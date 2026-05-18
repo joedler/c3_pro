@@ -80,25 +80,21 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
       // --- 教練模組 ---
       'coach.getSchedule': () => {
         AuthService.requireRole(user, ['coach']);
-        // TODO: 實作 CoachService.getSchedule(data, user)
-        return { message: '取得教練課表成功 (Stub)', user };
+        return CoachService.getSchedule(data, user);
       },
       'coach.checkin': () => {
         AuthService.requireRole(user, ['coach']);
-        // TODO: 實作 CoachService.checkin(data, user)
-        return { message: '簽到確認成功 (Stub)', user };
+        return CoachService.checkin(data, user);
       },
       'coach.adjustSession': () => {
         AuthService.requireRole(user, ['coach']);
-        // TODO: 實作 CoachService.adjustSession(data, user)
-        return { message: '調整課堂成功 (Stub)', user };
+        return CoachService.adjustSession(data, user);
       },
 
       // --- 管理員模組 ---
       'admin.createClass': () => {
         AuthService.requireRole(user, ['admin']);
-        // TODO: 實作 AdminService.createClass(data, user)
-        return { message: '開班設定成功 (Stub)', user };
+        return AdminService.createClass(data, user);
       },
       'admin.generateSessions': () => {
         AuthService.requireRole(user, ['admin']);
@@ -118,8 +114,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
       },
       'admin.announcement': () => {
         AuthService.requireRole(user, ['admin']);
-        // TODO: 實作 AdminService.createAnnouncement(data, user)
-        return { message: '發佈公告成功 (Stub)', user };
+        return AdminService.createAnnouncement(data, user);
       }
     };
 
