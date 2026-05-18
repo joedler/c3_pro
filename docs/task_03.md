@@ -6,16 +6,16 @@
 
 ## 📋 階段五：生產環境對接與上線任務清單
 
-- [ ] **1. 實作 LINE Webhook 事件處理核心 (`LineHandler.ts`)**
-  - [ ] **Follow（追蹤）事件處理**：當用戶加入 Bot 時，自動推送超高質感的「歡迎卡片」Flex Message，引導學員點擊開啟 `?mode=bind` 進行身分綁定。
-  - [ ] **學員對話框指令自動回覆**：
+- [x] **1. 實作 LINE Webhook 事件處理核心 (`LineHandler.ts`)**
+  - [x] **Follow（追蹤）事件處理**：當用戶加入 Bot 時，自動推送超高質感的「歡迎卡片」Flex Message，引導學員點擊開啟 `?mode=bind` 進行身分綁定。
+  - [x] **學員對話框指令自動回覆**：
     *   輸入「我的課程」、「請假補課」：自動計算學員課務統計（已上、剩餘、已請假、待補課），回傳高密度數據儀表板 Flex 卡片，並附帶 LIFF 請假與補課按鈕。
-  - [ ] **教練對話框指令自動回覆**：
+  - [x] **教練對話框指令自動回覆**：
     *   輸入「今日課表」：自動推送今日教練課表，並提供直達 `?mode=coach` 點名校正的 LIFF 連結。
 
-- [ ] **2. 實作公開 API 路由與服務 (`PublicService.ts`)**
-  - [ ] 實作 `schedule.public`：回傳不具敏感個資的公開週課表，以供外部官網或首頁免登入展示。
-  - [ ] 實作 `announcements`：讀取並過濾目前處於有效發布時間內的所有系統公告。
+- [x] **2. 實作公開 API 路由與服務 (`PublicService.ts`)**
+  - [x] 實作 `schedule.public`：回傳不具敏感個資的公開週課表，以供外部官網或首頁免登入展示。
+  - [x] 實作 `announcements`：讀取並過濾目前處於有效發布時間內的所有系統公告。
 
 - [ ] **3. 設計三角色 LINE 圖文選單 (Rich Menu) 配置與推送**
   - [ ] **學員版選單**：包含「我的課表、線上請假、跨班補課、最新公告」。
@@ -24,7 +24,7 @@
   - [ ] 實作動態圖文選單切換（綁定成功後，自動將學員/教練的 LINE 豐富選單切換為對應權限版）。
 
 - [ ] **4. LINE Webhook 實際對接與極端壓力測試**
-  - [ ] 在 `Main.ts` 中將 Stub 替換為 `LineHandler.process(payload)`。
+  - [x] 在 `Main.ts` 中將 Stub 替換為 `LineHandler.process(payload)`。
   - [ ] 在 LINE Developers Console 設定 Webhook 網址，並測試自動回覆與 LIFF 一秒開卡。
 
 ---
