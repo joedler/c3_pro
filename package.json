@@ -6,7 +6,8 @@
   "scripts": {
     "tc": "tsc --noEmit",
     "push": "clasp push",
-    "watch": "clasp push --watch"
+    "watch": "clasp push --watch",
+    "deploy": "powershell -ExecutionPolicy Bypass -File .\\deploy.ps1"
   },
   "devDependencies": {
     "@google/clasp": "^2.4.2",
