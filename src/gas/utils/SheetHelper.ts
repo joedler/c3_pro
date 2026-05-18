@@ -4,8 +4,19 @@
  */
 
 class SheetHelper {
-  private static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet {
+  private static getSpreadsheet(): GoogleAppsScript.Spreadsheet.Spreadsheet {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) return ss;
+
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+    if (!spreadsheetId) {
+      throw new Error('【設定錯誤】未在 GAS 專案屬性中設定 SPREADSHEET_ID！\n請至 Apps Script 左側「專案設定 (齒輪)」->「指令碼屬性 (Script Properties)」中新增一個 Key 為 SPREADSHEET_ID，Value 為你的目標試算表 ID 的屬性。');
+    }
+    return SpreadsheetApp.openById(spreadsheetId);
+  }
+
+  private static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet {
+    const ss = this.getSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       throw new Error(`Sheet "${sheetName}" 不存在，請確認是否已執行 setupDatabase。`);
