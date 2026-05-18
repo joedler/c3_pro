@@ -17,8 +17,16 @@ function Push-ToGAS {
       Write-Host "[ERROR] clasp push failed" -ForegroundColor Red
       exit 1
     }
+    
+    Write-Host "Redeploying Web App to latest version..." -ForegroundColor Cyan
+    npx clasp deploy -i AKfycbw5qd3RILHE1zkWfFLJfcDL-Mitfx2UcHj9cyzETaISKgwONltAcm1SL36Z_EK3lFAp -d "GymOS Auto Deploy"
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "[ERROR] clasp deploy failed" -ForegroundColor Red
+      exit 1
+    }
+
     $ErrorActionPreference = $oldErrorPreference
-    Write-Host "[OK] GAS push complete" -ForegroundColor Green
+    Write-Host "[OK] GAS push and redeployment complete!" -ForegroundColor Green
   } finally {
     Pop-Location
   }
