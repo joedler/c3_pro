@@ -354,15 +354,15 @@
           <div class="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl text-[11px] space-y-2 leading-relaxed text-slate-400">
             <div class="flex justify-between border-b border-slate-800/50 pb-2">
               <span class="font-semibold text-slate-400">連線模式:</span>
-              <span :class="typeof liff !== 'undefined' && liff.isInClient() ? 'text-emerald-400 font-bold' : 'text-amber-400'" x-text="typeof liff !== 'undefined' && liff.isInClient() ? '📱 LINE 官方 App' : '💻 電腦模擬網頁'"></span>
+              <span :class="liffReady && liff.isInClient() ? 'text-emerald-400 font-bold' : 'text-amber-400'" x-text="liffReady && liff.isInClient() ? '📱 LINE 官方 App' : '💻 電腦模擬網頁'"></span>
             </div>
             <div class="flex justify-between border-b border-slate-800/50 pb-2">
               <span class="font-semibold text-slate-400">LINE 登入狀態:</span>
-              <span :class="typeof liff !== 'undefined' && liff.isLoggedIn() ? 'text-emerald-400 font-bold' : 'text-rose-400'" x-text="typeof liff !== 'undefined' ? (liff.isLoggedIn() ? '✅ 已認證登入' : '❌ 未登入') : '🚫 SDK 未載入'"></span>
+              <span :class="liffReady && liff.isLoggedIn() ? 'text-emerald-400 font-bold' : 'text-rose-400'" x-text="liffReady ? (liff.isLoggedIn() ? '✅ 已認證登入' : '❌ 未登入') : '⌛ SDK 載入中...'"></span>
             </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold text-slate-400">當前識別碼 (Token):</span>
-              <span class="font-mono text-slate-300 truncate max-w-[170px] text-right font-bold text-[10px]" :title="devToken" x-text="devToken"></span>
+              <span class="font-mono text-amber-400 truncate max-w-[170px] text-right font-bold text-[10px]" :title="devToken" x-text="devToken"></span>
             </div>
           </div>
 
@@ -563,6 +563,7 @@
         devToken: localStorage.getItem('gymos_dev_token') || 'TEST_UID_MEMBER_001',
         showConfig: false,
         loading: false,
+        liffReady: false,
         toasts: [],
         
         // Navigation / Routing
@@ -702,6 +703,7 @@
               }
 
               await liff.init({ liffId: liffId });
+              this.liffReady = true;
               
               if (liff.isLoggedIn()) {
                 // 取得 LINE 官方核發的 Access Token，用作後端 API 的安全身份驗證！
