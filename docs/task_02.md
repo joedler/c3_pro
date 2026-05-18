@@ -12,7 +12,7 @@
 - [ ] **階段二：雲端部署與遠端備份**
   - [ ] 執行 `clasp push` 將程式碼部署到 GAS 雲端
   - [ ] 在 Google 試算表內執行 `setupDatabase()` 初始化資料結構
-  - [ ] 執行 `git commit & push` 將程式碼提交至 GitHub 儲存庫
+  - [x] 執行 `git commit & push` 將程式碼提交至 GitHub 儲存庫
 
 - [ ] **階段三：核心業務邏輯開發**
   - [ ] 實作學員身分綁定與學員資訊 (`MemberService.ts`)
