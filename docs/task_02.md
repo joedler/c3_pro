@@ -21,7 +21,7 @@
   - [x] 實作教練現場出席異常校正回報 (`CoachService.ts`)
   - [x] 實作管理端開班設定與選課學員綁定 (`AdminService.ts`)
 
-- [ ] **階段四：前端 SPA 頁面與 LINE LIFF 整合**
-  - [ ] 管理後台開班設定表單
-  - [ ] 串接 FullCalendar.js 展示視覺化共享日曆
-  - [ ] 學員端 LINE Flex Message 請假/補課步驟引導卡片
+- [x] **階段四：前端 SPA 頁面與 LINE LIFF 整合**
+  - [x] 管理後台開班設定表單與學員預登記
+  - [x] 串接 FullCalendar.js 展示視覺化共享日曆名冊
+  - [x] 學員端與教練端 LINE LIFF 整合（請假、補課預約、現場出席校正）
