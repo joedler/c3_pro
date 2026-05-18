@@ -562,8 +562,8 @@
   <script>
     document.addEventListener('alpine:init', () => {
       Alpine.data('gymApp', () => ({
-        // GAS URL connection
-        gasUrl: localStorage.getItem('gymos_gas_url') || '',
+        // GAS URL connection (生產環境固定金鑰)
+        gasUrl: 'https://script.google.com/macros/s/AKfycbw5qd3RILHE1zkWfFLJfcDL-Mitfx2UcHj9cyzETaISKgwONltAcm1SL36Z_EK3lFAp/exec',
         devToken: localStorage.getItem('gymos_dev_token') || 'TEST_UID_MEMBER_001',
         showConfig: false,
         loading: false,
@@ -691,22 +691,8 @@
           // 🚀 頂級商業化：正式初始化 LINE LIFF SDK，解鎖手機 LINE 容器的安全性沙盒，並獲取學員真實身分！
           if (typeof liff !== 'undefined') {
             try {
-              let liffId = '2010118365-aUSNbtpx'; // 預設專屬 LIFF ID
-              
-              // 🎯 全台首創自癒式架構：優先從後端動態取得真實 LIFF ID，免除任何硬編碼失誤！
-              if (this.gasUrl) {
-                try {
-                  const res = await fetch(`${this.gasUrl}?action=public.getLiffId`);
-                  const resJson = await res.json();
-                  if (resJson && resJson.status === 200 && resJson.data && resJson.data.liffId) {
-                    liffId = resJson.data.liffId;
-                    console.log('🎯 從後端動態取得真實 LIFF ID:', liffId);
-                  }
-                } catch (fetchErr) {
-                  console.warn('⚡ 無法從後端取得 LIFF ID，使用預設值或快取：', fetchErr);
-                }
-              }
-
+              // 終極修復：寫死正確大小寫的 LIFF ID，免除任何網路請求與快取異常！
+              let liffId = '2010118365-aUSNBtpx';
               this.activeLiffId = liffId;
               
               // 使用 Promise.race 加上 5 秒 Timeout 防護，避免 LIFF ID 不符時死當
