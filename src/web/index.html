@@ -360,6 +360,10 @@
               <span class="font-semibold text-slate-400">LINE 登入狀態:</span>
               <span :class="liffReady && liff.isLoggedIn() ? 'text-emerald-400 font-bold' : 'text-rose-400'" x-text="liffReady ? (liff.isLoggedIn() ? '✅ 已認證登入' : '❌ 未登入') : '⌛ SDK 載入中...'"></span>
             </div>
+            <div class="flex justify-between items-center border-b border-slate-800/50 pb-2">
+              <span class="font-semibold text-slate-400">LIFF ID:</span>
+              <span class="font-mono text-blue-400 truncate max-w-[170px] text-right font-bold text-[10px]" x-text="activeLiffId"></span>
+            </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold text-slate-400">當前識別碼 (Token):</span>
               <span class="font-mono text-amber-400 truncate max-w-[170px] text-right font-bold text-[10px]" :title="devToken" x-text="devToken"></span>
@@ -564,6 +568,7 @@
         showConfig: false,
         loading: false,
         liffReady: false,
+        activeLiffId: '初始化中...',
         toasts: [],
         
         // Navigation / Routing
@@ -702,7 +707,14 @@
                 }
               }
 
-              await liff.init({ liffId: liffId });
+              this.activeLiffId = liffId;
+              
+              // 使用 Promise.race 加上 5 秒 Timeout 防護，避免 LIFF ID 不符時死當
+              await Promise.race([
+                liff.init({ liffId: liffId }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('LIFF SDK 啟動逾時 (可能是 LIFF ID 錯誤或網路不佳)')), 5000))
+              ]);
+              
               this.liffReady = true;
               
               if (liff.isLoggedIn()) {
