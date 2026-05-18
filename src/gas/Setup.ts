@@ -219,12 +219,24 @@ function setupRichMenus(): void {
       }
       Logger.log(`[LINE RichMenu] ${menu.role} 背景圖片自動上傳綁定成功!`);
 
-      // D. 回寫更新至 Google 試算表的 Config 系統設定
+      // D. 回寫更新至 Google 試算表的 Config 系統設定 (具備自我修復機制：若無則自動新增欄位)
       const configRows = SheetHelper.getRows<any>('Config');
       const targetRow = configRows.find(row => row.key === menu.configKey);
       if (targetRow) {
         SheetHelper.updateRow('Config', 'key', menu.configKey, { value: richMenuId });
         Logger.log(`[LINE Config回填] 成功將 ${menu.configKey} 的值更新為 ${richMenuId}！`);
+      } else {
+        const descMap: Record<string, string> = {
+          'RICH_MENU_MEMBER': '學員版 LINE 圖文選單 ID',
+          'RICH_MENU_COACH': '教練版 LINE 圖文選單 ID',
+          'RICH_MENU_ADMIN': '管理員版 LINE 圖文選單 ID'
+        };
+        SheetHelper.addRow('Config', {
+          key: menu.configKey,
+          value: richMenuId,
+          description: descMap[menu.configKey] || ''
+        });
+        Logger.log(`[LINE Config自動新增] 成功建立並填入 ${menu.configKey} 欄位，值為 ${richMenuId}！`);
       }
     } catch (e) {
       Logger.log(`[⚠️ LINE RichMenu 建立失敗 - ${menu.role}] ${e instanceof Error ? e.message : e}`);
