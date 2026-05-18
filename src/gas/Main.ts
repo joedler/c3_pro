@@ -14,6 +14,9 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
       },
       'announcements': () => {
         return PublicService.getActiveAnnouncements();
+      },
+      'public.getLiffId': () => {
+        return { liffId: Config.get('LIFF_ID') };
       }
     };
 

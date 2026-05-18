@@ -669,7 +669,22 @@
           // 🚀 頂級商業化：正式初始化 LINE LIFF SDK，解鎖手機 LINE 容器的安全性沙盒，並獲取學員真實身分！
           if (typeof liff !== 'undefined') {
             try {
-              const liffId = '2010118365-aUSNbtpx'; // 你的專屬 LIFF ID
+              let liffId = '2010118365-aUSNbtpx'; // 預設專屬 LIFF ID
+              
+              // 🎯 全台首創自癒式架構：優先從後端動態取得真實 LIFF ID，免除任何硬編碼失誤！
+              if (this.gasUrl) {
+                try {
+                  const res = await fetch(`${this.gasUrl}?action=public.getLiffId`);
+                  const resJson = await res.json();
+                  if (resJson && resJson.status === 200 && resJson.data && resJson.data.liffId) {
+                    liffId = resJson.data.liffId;
+                    console.log('🎯 從後端動態取得真實 LIFF ID:', liffId);
+                  }
+                } catch (fetchErr) {
+                  console.warn('⚡ 無法從後端取得 LIFF ID，使用預設值或快取：', fetchErr);
+                }
+              }
+
               await liff.init({ liffId: liffId });
               
               if (liff.isLoggedIn()) {
@@ -835,11 +850,19 @@
               realName: this.studentBindForm.realName,
               birthday: this.studentBindForm.birthday
             });
-            this.addToast(`綁定成功！歡迎您，「${result.member.realName}」！已對應級別: ${result.member.level}。`, 'success');
+            this.addToast(`安全綁定成功！歡迎您，「${result.member.realName}」！`, 'success');
             this.studentProfile.realName = result.member.realName;
             this.studentProfile.level = result.member.level;
             
-            setTimeout(() => this.switchMode('leave'), 1500);
+            // 🎯 超貼心商業級體驗：若在 LINE App 內，綁定完畢自動關閉 LIFF 視窗返回聊天室！
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+              setTimeout(() => {
+                liff.closeWindow();
+              }, 1500);
+            } else {
+              // 電腦模擬環境下切換至請假模組
+              setTimeout(() => this.switchMode('leave'), 1500);
+            }
           } catch (e) {
             console.error(e);
           }
