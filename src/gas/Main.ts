@@ -10,12 +10,10 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
     // 定義公開 API 路由 (不需要驗證 Token)
     const publicRoutes: Record<string, () => any> = {
       'schedule.public': () => {
-        // TODO: 實作 ScheduleService.getPublic()
-        return { message: '取得公開課表成功 (Stub)' };
+        return PublicService.getPublicSchedule();
       },
       'announcements': () => {
-        // TODO: 實作 AnnouncementService.getActive()
-        return { message: '取得最新公告成功 (Stub)' };
+        return PublicService.getActiveAnnouncements();
       }
     };
 
@@ -41,7 +39,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
 
     // 2. 特殊處理 LINE Webhook 事件 (由 LINE 伺服器主動發送)
     if (payload.events) {
-      // TODO: 實作 LineHandler.process(payload)
+      LineHandler.process(payload);
       return respond(200, { message: 'LINE Webhook 接收成功' });
     }
 
