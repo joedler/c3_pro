@@ -1,0 +1,16 @@
+{
+  "name": "gym-os",
+  "version": "1.0.0",
+  "description": "GymOS - 模組化健身房管理系統",
+  "main": "index.js",
+  "scripts": {
+    "tc": "tsc --noEmit",
+    "push": "clasp push",
+    "watch": "clasp push --watch"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.83",
+    "typescript": "^5.4.5"
+  }
+}
