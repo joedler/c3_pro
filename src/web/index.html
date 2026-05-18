@@ -688,8 +688,9 @@
                   name: profile.displayName
                 };
               } else {
-                // 如果未在 LINE 登入，且是在 LINE 瀏覽器中，自動觸發登入
-                if (liff.isInClient()) {
+                // 如果未在 LINE 登入，且是在手機端或 LINE 瀏覽器中，自動觸發 LINE 安全登入，確保抓到真實 ID！
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (liff.isInClient() || isMobile) {
                   liff.login();
                 }
               }
