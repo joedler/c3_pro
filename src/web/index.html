@@ -628,11 +628,17 @@
         },
         
         init() {
-          // Parse query parameter to support routing
+          // Parse query parameter to support routing and dynamic API injection
           const params = new URLSearchParams(window.location.search);
           const mode = params.get('mode');
           if (mode) {
             this.currentMode = mode;
+          }
+          
+          const apiParam = params.get('api');
+          if (apiParam) {
+            this.gasUrl = apiParam;
+            localStorage.setItem('gymos_gas_url', apiParam);
           }
           
           if (!this.gasUrl) {
