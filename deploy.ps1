@@ -10,12 +10,14 @@ function Push-ToGAS {
   Write-Host "[1/2] Pushing to Google Apps Script..." -ForegroundColor Cyan
   Push-Location $PSScriptRoot
   try {
-    $claspOutput = clasp push --force 2>&1
-    Write-Host $claspOutput
+    $oldErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    npx clasp push --force
     if ($LASTEXITCODE -ne 0) {
       Write-Host "[ERROR] clasp push failed" -ForegroundColor Red
       exit 1
     }
+    $ErrorActionPreference = $oldErrorPreference
     Write-Host "[OK] GAS push complete" -ForegroundColor Green
   } finally {
     Pop-Location
