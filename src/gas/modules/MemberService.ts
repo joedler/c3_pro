@@ -17,8 +17,36 @@ class MemberService {
     }
 
     const { realName, birthday } = data;
-    if (!realName || !birthday) {
-      throw new Error('請輸入真實姓名與生日。');
+    if (!realName) {
+      throw new Error('請輸入真實姓名。');
+    }
+
+    // 0. 檢查是否為教職員預先登記的綁定
+    const allStaff = SheetHelper.getRows<any>('Staff');
+    const matchedStaff = allStaff.find(
+      s => s.real_name === realName && (!s.line_uid || s.line_uid === '')
+    );
+    if (matchedStaff) {
+      SheetHelper.updateRow('Staff', 'staff_id', matchedStaff.staff_id, {
+        line_uid: user.uid
+      });
+      // 根據教職員角色動態綁定 LINE 圖文選單
+      LineRichMenu.link(user.uid, matchedStaff.role || 'coach');
+      Logger.log(`[教職員綁定] 成功匹配預登記教職員：${realName} (${matchedStaff.staff_id})`);
+      return {
+        success: true,
+        type: 'staff',
+        role: matchedStaff.role || 'coach',
+        member: {
+          memberId: matchedStaff.staff_id,
+          realName: matchedStaff.real_name,
+          level: 'Staff'
+        }
+      };
+    }
+
+    if (!birthday) {
+      throw new Error('請輸入生日。');
     }
 
     // 1. 檢查是否該 LINE 帳號已綁定過任何學員
@@ -52,6 +80,9 @@ class MemberService {
         throw new Error('學員帳號更新失敗，請重新嘗試或聯絡管理員。');
       }
 
+      // 動態對接 LINE 學員豐富選單
+      LineRichMenu.link(user.uid, 'member');
+
       Logger.log(`[學員綁定] 成功匹配預先登記學員：${realName} (${matchedPreRegistered.member_id})`);
       return {
         success: true,
@@ -79,6 +110,10 @@ class MemberService {
     };
 
     SheetHelper.addRow('Members', newMember);
+    
+    // 動態對接 LINE 學員豐富選單
+    LineRichMenu.link(user.uid, 'member');
+
     Logger.log(`[學員綁定] 建立全新學員檔案：${realName} (${newMemberId})`);
 
     return {
