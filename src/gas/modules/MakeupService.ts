@@ -1,0 +1,253 @@
+/**
+ * MakeupService.ts
+ * 提供學員補課管理（查詢可用補課名額與補課申請登記）之核心邏輯 (PRD v3.0)
+ */
+
+class MakeupService {
+  /**
+   * 查詢可用的補課課堂清單 (F-M04)
+   * 規則：必須與原請假課堂同難度等級、時間在未來、且該課堂人數尚未額滿。
+   */
+  public static getAvailable(
+    data: { leaveId: string },
+    user: UserSession
+  ): Record<string, any>[] {
+    if (!user || !user.uid) {
+      throw new Error('未驗證的學員身分，請重新登入。');
+    }
+
+    const { leaveId } = data;
+    if (!leaveId) {
+      throw new Error('請提供請假紀錄 ID 以匹配同等級之可用課程。');
+    }
+
+    // 1. 取得學員資料
+    const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    if (!member || member.status !== 'active') {
+      throw new Error('您的學員帳號不存在或已停用。');
+    }
+
+    // 2. 取得該次請假紀錄
+    const leave = SheetHelper.getRow<any>('Leave_Requests', 'leave_id', leaveId);
+    if (!leave || leave.member_id !== member.member_id) {
+      throw new Error('找不到該次請假的申請紀錄。');
+    }
+
+    if (leave.status !== 'approved') {
+      throw new Error('該次請假尚未通過審核，無法安排補課。');
+    }
+
+    if (leave.makeup_session_id && leave.makeup_session_id !== '') {
+      throw new Error('此請假紀錄已安排過補課，無法重複補課。');
+    }
+
+    // 3. 取得原始課堂與原始班級難度等級
+    const origSession = SheetHelper.getRow<any>('Sessions', 'session_id', leave.session_id);
+    if (!origSession) {
+      throw new Error('找不到原始請假的課堂紀錄。');
+    }
+
+    const origClass = SheetHelper.getRow<any>('Classes', 'class_id', origSession.class_id);
+    if (!origClass) {
+      throw new Error('找不到原始班級設定。');
+    }
+
+    const level = origClass.level; // 例如 '初級'、'中級'、'高級' 或 'L1'
+
+    // 4. 篩選出同等級的所有活躍班級
+    const allClasses = SheetHelper.getRows<any>('Classes');
+    const sameLevelClassIds = allClasses
+      .filter(c => c.level === level && c.status === 'active')
+      .map(c => c.class_id);
+
+    if (sameLevelClassIds.length === 0) {
+      return [];
+    }
+
+    // 5. 撈出所有同等級班級在未來的 scheduled 課堂
+    const now = new Date();
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    const candidateSessions = allSessions.filter(s => {
+      if (!sameLevelClassIds.includes(s.class_id) || s.status !== 'scheduled') {
+        return false;
+      }
+      // 判斷是否在未來
+      const sessionStart = new Date(`${s.session_date}T${s.start_time}:00`);
+      return sessionStart > now;
+    });
+
+    const result: Record<string, any>[] = [];
+
+    // 6. 計算每堂課的剩餘空位
+    const allEnrollments = SheetHelper.getRows<any>('Enrollments').filter(e => e.status === 'active');
+    const allLeaves = SheetHelper.getRows<any>('Leave_Requests').filter(l => l.status === 'approved');
+    const allMakeups = SheetHelper.getRows<any>('Makeup_Requests').filter(
+      m => m.status === 'approved' || m.status === 'completed'
+    );
+    const allRooms = SheetHelper.getRows<any>('Rooms');
+
+    const classMap = new Map(allClasses.map(c => [c.class_id, c]));
+    const roomMap = new Map(allRooms.map(r => [r.room_id, r]));
+
+    candidateSessions.forEach(s => {
+      const cls = classMap.get(s.class_id);
+      if (!cls) return;
+
+      const room = roomMap.get(cls.room_id);
+      const maxCapacity = Number(cls.max_capacity) || (room ? Number(room.max_capacity) : 15);
+
+      // 正式出席人數 (正式選課人數 - 該堂請假人數)
+      const regCount = allEnrollments.filter(e => e.class_id === s.class_id).length;
+      const leaveCount = allLeaves.filter(l => l.session_id === s.session_id).length;
+      const attendingRegular = regCount - leaveCount;
+
+      // 補課人數
+      const makeupCount = allMakeups.filter(m => m.target_session_id === s.session_id).length;
+
+      // 剩餘空位
+      const currentAttending = attendingRegular + makeupCount;
+      const vacancy = maxCapacity - currentAttending;
+
+      if (vacancy > 0) {
+        result.push({
+          sessionId: s.session_id,
+          classId: s.class_id,
+          className: cls.class_name,
+          date: s.session_date,
+          startTime: s.start_time,
+          endTime: s.end_time,
+          level: cls.level,
+          vacancy: vacancy
+        });
+      }
+    });
+
+    // 按照日期排序
+    return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
+
+  /**
+   * 提交補課申請登記
+   * 補課一經登記即不可修改、不可取消，缺席不得再補。
+   */
+  public static request(
+    data: { leaveId: string; targetSessionId: string },
+    user: UserSession
+  ): Record<string, any> {
+    if (!user || !user.uid) {
+      throw new Error('未驗證的學員身分，請重新登入。');
+    }
+
+    const { leaveId, targetSessionId } = data;
+    if (!leaveId || !targetSessionId) {
+      throw new Error('請提供請假紀錄 ID 與欲補課之目標課堂 ID。');
+    }
+
+    // 1. 取得學員資料
+    const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    if (!member || member.status !== 'active') {
+      throw new Error('您的學員帳號不存在或已停用。');
+    }
+
+    const memberId = member.member_id;
+
+    // 2. 取得原請假紀錄並進行規則校驗
+    const leave = SheetHelper.getRow<any>('Leave_Requests', 'leave_id', leaveId);
+    if (!leave || leave.member_id !== memberId) {
+      throw new Error('找不到與您身分匹配的請假紀錄。');
+    }
+
+    if (leave.status !== 'approved') {
+      throw new Error('該次請假尚未通過審核，無法安排補課。');
+    }
+
+    if (leave.makeup_session_id && leave.makeup_session_id !== '') {
+      throw new Error('此請假紀錄已安排過補課，無法重複安排。');
+    }
+
+    // 3. 取得目標補課課堂與班級資料
+    const targetSession = SheetHelper.getRow<any>('Sessions', 'session_id', targetSessionId);
+    if (!targetSession || targetSession.status !== 'scheduled') {
+      throw new Error('目標補課課堂已停課或非正常排定狀態。');
+    }
+
+    // 4. 驗證時間：目標課堂必須是在未來
+    const now = new Date();
+    const targetStart = new Date(`${targetSession.session_date}T${targetSession.start_time}:00`);
+    if (targetStart <= now) {
+      throw new Error('不能選擇過去或已經開始的課堂作為補課目標。');
+    }
+
+    // 5. 驗證程度等級
+    const origSession = SheetHelper.getRow<any>('Sessions', 'session_id', leave.session_id);
+    const origClass = origSession ? SheetHelper.getRow<any>('Classes', 'class_id', origSession.class_id) : null;
+    const targetClass = SheetHelper.getRow<any>('Classes', 'class_id', targetSession.class_id);
+
+    if (!origClass || !targetClass || origClass.level !== targetClass.level) {
+      throw new Error(`程度不相符！您只能選擇「${origClass ? origClass.level : '同等'}」難度等級的班級進行跨班補課。`);
+    }
+
+    // 6. 精準檢查目標課堂是否還有剩餘空額
+    const allEnrollments = SheetHelper.getRows<any>('Enrollments').filter(
+      e => e.class_id === targetSession.class_id && e.status === 'active'
+    );
+    const allLeaves = SheetHelper.getRows<any>('Leave_Requests').filter(
+      l => l.session_id === targetSessionId && l.status === 'approved'
+    );
+    const allMakeups = SheetHelper.getRows<any>('Makeup_Requests').filter(
+      m => m.target_session_id === targetSessionId && (m.status === 'approved' || m.status === 'completed')
+    );
+    const room = SheetHelper.getRow<any>('Rooms', 'room_id', targetClass.room_id);
+    const maxCapacity = Number(targetClass.max_capacity) || (room ? Number(room.max_capacity) : 15);
+
+    const currentAttending = (allEnrollments.length - allLeaves.length) + allMakeups.length;
+    if (currentAttending >= maxCapacity) {
+      throw new Error('抱歉，目標課堂的補課/出席名額已滿，請選擇其他時間或班級補課。');
+    }
+
+    // 7. 寫入補課申請紀錄 (Makeup_Requests)
+    const makeupId = `MK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newMakeup = {
+      makeup_id: makeupId,
+      member_id: memberId,
+      leave_id: leaveId,
+      target_session_id: targetSessionId,
+      request_time: now,
+      status: 'approved', // 登記即視為核准安排
+      notes: '學員自主補課登記'
+    };
+    SheetHelper.addRow('Makeup_Requests', newMakeup);
+
+    // 8. 回寫/更新請假紀錄以綁定此補課課堂
+    SheetHelper.updateRow('Leave_Requests', 'leave_id', leaveId, {
+      makeup_session_id: targetSessionId
+    });
+
+    // 9. 寫入出勤紀錄 (Attendance) 類型為 'makeup'
+    const attendanceId = `ATT-MK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newAttendance = {
+      attendance_id: attendanceId,
+      session_id: targetSessionId,
+      member_id: memberId,
+      type: 'makeup',
+      checkin_time: '', // 補課當天由教練手動簽到
+      checkin_by: '',
+      original_session_id: leave.session_id, // 標記原始請假課程ID
+      notes: '補課登記'
+    };
+    SheetHelper.addRow('Attendance', newAttendance);
+
+    // 10. 即時同步更新目標課堂的 Google 日曆事件描述欄
+    ClassEngine.syncCalendarEvent(targetSessionId);
+
+    Logger.log(`[學員補課] 學員 ${member.real_name} 成功預約補課：${targetSessionId}，對應請假 ID: ${leaveId}`);
+
+    return {
+      success: true,
+      makeupId: makeupId,
+      sessionDate: targetSession.session_date,
+      startTime: targetSession.start_time,
+      className: targetClass.class_name
+    };
+  }
+}

@@ -59,27 +59,22 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
     const routes: Record<string, () => any> = {
       // --- 學員模組 ---
       'member.bind': () => {
-        // TODO: 實作 MemberService.bind(data, user)
-        return { message: '學員綁定成功 (Stub)', user };
+        return MemberService.bind(data, user);
       },
       'member.getInfo': () => {
-        // TODO: 實作 MemberService.getInfo(user)
-        return { message: '取得學員資訊成功 (Stub)', user };
+        return MemberService.getInfo(user);
       },
       'leave.request': () => {
         AuthService.requireRole(user, ['member']);
-        // TODO: 實作 LeaveService.request(data, user)
-        return { message: '請假申請成功 (Stub)', user };
+        return LeaveService.request(data, user);
       },
       'makeup.request': () => {
         AuthService.requireRole(user, ['member']);
-        // TODO: 實作 MakeupService.request(data, user)
-        return { message: '補課申請成功 (Stub)', user };
+        return MakeupService.request(data, user);
       },
       'makeup.available': () => {
         AuthService.requireRole(user, ['member']);
-        // TODO: 實作 MakeupService.getAvailable(data, user)
-        return { message: '取得可用補課名額成功 (Stub)', user };
+        return MakeupService.getAvailable(data, user);
       },
 
       // --- 教練模組 ---
