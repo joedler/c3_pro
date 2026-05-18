@@ -628,14 +628,21 @@
         },
         
         init() {
-          // Parse query parameter to support routing and dynamic API injection
-          const params = new URLSearchParams(window.location.search);
+          // 支援 LINE LIFF 特有的 liff.state 參數解碼（避免 LINE 導向時遺失 mode 等路由參數）
+          let searchStr = window.location.search;
+          const mainParams = new URLSearchParams(searchStr);
+          const liffState = mainParams.get('liff.state');
+          if (liffState) {
+            searchStr = decodeURIComponent(liffState);
+          }
+          
+          const params = new URLSearchParams(searchStr);
           const mode = params.get('mode');
           if (mode) {
             this.currentMode = mode;
           }
           
-          const apiParam = params.get('api');
+          const apiParam = params.get('api') || mainParams.get('api');
           if (apiParam) {
             this.gasUrl = apiParam;
             localStorage.setItem('gymos_gas_url', apiParam);
