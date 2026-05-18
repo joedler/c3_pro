@@ -627,7 +627,7 @@
           setTimeout(() => window.location.reload(), 1000);
         },
         
-        init() {
+        async init() {
           // 支援 LINE LIFF 特有的 liff.state 參數解碼（避免 LINE 導向時遺失 mode 等路由參數）
           let searchStr = window.location.search;
           const mainParams = new URLSearchParams(searchStr);
@@ -644,14 +644,48 @@
           
           const apiParam = params.get('api') || mainParams.get('api');
           if (apiParam) {
-            this.gasUrl = apiParam;
-            localStorage.setItem('gymos_gas_url', apiParam);
+            // 確保 GAS 網址保持乾淨，切掉任何意外尾隨的 liff 參數，防範 URL 污染
+            let cleanApi = apiParam.split('?')[0];
+            this.gasUrl = cleanApi;
+            localStorage.setItem('gymos_gas_url', cleanApi);
           }
           
           if (!this.gasUrl) {
             this.showConfig = true;
           } else {
             this.loadInitialData();
+          }
+
+          // 🚀 頂級商業化：正式初始化 LINE LIFF SDK，解鎖手機 LINE 容器的安全性沙盒，並獲取學員真實身分！
+          if (typeof liff !== 'undefined') {
+            try {
+              const liffId = '2010118365-aUSNbtpx'; // 你的專屬 LIFF ID
+              await liff.init({ liffId: liffId });
+              
+              if (liff.isLoggedIn()) {
+                // 取得 LINE 官方核發的 Access Token，用作後端 API 的安全身份驗證！
+                const accessToken = liff.getAccessToken();
+                if (accessToken) {
+                  this.devToken = accessToken;
+                  localStorage.setItem('gymos_dev_token', accessToken);
+                }
+                
+                // 取得學員 LINE Profile 資訊
+                const profile = await liff.getProfile();
+                this.sessionUser = {
+                  uid: profile.userId,
+                  role: 'member',
+                  name: profile.displayName
+                };
+              } else {
+                // 如果未在 LINE 登入，且是在 LINE 瀏覽器中，自動觸發登入
+                if (liff.isInClient()) {
+                  liff.login();
+                }
+              }
+            } catch (err) {
+              console.warn('⚡ LIFF SDK 初始化失敗（可能在非 LINE 瀏覽器環境），切換至 mock 模擬環境：', err);
+            }
           }
         },
         
