@@ -649,9 +649,15 @@
           const apiParam = params.get('api') || mainParams.get('api');
           if (apiParam) {
             // 確保 GAS 網址保持乾淨，切掉任何意外尾隨的 liff 參數，防範 URL 污染
-            let cleanApi = apiParam.split('?')[0];
+            let cleanApi = apiParam.split('?')[0].split('&')[0];
             this.gasUrl = cleanApi;
             localStorage.setItem('gymos_gas_url', cleanApi);
+          }
+          
+          // 強大自我修復：確保任何從舊快取/localStorage 讀出的 GAS URL 都是 100% 乾淨的！
+          if (this.gasUrl) {
+            this.gasUrl = this.gasUrl.split('?')[0].split('&')[0];
+            localStorage.setItem('gymos_gas_url', this.gasUrl);
           }
           
           if (!this.gasUrl) {
@@ -716,7 +722,7 @@
             const response = await fetch(this.gasUrl, {
               method: 'POST',
               mode: 'cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              headers: { 'Content-Type': 'text/plain' }, // 極致簡化，防範某些手機瀏覽器（iOS WKWebView）觸發 CORS OPTIONS 預檢阻擋
               body: JSON.stringify({
                 action: action,
                 token: this.devToken,
