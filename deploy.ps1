@@ -8,9 +8,9 @@ $GAS_DIR = Join-Path $PSScriptRoot "src\gas"
 
 function Push-ToGAS {
   Write-Host "[1/2] Pushing to Google Apps Script..." -ForegroundColor Cyan
-  Push-Location $GAS_DIR
+  Push-Location $PSScriptRoot
   try {
-    $claspOutput = clasp push 2>&1
+    $claspOutput = clasp push --force 2>&1
     Write-Host $claspOutput
     if ($LASTEXITCODE -ne 0) {
       Write-Host "[ERROR] clasp push failed" -ForegroundColor Red
