@@ -25,6 +25,12 @@ class LineHandler {
 
         if (!replyToken) return;
 
+        // 🚀 頂級效能優化：如果是 LINE 官方的 Webhook 驗證虛擬事件，直接秒速返回，不進行任何資料庫與外部 API 呼叫！
+        if (replyToken === '00000000000000000000000000000000' || userId === 'U00000000000000000000000000000000') {
+          Logger.log('[LINE Webhook] 攔截到官方驗證虛擬事件，已秒速快速返回。');
+          return;
+        }
+
         if (event.type === 'follow') {
           // 1. 處理新加入好友事件
           this.handleFollowEvent(replyToken, userId);
