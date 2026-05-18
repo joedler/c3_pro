@@ -112,6 +112,31 @@ function setupRichMenus(): void {
     throw new Error('【設定錯誤】尚未在試算表「系統設定 (Config)」中填入您真實的 LIFF_ID！請填妥後再執行此功能。');
   }
 
+  // 🎯 自動化修復：若試算表內缺少這三個欄位，自動為管理員填入，避免手動輸入錯誤！
+  const configRows = SheetHelper.getRows<any>('Config');
+  const imageKeys = ['IMG_MENU_MEMBER', 'IMG_MENU_COACH', 'IMG_MENU_ADMIN'];
+  let fieldsAdded = false;
+  
+  imageKeys.forEach(key => {
+    if (!configRows.find(r => r.key === key)) {
+      const descMap: Record<string, string> = {
+        'IMG_MENU_MEMBER': '學員版選單圖 (支援 Google Drive 網址)',
+        'IMG_MENU_COACH': '教練版選單圖 (支援 Google Drive 網址)',
+        'IMG_MENU_ADMIN': '管理員版選單圖 (支援 Google Drive 網址)'
+      };
+      SheetHelper.addRow('Config', {
+        key: key,
+        value: '',
+        description: descMap[key]
+      });
+      fieldsAdded = true;
+    }
+  });
+
+  if (fieldsAdded) {
+    Config.loadCache();
+  }
+
   // 1. 定義 3 個圖文選單配置結構與符合 LINE 規定比例 (2500x843) 的 Unsplash 精準裁剪背景圖
   const richMenus = [
     {

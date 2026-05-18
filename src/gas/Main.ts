@@ -124,6 +124,11 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'admin.announcement': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.createAnnouncement(data, user);
+      },
+      'admin.updateRichMenus': () => {
+        AuthService.requireRole(user, ['admin']);
+        setupRichMenus();
+        return { message: '圖文選單重新建立與圖片同步成功' };
       }
     };
 
