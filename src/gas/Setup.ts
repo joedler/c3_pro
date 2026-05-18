@@ -1,6 +1,7 @@
 /**
  * Setup.ts
  * 一鍵初始化 Google Sheets 資料庫結構與預設 Config 設定 (PRD v3.0)
+ * 支援 100% 繁體中文試算表呈現，欄位定義與名稱由 SheetHelper.ts 統一管理。
  */
 
 function setupDatabase(): void {
@@ -13,122 +14,6 @@ function setupDatabase(): void {
     ss = SpreadsheetApp.openById(spreadsheetId);
   }
   
-  const sheetsConfig: Record<string, string[]> = {
-    Config: ['key', 'value', 'description'],
-    Members: [
-      'member_id',
-      'line_uid',
-      'display_name',
-      'real_name',
-      'birthday',
-      'level',
-      'join_date',
-      'status',
-      'notes',
-      'created_at',
-      'updated_at'
-    ],
-    Classes: [
-      'class_id',
-      'class_name',
-      'class_type',
-      'level',
-      'coach_line_uid',
-      'room_id',
-      'max_capacity',
-      'day_of_week',
-      'time_slot',
-      'start_time',
-      'end_time',
-      'period_start',
-      'period_weeks',
-      'sessions_per_week',
-      'total_sessions',
-      'status',
-      'notes'
-    ],
-    Sessions: [
-      'session_id',
-      'class_id',
-      'session_date',
-      'session_seq',
-      'start_time',
-      'end_time',
-      'status',
-      'cancel_reason',
-      'substitute_coach_uid',
-      'actual_count',
-      'calendar_event_id',
-      'notes'
-    ],
-    Enrollments: [
-      'enrollment_id',
-      'member_id',
-      'class_id',
-      'enroll_date',
-      'status',
-      'total_paid_sessions',
-      'notes'
-    ],
-    Attendance: [
-      'attendance_id',
-      'session_id',
-      'member_id',
-      'type',
-      'checkin_time',
-      'checkin_by',
-      'original_session_id',
-      'notes'
-    ],
-    Leave_Requests: [
-      'leave_id',
-      'member_id',
-      'session_id',
-      'request_time',
-      'status',
-      'approved_by',
-      'makeup_session_id',
-      'notes'
-    ],
-    Makeup_Requests: [
-      'makeup_id',
-      'member_id',
-      'leave_id',
-      'target_session_id',
-      'request_time',
-      'status',
-      'notes'
-    ],
-    Announcements: [
-      'announcement_id',
-      'title',
-      'content',
-      'target',
-      'publish_time',
-      'expire_time',
-      'created_by',
-      'pinned'
-    ],
-    Staff: [
-      'staff_id',
-      'line_uid',
-      'real_name',
-      'role',
-      'status',
-      'hourly_rate',
-      'notes',
-      'created_at',
-      'updated_at'
-    ],
-    Rooms: [
-      'room_id',
-      'room_name',
-      'max_capacity',
-      'status',
-      'notes'
-    ]
-  };
-
   const defaultSettings: [string, string, string][] = [
     ['GYM_NAME', 'C3 Fitness', '健身房名稱'],
     ['LINE_CHANNEL_ACCESS_TOKEN', 'YOUR_LINE_TOKEN', 'LINE Bot Channel Access Token'],
@@ -145,15 +30,20 @@ function setupDatabase(): void {
     ['MODULE_FINANCE', 'true', '啟用模組：財務管理']
   ];
 
-  for (const [sheetName, headers] of Object.entries(sheetsConfig)) {
-    let sheet = ss.getSheetByName(sheetName);
+  // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表
+  for (const [engSheetName, chineseSheetName] of Object.entries(SheetHelper.SHEET_NAME_MAP)) {
+    let sheet = ss.getSheetByName(chineseSheetName);
     if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
+      sheet = ss.insertSheet(chineseSheetName);
     } else {
       sheet.clear();
     }
 
-    // 寫入 Header
+    // 取得該工作表對應的繁體中文 Headers
+    const columnMap = SheetHelper.COLUMN_MAP[engSheetName] || {};
+    const headers = Object.values(columnMap);
+
+    // 寫入 Header 欄位
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1); // 凍結首列
 
@@ -164,13 +54,13 @@ function setupDatabase(): void {
       .setFontWeight('bold')
       .setHorizontalAlignment('center');
 
-    // 寫入預設設定
-    if (sheetName === 'Config') {
+    // 寫入預設設定值
+    if (engSheetName === 'Config') {
       sheet.getRange(2, 1, defaultSettings.length, 3).setValues(defaultSettings);
     }
     
     // 如果是 Rooms，寫入預設教室範本方便測試
-    if (sheetName === 'Rooms') {
+    if (engSheetName === 'Rooms') {
       const defaultRooms = [
         ['RM-01', '大教室', 15, 'active', '預設大教室'],
         ['RM-02', '小教室', 8, 'active', '預設小教室']
@@ -182,5 +72,18 @@ function setupDatabase(): void {
     sheet.autoResizeColumns(1, headers.length);
   }
 
-  Logger.log('=== GymOS v3.0 資料庫結構與 11 張 Sheets 初始化成功 ===');
+  // 刪除預設的 "工作表1" 或 "Sheet1" (若存在且不是我們的資料表之一)
+  const defaultSheetNames = ['工作表1', '工作表 1', 'Sheet1', 'Sheet 1'];
+  for (const name of defaultSheetNames) {
+    const defaultSheet = ss.getSheetByName(name);
+    if (defaultSheet && !Object.values(SheetHelper.SHEET_NAME_MAP).includes(name)) {
+      try {
+        ss.deleteSheet(defaultSheet);
+      } catch (e) {
+        // 忽略單一工作表無法刪除的錯誤
+      }
+    }
+  }
+
+  Logger.log('=== GymOS v3.0 繁體中文資料庫結構與 11 張 Sheets 初始化成功 ===');
 }
