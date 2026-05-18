@@ -28,7 +28,7 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
   }
 }
 
-function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
+function doPost(e: GoogleAppsScript.Events.DoPost): any {
   try {
     // 1. 安全解析 Payload
     if (!e.postData || !e.postData.contents) {
@@ -40,7 +40,8 @@ function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.Tex
     // 2. 特殊處理 LINE Webhook 事件 (由 LINE 伺服器主動發送)
     if (payload.events) {
       LineHandler.process(payload);
-      return respond(200, { message: 'LINE Webhook 接收成功' });
+      // 隱式回傳 200 OK 空白內容，徹底避免 GAS ContentService 302 重新導向與超時問題！
+      return;
     }
 
     // 3. 一般前端 Web App (LIFF) 的 API 請求
