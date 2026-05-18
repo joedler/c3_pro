@@ -711,6 +711,10 @@
               }
             } catch (err) {
               console.warn('⚡ LIFF SDK 初始化失敗（可能在非 LINE 瀏覽器環境），切換至 mock 模擬環境：', err);
+              const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+              if (isMobile) {
+                this.addToast(`LIFF 啟動出錯: ${err.message || err} (使用 ID: ${liffId})`, 'warning');
+              }
             }
           }
         },
