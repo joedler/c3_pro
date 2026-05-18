@@ -22,6 +22,9 @@ function setupDatabase(): void {
     ['RICH_MENU_MEMBER', 'YOUR_RICH_MENU_MEMBER_ID', '學員版 LINE 圖文選單 ID'],
     ['RICH_MENU_COACH', 'YOUR_RICH_MENU_COACH_ID', '教練版 LINE 圖文選單 ID'],
     ['RICH_MENU_ADMIN', 'YOUR_RICH_MENU_ADMIN_ID', '管理員版 LINE 圖文選單 ID'],
+    ['IMG_MENU_MEMBER', '', '學員版選單圖 (支援 Google Drive 網址)'],
+    ['IMG_MENU_COACH', '', '教練版選單圖 (支援 Google Drive 網址)'],
+    ['IMG_MENU_ADMIN', '', '管理員版選單圖 (支援 Google Drive 網址)'],
     ['MAX_LEAVE_PER_PERIOD', '3', '每期最多請假堂數'],
     ['MAX_MAKEUP_PER_PERIOD', '3', '每期最多補課堂數'],
     ['MAKEUP_ADVANCE_DAYS', '1', '補課需提前幾天申請'],
@@ -199,9 +202,27 @@ function setupRichMenus(): void {
       const richMenuId = createResJson.richMenuId;
       Logger.log(`[LINE RichMenu] ${menu.role} 選單結構建立成功! ID: ${richMenuId}`);
 
-      // B. 從 Unsplash 抓取 2500x843 精準尺寸背景圖 Blob
-      const imgRes = UrlFetchApp.fetch(menu.imageUrl);
-      const imgBlob = imgRes.getBlob();
+      // B. 取得背景圖 Blob (支援 Google Drive 解析或 Unsplash 網址)
+      let imgBlob: GoogleAppsScript.Base.Blob;
+      const customImgUrl = Config.get(`IMG_MENU_${menu.role.toUpperCase()}`);
+      const finalImgUrl = customImgUrl ? customImgUrl : menu.imageUrl;
+      
+      try {
+        if (finalImgUrl.includes('drive.google.com/file/d/')) {
+          const match = finalImgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            imgBlob = DriveApp.getFileById(match[1]).getBlob();
+            Logger.log(`[LINE RichMenu] 成功從 Google Drive 讀取 ${menu.role} 的圖片`);
+          } else {
+            throw new Error('無法解析 Google Drive 網址中的檔案 ID');
+          }
+        } else {
+          const imgRes = UrlFetchApp.fetch(finalImgUrl);
+          imgBlob = imgRes.getBlob();
+        }
+      } catch (err) {
+        throw new Error(`獲取背景圖失敗 (${finalImgUrl}): ${err instanceof Error ? err.message : err}`);
+      }
 
       // C. 呼叫上傳 Rich Menu 圖片 API
       const uploadUrl = `https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`;
@@ -246,4 +267,45 @@ function setupRichMenus(): void {
   // 強制重新載入 Config 記憶體快取
   Config.loadCache();
   Logger.log('=== GymOS 豪華三角色 LINE 圖文選單一鍵自動建立與數據對接完成！ ===');
+}
+
+/**
+ * 專屬提供給 Google Sheets UI 選單使用的「一鍵更新圖文選單」按鈕綁定函式
+ * 執行前先自動確保 Config 表有正確的圖片網址欄位
+ */
+function uiUpdateRichMenus() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    
+    // 確保有預留圖片網址的欄位
+    const configRows = SheetHelper.getRows<any>('Config');
+    const imageKeys = ['IMG_MENU_MEMBER', 'IMG_MENU_COACH', 'IMG_MENU_ADMIN'];
+    let fieldsAdded = false;
+    
+    imageKeys.forEach(key => {
+      if (!configRows.find(r => r.key === key)) {
+        SheetHelper.addRow('Config', {
+          key: key,
+          value: '',
+          description: `${key.replace('IMG_MENU_', '')} 版選單圖 (支援 Google Drive 網址)`
+        });
+        fieldsAdded = true;
+      }
+    });
+
+    if (fieldsAdded) {
+      ui.alert('✅ 已為您在 Config 表中新增圖片網址欄位！\n請貼上您的 Google Drive 圖片網址後，再點擊一次更新按鈕。');
+      return;
+    }
+
+    ui.alert('⏳ 開始為您重新建立並覆蓋圖文選單...\n處理時間約 5~10 秒，請稍候。');
+    
+    // 呼叫主函式
+    setupRichMenus();
+    
+    ui.alert('🎉 圖文選單更新成功！\n請至 LINE 查看最新畫面。');
+  } catch (error) {
+    const ui = SpreadsheetApp.getUi();
+    ui.alert('❌ 更新失敗：' + (error instanceof Error ? error.message : error));
+  }
 }

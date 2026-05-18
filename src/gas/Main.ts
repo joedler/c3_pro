@@ -3,6 +3,13 @@
  * Google Apps Script Web App 統一入口路由與 CORS 控制 (PRD v3.0)
  */
 
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🛠️ GymOS 管理工具')
+    .addItem('🖼️ 一鍵更新 LINE 圖文選單', 'uiUpdateRichMenus')
+    .addToUi();
+}
+
 function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextOutput {
   try {
     const action = e.parameter.action;
