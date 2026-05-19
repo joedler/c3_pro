@@ -122,9 +122,18 @@ class LineHandler {
   private static handleTextMessage(replyToken: string, userId: string, text: string): void {
     const cleanText = text.trim();
     if (cleanText === '診斷' || cleanText === '我的ID' || cleanText === '身分') {
+      const ss = SheetHelper['getSpreadsheet']();
+      const ssName = ss.getName();
+      const ssId = ss.getId();
+      
       const staffRows = SheetHelper.getRows<any>('Staff');
       const sampleStaff = staffRows[0] || {};
       const staffHeaders = Object.keys(sampleStaff).filter(k => k !== '_rowNum');
+      
+      // 取得前5筆教職員的原始配對資訊
+      const staffListDebug = staffRows.slice(0, 5).map(row => 
+        `- ID: ${row.staff_id}, UID: ${row.line_uid}, Role: ${row.role}, Status: ${row.status}`
+      ).join('\n');
       
       const memberRows = SheetHelper.getRows<any>('Members');
       const sampleMember = memberRows[0] || {};
@@ -137,8 +146,10 @@ class LineHandler {
                        `🔹 您的真實 LINE UID:\n${userId}\n\n` +
                        `🔹 系統識別角色: ${session.role}\n` +
                        `🔹 識別姓名: ${session.name}\n\n` +
-                       `🔹 教職員表解析欄位:\n${staffHeaders.join(', ')}\n\n` +
-                       `🔹 學員表解析欄位:\n${memberHeaders.join(', ')}`;
+                       `🔹 讀取試算表名稱: ${ssName}\n` +
+                       `🔹 讀取試算表 ID:\n${ssId}\n\n` +
+                       `🔹 教職員表前5筆原始資料:\n${staffListDebug || '無資料'}\n\n` +
+                       `🔹 教職員表解析欄位:\n${staffHeaders.join(', ')}`;
                        
       this.sendReply(replyToken, [{ type: 'text', text: replyMsg }]);
       return;
