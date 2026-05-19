@@ -375,3 +375,14 @@ function uiUpdateRichMenus() {
     ui.alert('❌ 更新失敗：' + (error instanceof Error ? error.message : error));
   }
 }
+
+/**
+ * 【知識庫標準解法】
+ * 強制觸發 Google 授權審查視窗的專用函式
+ * 用來解決 GAS 編輯器死不跳出授權視窗的 Bug (Bug 3 解決方案)
+ */
+function forceAuth() {
+  // 隨便呼叫一個需要該權限的官方方法，誘騙編輯器觸發審查
+  DriveApp.getFiles();
+  Logger.log('🎉 雲端硬碟 (DriveApp) 讀取權限授權完成！');
+}
