@@ -339,54 +339,293 @@
       </div>
     </template>
 
-    <!-- ================= STUDENT BINDING PORTAL ================= -->
+    <!-- ================= STUDENT BINDING PORTAL (Spec v2.0 4-Step Wizard) ================= -->
     <template x-if="currentMode === 'bind'">
       <div class="max-w-md mx-auto space-y-6">
-        <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl text-center space-y-4 relative">
-          <div class="w-16 h-16 bg-gradient-to-tr from-brand-600 to-blue-500 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-brand-500/20 text-2xl font-black">
-            👤
+        
+        <!-- Premium Step Indicator Header -->
+        <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-5 backdrop-blur-xl relative">
+          <!-- Step title header -->
+          <div class="text-center mb-4">
+            <span class="px-2.5 py-0.5 text-[10px] font-bold bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full" 
+                  x-text="'步驟 ' + studentBindForm.step + ' / 4'"></span>
+            <h2 class="text-lg font-extrabold text-white mt-1.5" x-show="studentBindForm.step === 1">👤 基本資料填寫</h2>
+            <h2 class="text-lg font-extrabold text-white mt-1.5" x-show="studentBindForm.step === 2">🏋️ 選擇預約班型</h2>
+            <h2 class="text-lg font-extrabold text-white mt-1.5" x-show="studentBindForm.step === 3">📅 選擇上課時段</h2>
+            <h2 class="text-lg font-extrabold text-white mt-1.5" x-show="studentBindForm.step === 4">🔒 確認綁定選課</h2>
+            <h2 class="text-lg font-extrabold text-white mt-1.5" x-show="studentBindForm.step === 5">🎉 綁定成功</h2>
           </div>
-          <h2 class="text-xl font-bold text-white">學員帳號 LINE 綁定</h2>
-          <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-            輸入您的真實姓名與生日，系統將自動匹配預登記課程與卡務額度，即時開啟 LINE 專屬個人小幫手！
-          </p>
+
+          <!-- Wizard Progress Bar -->
+          <div class="flex items-center justify-between px-6 relative" x-show="studentBindForm.step <= 4">
+            <!-- Background Line -->
+            <div class="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-slate-800 z-0"></div>
+            <!-- Active Progress Line -->
+            <div class="absolute left-6 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-brand-500 to-blue-500 z-0 transition-all duration-300"
+                 :style="'width: ' + ((studentBindForm.step - 1) / 3 * 100) + '%'"></div>
+
+            <!-- Dots -->
+            <template x-for="i in [1,2,3,4]">
+              <div class="relative z-10 w-7 h-7 rounded-full flex items-center justify-center border text-[11px] font-bold transition-all duration-300"
+                   :class="studentBindForm.step >= i 
+                     ? 'bg-gradient-to-tr from-brand-600 to-blue-500 border-brand-400 text-white shadow-md shadow-brand-500/20 scale-110' 
+                     : 'bg-slate-900 border-slate-800 text-slate-500'">
+                <span x-text="i"></span>
+              </div>
+            </template>
+          </div>
         </div>
 
-        <div class="bg-slate-900/10 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
-          <!-- 🎯 專業級即時連線狀態看板 (除錯完成，正式上線隱藏) -->
-          <!--
-          <div class="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl text-[11px] space-y-2 leading-relaxed text-slate-400">
-            <div class="flex justify-between border-b border-slate-800/50 pb-2">
-              <span class="font-semibold text-slate-400">連線模式:</span>
-              <span :class="liffReady && liff.isInClient() ? 'text-emerald-400 font-bold' : 'text-amber-400'" x-text="liffReady && liff.isInClient() ? '📱 LINE 官方 App' : '💻 電腦模擬網頁'"></span>
-            </div>
-            <div class="flex justify-between border-b border-slate-800/50 pb-2">
-              <span class="font-semibold text-slate-400">LINE 登入狀態:</span>
-              <span :class="liffReady && liff.isLoggedIn() ? 'text-emerald-400 font-bold' : 'text-rose-400'" x-text="liffReady ? (liff.isLoggedIn() ? '✅ 已認證登入' : '❌ 未登入') : '⌛ SDK 載入中...'"></span>
-            </div>
-            <div class="flex justify-between items-center border-b border-slate-800/50 pb-2">
-              <span class="font-semibold text-slate-400">LIFF ID:</span>
-              <span class="font-mono text-blue-400 truncate max-w-[170px] text-right font-bold text-[10px]" x-text="activeLiffId"></span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="font-semibold text-slate-400">當前識別碼 (Token):</span>
-              <span class="font-mono text-amber-400 truncate max-w-[170px] text-right font-bold text-[10px]" :title="devToken" x-text="devToken"></span>
-            </div>
-          </div>
-          -->
-
+        <!-- STEP 1: Basic Information -->
+        <div x-show="studentBindForm.step === 1" class="bg-slate-900/10 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4" x-transition>
           <div>
             <label class="block text-xs font-bold text-slate-400 mb-1.5">真實姓名</label>
-            <input type="text" x-model="studentBindForm.realName" placeholder="例如: 王小明" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+            <input type="text" x-model="studentBindForm.realName" placeholder="例如: 王小明" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 transition-all">
           </div>
+          
           <div>
-            <label class="block text-xs font-bold text-slate-400 mb-1.5">生日</label>
-            <input type="date" x-model="studentBindForm.birthday" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+            <label class="block text-xs font-bold text-slate-400 mb-2">性別</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button @click="studentBindForm.gender = '女'" 
+                      :class="studentBindForm.gender === '女' ? 'border-brand-500 bg-brand-500/5 text-brand-400 font-bold' : 'border-slate-800 bg-slate-950/20 text-slate-400'"
+                      class="py-3 rounded-xl border text-xs transition-all flex items-center justify-center gap-1.5">
+                <span>👩</span> 女生
+              </button>
+              <button @click="studentBindForm.gender = '男'" 
+                      :class="studentBindForm.gender === '男' ? 'border-brand-500 bg-brand-500/5 text-brand-400 font-bold' : 'border-slate-800 bg-slate-950/20 text-slate-400'"
+                      class="py-3 rounded-xl border text-xs transition-all flex items-center justify-center gap-1.5">
+                <span>👨</span> 男生
+              </button>
+            </div>
           </div>
-          <button @click="submitStudentBind()" class="w-full bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold shadow-lg shadow-brand-600/25 transition-all mt-2">
-            安全連線並綁定帳號
+
+          <div>
+            <label class="block text-xs font-bold text-slate-400 mb-1.5">出生年月日</label>
+            <input type="date" x-model="studentBindForm.birthday" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 transition-all">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1.5">身高 (cm)</label>
+              <input type="number" x-model.number="studentBindForm.height" placeholder="例如: 168" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 transition-all">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1.5">體重 (kg)</label>
+              <input type="number" x-model.number="studentBindForm.weight" placeholder="例如: 55" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 transition-all">
+            </div>
+          </div>
+
+          <button @click="if(studentBindForm.realName && studentBindForm.birthday && studentBindForm.height && studentBindForm.weight) { studentBindForm.step = 2; } else { addToast('請完整填寫所有個人資料欄位！', 'error'); }" 
+                  class="w-full bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white rounded-xl py-3.5 text-xs font-bold shadow-lg shadow-brand-600/20 transition-all mt-2 flex items-center justify-center gap-1.5">
+            下一步：選擇欲預約之班型 ➡️
           </button>
         </div>
+
+        <!-- STEP 2: Choose Class Type -->
+        <div x-show="studentBindForm.step === 2" class="bg-slate-900/10 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4" x-transition>
+          <p class="text-[11px] text-slate-400 leading-relaxed text-center">
+            請選擇您要選修預約的班級類型：
+          </p>
+
+          <div class="space-y-3">
+            <!-- Class Type A -->
+            <label :class="studentBindForm.classType === 'A' ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" 
+                   class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
+              <input type="radio" value="A" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
+              <div>
+                <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>A 類 基礎重訓專班</span>
+                  <span class="px-1.5 py-0.5 text-[8px] bg-emerald-500/10 text-emerald-400 rounded">最推薦</span>
+                </h4>
+                <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">適合重訓新手，深入雕琢基礎動作、骨盆與肌群發力技巧。</p>
+              </div>
+            </label>
+
+            <!-- Class Type B -->
+            <label :class="studentBindForm.classType === 'B' ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" 
+                   class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
+              <input type="radio" value="B" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
+              <div>
+                <h4 class="text-xs font-bold text-white">B 類 混合重訓專班</h4>
+                <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">高強度多關節複合動作，結合肌力與爆發力挑戰自我極限。</p>
+              </div>
+            </label>
+
+            <!-- Class Type C -->
+            <label :class="studentBindForm.classType === 'C' ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" 
+                   class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
+              <input type="radio" value="C" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
+              <div>
+                <h4 class="text-xs font-bold text-white">C 類 特殊專項專班</h4>
+                <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">針對特定肌群（如翹臀、核心、上肢）或特定器具的專項深入教學。</p>
+              </div>
+            </label>
+          </div>
+
+          <div class="flex gap-3 mt-4">
+            <button @click="studentBindForm.step = 1" class="flex-grow w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              ⬅️ 返回
+            </button>
+            <button @click="loadAvailableClasses(); studentBindForm.step = 3" 
+                    class="flex-grow w-2/3 bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-600/20">
+              下一步：選擇時段 ➡️
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Choose Class Slot -->
+        <div x-show="studentBindForm.step === 3" class="bg-slate-900/10 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4" x-transition>
+          <div class="text-center">
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              根據您的性別與選定班型，後端已為您篩選出可報名時段：
+            </p>
+          </div>
+
+          <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+            <template x-for="cls in studentBindForm.availableClasses" :key="cls.class_id">
+              <!-- Class slot item -->
+              <label :class="{
+                       'border-rose-500/20 bg-rose-500/5 cursor-not-allowed opacity-65': cls.status === 'full',
+                       'border-amber-500/20 bg-amber-500/5 cursor-not-allowed opacity-65': cls.status === 'pending',
+                       'border-brand-500 bg-brand-500/5': studentBindForm.classId === cls.class_id && cls.status === 'open',
+                       'border-slate-800 bg-slate-950/20 hover:border-slate-700': studentBindForm.classId !== cls.class_id && cls.status === 'open'
+                     }" 
+                     class="flex items-center justify-between p-3.5 rounded-2xl border transition-all text-left">
+                
+                <div class="flex items-start gap-2.5">
+                  <!-- Disabled status checker -->
+                  <input type="radio" 
+                         :value="cls.class_id" 
+                         x-model="studentBindForm.classId" 
+                         :disabled="cls.status !== 'open'"
+                         class="text-brand-600 focus:ring-brand-500 mt-0.5"
+                         x-show="cls.status === 'open'">
+                  
+                  <div class="text-[20px] leading-none mt-0.5" x-show="cls.status !== 'open'">🔒</div>
+                  
+                  <div>
+                    <h5 class="text-xs font-bold text-white" x-text="cls.class_name"></h5>
+                    <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                      📅 每週<span x-text="cls.day_of_week"></span> <span x-text="cls.start_time + ' ~ ' + cls.end_time"></span>
+                    </p>
+                    <div class="flex gap-1.5 mt-1.5">
+                      <span class="px-1 py-0.5 text-[8px] rounded border" 
+                            :class="cls.gender_limit === 'female' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-400 border-slate-700'"
+                            x-text="cls.gender_limit === 'female' ? '限女性' : '無性別限制'"></span>
+                      <span class="px-1 py-0.5 text-[8px] bg-slate-800 border border-slate-700 text-slate-400 rounded" 
+                            x-text="'額度 ' + cls.max_capacity + ' 人'"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="text-right flex flex-col items-end gap-1">
+                  <!-- Vacancy badges -->
+                  <span class="text-[9px] font-bold bg-brand-500/10 border border-brand-500/20 px-2 py-0.5 rounded-full text-brand-400"
+                        x-show="cls.status === 'open'"
+                        x-text="'餘 ' + (cls.max_capacity - cls.enrolled) + ' 名額'"></span>
+                  
+                  <span class="text-[9px] font-bold bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full text-rose-400"
+                        x-show="cls.status === 'full'">已額滿</span>
+
+                  <span class="text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-amber-400"
+                        x-show="cls.status === 'pending'">即將開課</span>
+                </div>
+
+              </label>
+            </template>
+
+            <!-- Empty slots view -->
+            <template x-if="studentBindForm.availableClasses.length === 0">
+              <div class="text-center py-8 space-y-2">
+                <span class="text-2xl block">🔍</span>
+                <p class="text-xs text-slate-500">目前沒有符合此性別與班型的開放時段。</p>
+              </div>
+            </template>
+          </div>
+
+          <div class="flex gap-3 mt-4">
+            <button @click="studentBindForm.step = 2" class="flex-grow w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              ⬅️ 返回
+            </button>
+            <button @click="if(studentBindForm.classId) { studentBindForm.step = 4; } else { addToast('請先選擇一個上課時段！', 'error'); }" 
+                    :disabled="!studentBindForm.classId"
+                    class="flex-grow w-2/3 bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-600/20 disabled:opacity-50 disabled:cursor-not-allowed">
+              下一步：確認綁定 ➡️
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Confirm Details -->
+        <div x-show="studentBindForm.step === 4" class="bg-slate-900/10 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4" x-transition>
+          <div class="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-3 leading-relaxed text-xs">
+            <h4 class="font-bold text-white border-b border-slate-800 pb-2 text-center text-xs">📝 預約綁定學員檔案清單摘要</h4>
+            
+            <div class="grid grid-cols-2 gap-y-2 gap-x-4">
+              <span class="text-slate-400">學員姓名:</span>
+              <span class="text-white text-right font-semibold" x-text="studentBindForm.realName"></span>
+              
+              <span class="text-slate-400">學員性別:</span>
+              <span class="text-white text-right font-semibold" x-text="studentBindForm.gender"></span>
+              
+              <span class="text-slate-400">出生年月:</span>
+              <span class="text-white text-right font-semibold" x-text="studentBindForm.birthday"></span>
+              
+              <span class="text-slate-400">身高體重:</span>
+              <span class="text-white text-right font-semibold" x-text="studentBindForm.height + ' cm / ' + studentBindForm.weight + ' kg'"></span>
+              
+              <span class="text-slate-400">預報時段:</span>
+              <span class="text-brand-400 text-right font-extrabold truncate" 
+                    x-text="studentBindForm.availableClasses.find(c => c.class_id === studentBindForm.classId)?.class_name || studentBindForm.classId"></span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-brand-500/10 border border-brand-500/25 rounded-2xl text-[10px] text-brand-400 leading-relaxed">
+            ⚠️ <b>名額鎖定提醒</b>：送出綁定後，後端將自動將您的 LINE 帳號完成認證，為您鎖定該時段課程名額，並為您存入一期 12 堂選課紀錄。
+          </div>
+
+          <div class="flex gap-3 mt-4">
+            <button @click="studentBindForm.step = 3" class="flex-grow w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              ⬅️ 返回
+            </button>
+            <button @click="submitStudentBind()" 
+                    class="flex-grow w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5">
+              <span x-show="loading" class="animate-spin">⏳</span>
+              確認綁定並送出選課 ➡️
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 5: Success View -->
+        <div x-show="studentBindForm.step === 5" class="bg-slate-900/40 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl text-center space-y-6" x-transition>
+          <div class="w-20 h-20 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 text-4xl animate-bounce">
+            🎉
+          </div>
+          
+          <div class="space-y-2">
+            <h2 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
+              帳號安全綁定與選課預約成功！
+            </h2>
+            <p class="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+              系統已成功為您的 LINE 帳號關聯學員檔案，並為您鎖定課程上課名額與額度！
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl inline-block w-full text-xs space-y-1">
+            <p class="text-slate-400">已關聯學員姓名：<span class="text-white font-bold" x-text="studentBindForm.realName"></span></p>
+            <p class="text-slate-400">已選修時段：<span class="text-brand-400 font-extrabold" 
+                                           x-text="studentBindForm.availableClasses.find(c => c.class_id === studentBindForm.classId)?.class_name || studentBindForm.classId"></span></p>
+          </div>
+
+          <p class="text-[10px] text-slate-500 animate-pulse">
+            * 後端正在推送最新的「學員圖文選單」至您的手機底欄，請重新開啟此官方對話視窗即可體驗！
+          </p>
+
+          <button @click="if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); } else { switchMode('leave'); }" 
+                  class="w-full bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 text-xs font-bold transition-all">
+            關閉此視窗
+          </button>
+        </div>
+
       </div>
     </template>
 
@@ -608,8 +847,15 @@
         },
         
         studentBindForm: {
+          step: 1,
           realName: '',
-          birthday: ''
+          gender: '女',
+          birthday: '',
+          height: '',
+          weight: '',
+          classType: 'A',
+          classId: '',
+          availableClasses: []
         },
         
         leaveForm: {
@@ -882,28 +1128,54 @@
           }
         },
         
+        // Load available classes from classes.available API (v2.0)
+        async loadAvailableClasses() {
+          try {
+            this.studentBindForm.availableClasses = await this.apiCall('classes.available', {
+              type: this.studentBindForm.classType,
+              gender: this.studentBindForm.gender
+            });
+          } catch (e) {
+            console.error(e);
+            this.addToast('無法載入可用班級時段，請稍後再試。', 'error');
+          }
+        },
+
         // Student Bind
         async submitStudentBind() {
           try {
             const result = await this.apiCall('member.bind', {
               realName: this.studentBindForm.realName,
-              birthday: this.studentBindForm.birthday
+              gender: this.studentBindForm.gender,
+              birthday: this.studentBindForm.birthday,
+              height: Number(this.studentBindForm.height),
+              weight: Number(this.studentBindForm.weight),
+              classId: this.studentBindForm.classId
             });
-            this.addToast(`安全綁定成功！歡迎您，「${result.member.realName}」！`, 'success');
+            
+            this.addToast(`帳號安全綁定與選課預約成功！歡迎，「${result.member.realName}」！`, 'success');
             this.studentProfile.realName = result.member.realName;
             this.studentProfile.level = result.member.level;
             
-            // 🎯 超貼心商業級體驗：若在 LINE App 內，綁定完畢自動關閉 LIFF 視窗返回聊天室！
+            // 跳轉至成功畫面
+            this.studentBindForm.step = 5;
+            
+            // 若在 LINE App 內，幾秒後自動關閉 LIFF 視窗
             if (typeof liff !== 'undefined' && liff.isInClient()) {
               setTimeout(() => {
                 liff.closeWindow();
-              }, 1500);
-            } else {
-              // 電腦模擬環境下切換至請假模組
-              setTimeout(() => this.switchMode('leave'), 1500);
+              }, 3000);
             }
           } catch (e) {
             console.error(e);
+            const errMsg = e.message || String(e);
+            // 409 防爆防呆特判
+            if (errMsg.indexOf('額滿') !== -1) {
+              this.addToast('很抱歉，此時段剛剛額滿，請重新選擇時段！', 'error');
+              // 重新撈取最新人數
+              await this.loadAvailableClasses();
+              this.studentBindForm.step = 3; // 跳回時段選擇步驟
+            }
           }
         },
         

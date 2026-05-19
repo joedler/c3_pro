@@ -39,43 +39,77 @@ function setupDatabase(): void {
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表
   for (const [engSheetName, chineseSheetName] of Object.entries(SheetHelper.SHEET_NAME_MAP)) {
     let sheet = ss.getSheetByName(chineseSheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(chineseSheetName);
-    } else {
-      sheet.clear();
-    }
-
-    // 取得該工作表對應的繁體中文 Headers
     const columnMap = SheetHelper.COLUMN_MAP[engSheetName] || {};
-    const headers = Object.values(columnMap);
+    const targetHeaders = Object.values(columnMap);
 
-    // 寫入 Header 欄位
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.setFrozenRows(1); // 凍結首列
+    if (!sheet) {
+      // 1. 若資料表不存在：全新建立並寫入完整表頭
+      sheet = ss.insertSheet(chineseSheetName);
+      sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
+      sheet.setFrozenRows(1); // 凍結首列
+      
+      // 美化表頭風格
+      sheet.getRange(1, 1, 1, targetHeaders.length)
+        .setBackground('#1e293b')
+        .setFontColor('#ffffff')
+        .setFontWeight('bold')
+        .setHorizontalAlignment('center');
 
-    // 表頭風格美化
-    sheet.getRange(1, 1, 1, headers.length)
-      .setBackground('#1e293b')
-      .setFontColor('#ffffff')
-      .setFontWeight('bold')
-      .setHorizontalAlignment('center');
+      // 寫入預設設定值 (僅在全新建立 Config 時寫入)
+      if (engSheetName === 'Config') {
+        sheet.getRange(2, 1, defaultSettings.length, 3).setValues(defaultSettings);
+      }
+      
+      // 寫入預設教室 (僅在全新建立 Rooms 時寫入)
+      if (engSheetName === 'Rooms') {
+        const defaultRooms = [
+          ['RM-01', '大教室', 15, 'active', '預設大教室'],
+          ['RM-02', '小教室', 8, 'active', '預設小教室']
+        ];
+        sheet.getRange(2, 1, defaultRooms.length, 5).setValues(defaultRooms);
+      }
+    } else {
+      // 2. 若資料表已存在：比對表頭並無損升級 (無損遷移升級欄位，不影響已填寫的舊資料)
+      const lastCol = sheet.getLastColumn();
+      let currentHeaders: any[] = [];
+      if (lastCol > 0) {
+        currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      }
 
-    // 寫入預設設定值
-    if (engSheetName === 'Config') {
-      sheet.getRange(2, 1, defaultSettings.length, 3).setValues(defaultSettings);
-    }
-    
-    // 如果是 Rooms，寫入預設教室範本方便測試
-    if (engSheetName === 'Rooms') {
-      const defaultRooms = [
-        ['RM-01', '大教室', 15, 'active', '預設大教室'],
-        ['RM-02', '小教室', 8, 'active', '預設小教室']
-      ];
-      sheet.getRange(2, 1, defaultRooms.length, 5).setValues(defaultRooms);
+      // 找出缺失的目標表頭欄位並依序追加到後面
+      const missingHeaders = targetHeaders.filter(header => !currentHeaders.includes(header));
+      
+      if (missingHeaders.length > 0) {
+        const startColForAppend = lastCol + 1;
+        sheet.getRange(1, startColForAppend, 1, missingHeaders.length).setValues([missingHeaders]);
+        
+        // 僅美化新追加的表頭樣式
+        sheet.getRange(1, startColForAppend, 1, missingHeaders.length)
+          .setBackground('#1e293b')
+          .setFontColor('#ffffff')
+          .setFontWeight('bold')
+          .setHorizontalAlignment('center');
+        
+        Logger.log(`【無損升級】在工作表「${chineseSheetName}」中追加了新欄位：${missingHeaders.join(', ')}`);
+      }
+
+      // 針對 Config 資料表：如果有新擴充的預設變數，安全地追加到末尾而不動原先的值
+      if (engSheetName === 'Config' && sheet.getLastRow() > 0) {
+        const existingKeys = sheet.getRange(1, 1, sheet.getLastRow(), 1).getValues().map(row => row[0]);
+        const missingSettings = defaultSettings.filter(setting => !existingKeys.includes(setting[0]));
+        if (missingSettings.length > 0) {
+          const nextRow = sheet.getLastRow() + 1;
+          sheet.getRange(nextRow, 1, missingSettings.length, 3).setValues(missingSettings);
+          Logger.log(`【無損升級】在設定表（Config）中安全追加了預設變數：${missingSettings.map(s => s[0]).join(', ')}`);
+        }
+      }
     }
 
     // 自動微調欄寬
-    sheet.autoResizeColumns(1, headers.length);
+    const currentLastCol = sheet.getLastColumn();
+    if (currentLastCol > 0) {
+      sheet.autoResizeColumns(1, currentLastCol);
+    }
   }
 
   // 刪除預設的 "工作表1" 或 "Sheet1" (若存在且不是我們的資料表之一)
@@ -86,12 +120,12 @@ function setupDatabase(): void {
       try {
         ss.deleteSheet(defaultSheet);
       } catch (e) {
-        // 忽略單一工作表無法刪除的錯誤
+        // 忽略單一工作表無法刪除 the 錯誤
       }
     }
   }
 
-  Logger.log('=== GymOS v3.0 繁體中文資料庫結構與 11 張 Sheets 初始化成功 ===');
+  Logger.log('=== GymOS v3.0 繁體中文資料庫結構「無損遷移與升級」執行成功 ===');
 }
 
 /**
@@ -389,4 +423,417 @@ function forceAuth() {
   // 隨便呼叫一個需要該權限的官方方法，誘騙編輯器觸發審查
   DriveApp.getFiles();
   Logger.log('🎉 雲端硬碟 (DriveApp) 讀取權限授權完成！');
+}
+
+/**
+ * 一鍵自動建立並寫入 C3 Fitness 17 班課程種子資料 (Spec v2.0)
+ */
+function seedClasses(): void {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+    if (!spreadsheetId) {
+      throw new Error('【設定錯誤】未在 GAS 專案屬性中設定 SPREADSHEET_ID！');
+    }
+    ss = SpreadsheetApp.openById(spreadsheetId);
+  }
+  const chineseSheetName = SheetHelper.SHEET_NAME_MAP['Classes'];
+  let sheet = ss.getSheetByName(chineseSheetName);
+  if (!sheet) {
+    throw new Error('未找到班級設定工作表，請先執行初始化資料庫');
+  }
+
+  // 清除除了 Header 以外的所有資料
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+  }
+
+  const defaultClasses: any[] = [
+    // === A 類：基礎重訓 (每週1次，難度2-5，上限8人，開放補課) ===
+    {
+      class_id: 'A-MON-1000',
+      class_name: '基礎重訓 週一班',
+      class_type: 'A',
+      level: 'Lv.2',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 4,
+      enrolled: 4,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週一',
+      time_slot: '上午',
+      start_time: '10:00',
+      end_time: '11:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-MON-1900',
+      class_name: '基礎重訓 週一女性專班',
+      class_type: 'A',
+      level: 'Lv.4',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 5,
+      enrolled: 5,
+      gender_limit: 'female',
+      allow_makeup: true,
+      day_of_week: '週一',
+      time_slot: '晚間',
+      start_time: '19:00',
+      end_time: '20:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-MON-2000',
+      class_name: '基礎重訓 週一晚間班',
+      class_type: 'A',
+      level: 'Lv.4',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 7,
+      enrolled: 7,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週一',
+      time_slot: '晚間',
+      start_time: '20:00',
+      end_time: '21:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-TUE-1000',
+      class_name: '基礎重訓 週二女性專班',
+      class_type: 'A',
+      level: 'Lv.4',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 7,
+      enrolled: 7,
+      gender_limit: 'female',
+      allow_makeup: true,
+      day_of_week: '週二',
+      time_slot: '上午',
+      start_time: '10:00',
+      end_time: '11:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-WED-1900',
+      class_name: '基礎重訓 週三女性專班',
+      class_type: 'A',
+      level: 'Lv.2',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 4,
+      enrolled: 4,
+      gender_limit: 'female',
+      allow_makeup: true,
+      day_of_week: '週三',
+      time_slot: '晚間',
+      start_time: '19:00',
+      end_time: '20:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-WED-2000',
+      class_name: '基礎重訓 週三晚間限女班',
+      class_type: 'A',
+      level: 'Lv.2',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 6,
+      enrolled: 6,
+      gender_limit: 'female',
+      allow_makeup: true,
+      day_of_week: '週三',
+      time_slot: '晚間',
+      start_time: '20:00',
+      end_time: '21:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-THU-2000',
+      class_name: '基礎重訓 週四晚間限女班',
+      class_type: 'A',
+      level: 'Lv.4',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 6,
+      enrolled: 6,
+      gender_limit: 'female',
+      allow_makeup: true,
+      day_of_week: '週四',
+      time_slot: '晚間',
+      start_time: '20:00',
+      end_time: '21:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'A-SAT-1000',
+      class_name: '基礎重訓 週六上午班',
+      class_type: 'A',
+      level: 'Lv.2',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 8,
+      enrolled: 0,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週六',
+      time_slot: '上午',
+      start_time: '10:00',
+      end_time: '11:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'pending',
+      notes: '尚未開課'
+    },
+    {
+      class_id: 'A-SUN-1100',
+      class_name: '基礎重訓 週日上午班',
+      class_type: 'A',
+      level: 'Lv.4',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 8,
+      enrolled: 8,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週日',
+      time_slot: '上午',
+      start_time: '11:00',
+      end_time: '12:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+
+    // === B 類：混合重訓 (每週2次，難度6-9，上限15人，開放補課，不限性別) ===
+    {
+      class_id: 'B-MONWED-1840',
+      class_name: '混合重訓 週一三晚間A班',
+      class_type: 'B',
+      level: 'Lv.8',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 14,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週一 + 週三',
+      time_slot: '晚間',
+      start_time: '18:40',
+      end_time: '19:40',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 2,
+      total_sessions: 24,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'B-MONWED-1950',
+      class_name: '混合重訓 週一三晚間B班',
+      class_type: 'B',
+      level: 'Lv.6',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 13,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週一 + 週三',
+      time_slot: '晚間',
+      start_time: '19:50',
+      end_time: '20:50',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 2,
+      total_sessions: 24,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'B-MONWED-2100',
+      class_name: '混合重訓 週一三夜間班',
+      class_type: 'B',
+      level: 'Lv.6',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 12,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週一 + 週三',
+      time_slot: '晚間',
+      start_time: '21:00',
+      end_time: '22:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 2,
+      total_sessions: 24,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'B-TUETHU-1840',
+      class_name: '混合重訓 週二四晚間A班',
+      class_type: 'B',
+      level: 'Lv.8',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 14,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週二 + 週四',
+      time_slot: '晚間',
+      start_time: '18:40',
+      end_time: '19:40',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 2,
+      total_sessions: 24,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'B-TUETHU-1950',
+      class_name: '混合重訓 週二四晚間B班',
+      class_type: 'B',
+      level: 'Lv.6',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 10,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週二 + 週四',
+      time_slot: '晚間',
+      start_time: '19:50',
+      end_time: '20:50',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 2,
+      total_sessions: 24,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'B-TUETHU-2100',
+      class_name: '混合重訓 週二四夜間班',
+      class_type: 'B',
+      level: 'Lv.8',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 13,
+      gender_limit: null,
+      allow_makeup: true,
+      day_of_week: '週二 + 週四',
+      time_slot: '晚間',
+      start_time: '21:00',
+      end_time: '22:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 2,
+      total_sessions: 24,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+
+    // === C 類：特殊專班 (每週1次，程度不固定，上限15人，不開放補課，不限性別) ===
+    {
+      class_id: 'C-THU-1000',
+      class_name: '特殊專班 週四上午班',
+      class_type: 'C',
+      level: '不固定',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 0,
+      gender_limit: null,
+      allow_makeup: false,
+      day_of_week: '週四',
+      time_slot: '上午',
+      start_time: '10:00',
+      end_time: '11:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    },
+    {
+      class_id: 'C-SAT-0800',
+      class_name: '特殊專班 週六上午班',
+      class_type: 'C',
+      level: '不固定',
+      coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
+      room_id: 'RM-01',
+      max_capacity: 15,
+      enrolled: 0,
+      gender_limit: null,
+      allow_makeup: false,
+      day_of_week: '週六',
+      time_slot: '上午',
+      start_time: '08:00',
+      end_time: '09:00',
+      period_start: new Date('2026-05-01'),
+      period_weeks: 12,
+      sessions_per_week: 1,
+      total_sessions: 12,
+      status: 'open',
+      notes: '課程種子資料'
+    }
+  ];
+
+  // 批次寫入所有班級資料
+  defaultClasses.forEach(cls => {
+    SheetHelper.addRow('Classes', cls);
+  });
+
+  Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料！ ===`);
 }

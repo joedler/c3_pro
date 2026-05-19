@@ -7,7 +7,25 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('🛠️ GymOS 管理工具')
     .addItem('🖼️ 一鍵更新 LINE 圖文選單', 'uiUpdateRichMenus')
+    .addItem('🗃️ 一鍵重置資料庫與課程種子', 'uiResetDatabaseAndSeed')
     .addToUi();
+}
+
+/**
+ * 專屬提供給 Google Sheets UI 選單使用的「一鍵重置資料庫並寫入課程種子」按鈕
+ */
+function uiResetDatabaseAndSeed() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert('⚠️ 警告', '確定要初始化（清除）所有資料表，並導入最新的 17 班課程種子資料嗎？', ui.ButtonSet.YES_NO);
+  if (response === ui.Button.YES) {
+    try {
+      setupDatabase();
+      seedClasses();
+      ui.alert('🎉 成功！資料表結構已全部重建，且 17 班課程種子已成功匯入！');
+    } catch (e) {
+      ui.alert('❌ 重置失敗：' + (e instanceof Error ? e.message : e));
+    }
+  }
 }
 
 function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextOutput {
@@ -67,6 +85,10 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
     // 5. API 門控路由分發 (根據 Action 比對 Role)
     const routes: Record<string, () => any> = {
       // --- 學員模組 ---
+      'classes.available': () => {
+        // 免登入門控，供綁定流程的步驟 3 動態獲取可用班級時段
+        return MemberService.getAvailableClasses(data);
+      },
       'member.bind': () => {
         return MemberService.bind(data, user);
       },
@@ -141,8 +163,18 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
     return respond(200, responseData);
 
   } catch (error) {
-    Logger.log(`[doPost 出錯] ${error instanceof Error ? error.message : error}`);
-    return respond(500, { error: error instanceof Error ? error.message : '系統內部錯誤' });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    Logger.log(`[doPost 出錯] ${errMsg}`);
+    
+    // 支援規格書 v2.0 的自訂 REST 狀態碼 (如 409, 422)
+    if (errMsg.indexOf('409:') === 0) {
+      return respond(409, { error: errMsg.substring(4) });
+    }
+    if (errMsg.indexOf('422:') === 0) {
+      return respond(422, { error: errMsg.substring(4) });
+    }
+    
+    return respond(500, { error: errMsg });
   }
 }
 

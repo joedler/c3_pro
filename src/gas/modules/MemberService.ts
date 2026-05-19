@@ -8,20 +8,96 @@ class MemberService {
    * 新學員 LINE 帳號綁定流程
    * 優先匹配後台已預先登記之學員（真實姓名 + 生日），若無匹配則自動建立全新學員檔案。
    */
+  /**
+   * 根據班型與性別動態獲取可用班級時段 (Spec v2.0)
+   */
+  public static getAvailableClasses(data: { type: string; gender: string }): Record<string, any>[] {
+    const { type, gender } = data;
+    if (!type) {
+      throw new Error('請指定班級類型。');
+    }
+
+    const allClasses = SheetHelper.getRows<any>('Classes');
+    
+    return allClasses
+      .filter(cls => {
+        if (cls.class_type !== type) return false;
+        
+        // 若學員性別為男，自動過濾並隱藏限女班
+        if (gender === '男' && cls.gender_limit === 'female') {
+          return false;
+        }
+
+        // 保留狀態為 open 與 pending 的課堂
+        return cls.status === 'open' || cls.status === 'pending';
+      })
+      .map(cls => {
+        const capacity = Number(cls.max_capacity) || 0;
+        const enrolled = Number(cls.enrolled) || 0;
+        
+        let computedStatus = cls.status;
+        if (cls.status === 'open') {
+          if (enrolled >= capacity) {
+            computedStatus = 'full';
+          }
+        }
+
+        return {
+          class_id: cls.class_id,
+          class_name: cls.class_name,
+          class_type: cls.class_type,
+          level: cls.level || '—',
+          day_of_week: cls.day_of_week,
+          start_time: cls.start_time,
+          end_time: cls.end_time,
+          max_capacity: capacity,
+          enrolled: enrolled,
+          gender_limit: cls.gender_limit,
+          allow_makeup: cls.allow_makeup === true || String(cls.allow_makeup).toLowerCase() === 'true',
+          status: computedStatus
+        };
+      });
+  }
+
+  /**
+   * 新學員 LINE 帳號與時段課程四步驟綁定流程 (Spec v2.0)
+   */
   public static bind(
-    data: { realName: string; birthday: string },
+    data: {
+      realName: string;
+      gender: string;
+      birthday: string;
+      height: number;
+      weight: number;
+      classId: string;
+    },
     user: UserSession
   ): Record<string, any> {
     if (!user || !user.uid) {
       throw new Error('無法取得您的 LINE 身份識別，請在 LINE 官方帳號內重新開啟頁面。');
     }
 
-    const { realName, birthday } = data;
-    if (!realName) {
+    const { realName, gender, birthday, height, weight, classId } = data;
+    if (!realName || String(realName).trim() === '') {
       throw new Error('請輸入真實姓名。');
     }
+    if (!gender || (gender !== '男' && gender !== '女')) {
+      throw new Error('請選擇性別。');
+    }
+    if (!birthday) {
+      throw new Error('請選擇出生年月日。');
+    }
+    if (!height || isNaN(Number(height)) || Number(height) < 100 || Number(height) > 250) {
+      throw new Error('請輸入合理的身高範圍 (100–250 cm)。');
+    }
+    if (!weight || isNaN(Number(weight)) || Number(weight) < 20 || Number(weight) > 200) {
+      throw new Error('請輸入合理的體重範圍 (20–200 kg)。');
+    }
+    if (!classId) {
+      throw new Error('請選擇要綁定的上課時段。');
+    }
 
-    // 0. 檢查是否為教職員預先登記的綁定
+    // 0. 檢查是否為教職員預先登記的綁定 (教職員優先路徑，不綁定課程)
     const allStaff = SheetHelper.getRows<any>('Staff');
     const matchedStaff = allStaff.find(
       s => s.real_name === realName && (!s.line_uid || s.line_uid === '')
@@ -30,7 +106,6 @@ class MemberService {
       SheetHelper.updateRow('Staff', 'staff_id', matchedStaff.staff_id, {
         line_uid: user.uid
       });
-      // 根據教職員角色動態綁定 LINE 圖文選單
       LineRichMenu.link(user.uid, matchedStaff.role || 'coach');
       Logger.log(`[教職員綁定] 成功匹配預登記教職員：${realName} (${matchedStaff.staff_id})`);
       return {
@@ -45,21 +120,38 @@ class MemberService {
       };
     }
 
-    if (!birthday) {
-      throw new Error('請輸入生日。');
+    // 1. 取得目標班級資訊，進行人數與性別防呆
+    const targetClass = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+    if (!targetClass) {
+      throw new Error('所選的課程時段不存在，請重新整理頁面。');
+    }
+    if (targetClass.status === 'pending') {
+      throw new Error('該課程時段目前尚未開課，無法預約綁定。');
+    }
+    
+    // 性別過濾防呆
+    if (gender === '男' && targetClass.gender_limit === 'female') {
+      throw new Error('很抱歉，此課程為限女專班，男性學員無法選修。');
     }
 
-    // 1. 檢查是否該 LINE 帳號已綁定過任何學員
+    // 人數防呆 (Race Condition 關鍵點)
+    const maxCapacity = Number(targetClass.max_capacity) || 0;
+    const enrolled = Number(targetClass.enrolled) || 0;
+    if (enrolled >= maxCapacity) {
+      throw new Error('409:很抱歉，此時段剛剛額滿，請重新選擇時段');
+    }
+
+    // 2. 檢查是否該 LINE 帳號已綁定過任何學員
     const existingMemberByUid = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
     if (existingMemberByUid) {
       if (existingMemberByUid.status === 'active') {
-        throw new Error(`您的 LINE 帳號已綁定學員「${existingMemberByUid.real_name}」，無須重複綁定。`);
+        throw new Error(`422:您的 LINE 帳號已綁定學員「${existingMemberByUid.real_name}」，無須重複綁定。`);
       } else {
-        throw new Error(`您的 LINE 帳號綁定的學員「${existingMemberByUid.real_name}」狀態為：${existingMemberByUid.status}，請聯絡管理員啟用。`);
+        throw new Error(`422:您的 LINE 帳號綁定的學員「${existingMemberByUid.real_name}」狀態為：${existingMemberByUid.status}，請聯絡管理員啟用。`);
       }
     }
 
-    // 2. 搜尋是否有「預先登記」的學員（真實姓名與生日吻合，且尚未綁定 LINE 帳號）
+    // 3. 搜尋是否有「預先登記」的學員（真實姓名與生日吻合，且尚未綁定 LINE 帳號）
     const allMembers = SheetHelper.getRows<any>('Members');
     const matchedPreRegistered = allMembers.find(
       member =>
@@ -68,11 +160,19 @@ class MemberService {
         (!member.line_uid || member.line_uid === '')
     );
 
+    let finalMemberId = '';
+    let finalLevel = 'L1';
+
     if (matchedPreRegistered) {
-      // 匹配成功：綁定該預先登記學員的 LINE UID 與 LINE 暱稱，並激活狀態
-      const updated = SheetHelper.updateRow('Members', 'member_id', matchedPreRegistered.member_id, {
+      finalMemberId = matchedPreRegistered.member_id;
+      finalLevel = matchedPreRegistered.level || 'L1';
+      
+      const updated = SheetHelper.updateRow('Members', 'member_id', finalMemberId, {
         line_uid: user.uid,
         display_name: user.name || 'LINE 用戶',
+        gender: gender,
+        height: Number(height),
+        weight: Number(weight),
         status: 'active'
       });
 
@@ -80,49 +180,59 @@ class MemberService {
         throw new Error('學員帳號更新失敗，請重新嘗試或聯絡管理員。');
       }
 
-      // 動態對接 LINE 學員豐富選單
-      LineRichMenu.link(user.uid, 'member');
-
-      Logger.log(`[學員綁定] 成功匹配預先登記學員：${realName} (${matchedPreRegistered.member_id})`);
-      return {
-        success: true,
-        type: 'matched',
-        member: {
-          memberId: matchedPreRegistered.member_id,
-          realName: matchedPreRegistered.real_name,
-          level: matchedPreRegistered.level
-        }
+      Logger.log(`[學員綁定] 成功匹配預先登記學員：${realName} (${finalMemberId})`);
+    } else {
+      // 4. 無匹配之預先登記檔案：建立全新學員檔案
+      finalMemberId = `MEM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const newMember = {
+        member_id: finalMemberId,
+        line_uid: user.uid,
+        display_name: user.name || 'LINE 用戶',
+        real_name: realName,
+        birthday: birthday,
+        gender: gender,
+        height: Number(height),
+        weight: Number(weight),
+        level: 'L1',
+        join_date: new Date(),
+        status: 'active',
+        notes: '學員自主綁定建立'
       };
+
+      SheetHelper.addRow('Members', newMember);
+      Logger.log(`[學員綁定] 建立全新學員檔案：${realName} (${finalMemberId})`);
     }
 
-    // 3. 無匹配之預先登記檔案：建立全新學員檔案
-    const newMemberId = `MEM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const newMember = {
-      member_id: newMemberId,
-      line_uid: user.uid,
-      display_name: user.name || 'LINE 用戶',
-      real_name: realName,
-      birthday: birthday,
-      level: 'L1', // 預設最初階程度，由教練後續於後台微調
-      join_date: new Date(),
+    // 5. 寫入選課紀錄表 (Enrollments)
+    const newEnrollmentId = `ENR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newEnrollment = {
+      enrollment_id: newEnrollmentId,
+      member_id: finalMemberId,
+      class_id: classId,
+      enroll_date: new Date(),
       status: 'active',
-      notes: '學員自主綁定建立'
+      total_paid_sessions: 12,
+      notes: '綁定自動選課'
     };
+    SheetHelper.addRow('Enrollments', newEnrollment);
+    Logger.log(`[學員綁定] 成功寫入選課紀錄：${newEnrollmentId}`);
 
-    SheetHelper.addRow('Members', newMember);
-    
-    // 動態對接 LINE 學員豐富選單
+    // 6. 更新班級表的「目前人數」計數器 (+1)
+    SheetHelper.updateRow('Classes', 'class_id', classId, {
+      enrolled: enrolled + 1
+    });
+    Logger.log(`[學員綁定] 班級人數計數更新成功：${classId} (目前人數: ${enrolled + 1})`);
+
+    // 7. 動態對接 LINE 學員豐富選單
     LineRichMenu.link(user.uid, 'member');
-
-    Logger.log(`[學員綁定] 建立全新學員檔案：${realName} (${newMemberId})`);
 
     return {
       success: true,
-      type: 'new',
+      type: matchedPreRegistered ? 'matched' : 'new',
       member: {
-        memberId: newMemberId,
+        memberId: finalMemberId,
         realName: realName,
-        level: 'L1'
+        level: finalLevel
       }
     };
   }
