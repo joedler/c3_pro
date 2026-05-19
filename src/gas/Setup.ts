@@ -830,10 +830,16 @@ function seedClasses(): void {
     }
   ];
 
-  // 批次寫入所有班級資料
+  // 批次寫入所有班級資料並自動展開課堂 Sessions 及 Google 日曆事件
   defaultClasses.forEach(cls => {
     SheetHelper.addRow('Classes', cls);
+    try {
+      ClassEngine.generate(cls.class_id);
+      Logger.log(`[自動排課] 班級 ${cls.class_id} 的課堂已成功展開並建立日曆事件。`);
+    } catch (err) {
+      Logger.log(`[自動排課失敗 - ${cls.class_id}] ${err instanceof Error ? err.message : err}`);
+    }
   });
 
-  Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料！ ===`);
+  Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料且批次展開日曆！ ===`);
 }

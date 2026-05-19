@@ -34,17 +34,55 @@ class ClassEngine {
     const holidaysStr = Config.get('HOLIDAYS', '');
     const holidays = holidaysStr ? holidaysStr.split(',').map(d => d.trim()) : [];
 
+    // 解析星期幾字串為 JavaScript getDay() 數字陣列 (例如 "週一" -> [1], "週一 + 週三" -> [1, 3])
+    function parseDaysOfWeek(dayStr: string): number[] {
+      const clean = String(dayStr || '').trim();
+      const days: number[] = [];
+      const map: Record<string, number> = {
+        '日': 0, '週日': 0, '星期日': 0,
+        '一': 1, '週一': 1, '星期一': 1,
+        '二': 2, '週二': 2, '星期二': 2,
+        '三': 3, '週三': 3, '星期三': 3,
+        '四': 4, '週四': 4, '星期四': 4,
+        '五': 5, '週五': 5, '星期五': 5,
+        '六': 6, '週六': 6, '星期六': 6
+      };
+      
+      if (clean.includes('+')) {
+        clean.split('+').forEach(part => {
+          const key = part.trim();
+          if (map[key] !== undefined) {
+            days.push(map[key]);
+          }
+        });
+      } else {
+        if (map[clean] !== undefined) {
+          days.push(map[clean]);
+        } else {
+          const num = Number(clean);
+          if (!isNaN(num)) {
+            days.push(num);
+          }
+        }
+      }
+      return days;
+    }
+
+    const daysOfWeek = parseDaysOfWeek(cls.day_of_week);
+    if (daysOfWeek.length === 0) {
+      daysOfWeek.push(1); // 預設週一
+    }
+
     let currentDate = new Date(cls.period_start);
     currentDate.setHours(0, 0, 0, 0); // 確保在台北時間的午夜開始計算
 
     // 1. 移動到第一個符合上課星期的日期
-    while (currentDate.getDay() !== Number(cls.day_of_week)) {
+    while (!daysOfWeek.includes(currentDate.getDay())) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
     const totalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
     let seq = 1;
-    let alternateGap = 3; // 適用於一週兩堂 (如週二/週五差 3 天，週五/下週二差 4 天)
 
     // 2. 展開所有上課日期並跳過國定假日
     while (seq <= totalSessions) {
@@ -74,12 +112,9 @@ class ClassEngine {
     }
 
     function advanceDate() {
-      if (Number(cls.sessions_per_week) === 1) {
-        currentDate.setDate(currentDate.getDate() + 7);
-      } else {
-        currentDate.setDate(currentDate.getDate() + alternateGap);
-        alternateGap = alternateGap === 3 ? 4 : 3;
-      }
+      do {
+        currentDate.setDate(currentDate.getDate() + 1);
+      } while (!daysOfWeek.includes(currentDate.getDay()));
     }
 
     // 3. 取得相關關聯名稱 (教練、教室) 供日曆渲染使用
