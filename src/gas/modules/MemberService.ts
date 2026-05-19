@@ -54,6 +54,8 @@ class MemberService {
           enrolled: enrolled,
           gender_limit: cls.gender_limit,
           allow_makeup: cls.allow_makeup === true || String(cls.allow_makeup).toLowerCase() === 'true',
+          period_start: cls.period_start,
+          period_weeks: Number(cls.period_weeks) || 12,
           status: computedStatus
         };
       });
@@ -161,11 +163,11 @@ class MemberService {
     );
 
     let finalMemberId = '';
-    let finalLevel = 'L1';
+    let finalLevel = targetClass.level || 'L1';
 
     if (matchedPreRegistered) {
       finalMemberId = matchedPreRegistered.member_id;
-      finalLevel = matchedPreRegistered.level || 'L1';
+      finalLevel = targetClass.level || matchedPreRegistered.level || 'L1';
       
       const updated = SheetHelper.updateRow('Members', 'member_id', finalMemberId, {
         line_uid: user.uid,
@@ -173,6 +175,7 @@ class MemberService {
         gender: gender,
         height: Number(height),
         weight: Number(weight),
+        level: finalLevel,
         status: 'active'
       });
 
@@ -180,7 +183,7 @@ class MemberService {
         throw new Error('學員帳號更新失敗，請重新嘗試或聯絡管理員。');
       }
 
-      Logger.log(`[學員綁定] 成功匹配預先登記學員：${realName} (${finalMemberId})`);
+      Logger.log(`[學員綁定] 成功匹配預先登記學員：${realName} (${finalMemberId})，程度設定為：${finalLevel}`);
     } else {
       // 4. 無匹配之預先登記檔案：建立全新學員檔案
       finalMemberId = `MEM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -193,7 +196,7 @@ class MemberService {
         gender: gender,
         height: Number(height),
         weight: Number(weight),
-        level: 'L1',
+        level: finalLevel,
         join_date: new Date(),
         status: 'active',
         notes: '學員自主綁定建立'

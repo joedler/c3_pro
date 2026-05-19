@@ -175,9 +175,6 @@
               <button @click="showClassModal = true" class="px-5 py-3 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-600/20 transition-all flex items-center gap-1.5">
                 <span>➕</span> 新增班級並自動展開
               </button>
-              <button @click="showBindModal = true" class="px-5 py-3 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl transition-all flex items-center gap-1.5">
-                <span>👤</span> 預先登記學員
-              </button>
               <button @click="syncRichMenus()" class="px-5 py-3 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1.5">
                 <span>🖼️</span> 同步圖文選單
               </button>
@@ -234,6 +231,37 @@
                     <div class="flex items-center justify-between text-xs p-2.5 bg-slate-900/40 border border-slate-800 rounded-lg">
                       <span class="text-slate-400">課堂紀錄表格 `Sessions`</span>
                       <span class="text-emerald-400 font-bold">連線正常</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Session Suspension panel -->
+                <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4 lg:col-span-3">
+                  <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (停課/代課)</h3>
+                  <p class="text-[11px] text-slate-400">
+                    輸入特定的課堂 ID（例如 <code>SES-xxx</code>，可從試算表「課堂紀錄」或 Google 日曆活動中取得），即可一鍵與 Google 日曆及 LINE 系統完成同步調整！
+                  </p>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustSessionId: '', adjustReason: '', adjustSubCoach: '' }">
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 輸入課堂 ID (Session ID)</label>
+                      <input type="text" x-model="adjustSessionId" placeholder="例如: SES-1716075900" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-400 mb-1">2. 輸入調整原因</label>
+                      <input type="text" x-model="adjustReason" placeholder="例如: 教練公假 / 國定假日停課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-bold text-slate-400 mb-1">3. 安排代課教練 (選填 LINE UID)</label>
+                      <input type="text" x-model="adjustSubCoach" placeholder="空白代表停課，填入即安排代課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                    
+                    <div class="sm:col-span-3 flex justify-end gap-3 mt-2">
+                      <button @click="if(!adjustSessionId || !adjustReason) { addToast('請填妥課堂 ID 與調整原因！', 'error'); return; } 
+                                      apiCall('admin.suspendSession', { sessionIds: [adjustSessionId], reason: adjustReason, substituteCoachUid: adjustSubCoach || null })
+                                      .then(() => { addToast('🟢 課堂調整已成功執行，日曆與試算表已連動同步！', 'success'); adjustSessionId=''; adjustReason=''; adjustSubCoach=''; })" 
+                              class="px-4 py-2.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5">
+                        <span>⚠️</span> 送出課程停課/代課調整
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -312,29 +340,7 @@
           </div>
         </div>
 
-        <!-- Bind Modal Form -->
-        <div x-show="showBindModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
-          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
-            <h3 class="text-lg font-bold text-white mb-4">👤 預先登記學員資料</h3>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">學員真實姓名</label>
-                <input type="text" x-model="adminBindForm.realName" placeholder="例如: 王小明" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">學員生日</label>
-                <input type="date" x-model="adminBindForm.birthday" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <p class="text-[10px] text-slate-500 leading-relaxed">
-                * 登記完成後，學員在 LINE 官方帳號內只要輸入姓名與生日即可一秒完美對齊帳號權限，無須另外發送驗證碼！
-              </p>
-            </div>
-            <div class="flex gap-3 mt-6">
-              <button @click="submitAdminRegister(); showBindModal = false" class="flex-grow bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all">送出登記</button>
-              <button @click="showBindModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-6 py-3 text-xs font-bold transition-all">取消</button>
-            </div>
-          </div>
-        </div>
+
 
       </div>
     </template>
@@ -434,7 +440,7 @@
               <input type="radio" value="A" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
               <div>
                 <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>A 類 基礎重訓專班</span>
+                  <span>A 類 基礎重訓專班 (提供每週 1 堂 或 每週 2 堂)</span>
                   <span class="px-1.5 py-0.5 text-[8px] bg-emerald-500/10 text-emerald-400 rounded">最推薦</span>
                 </h4>
                 <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">適合重訓新手，深入雕琢基礎動作、骨盆與肌群發力技巧。</p>
@@ -446,7 +452,7 @@
                    class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
               <input type="radio" value="B" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
               <div>
-                <h4 class="text-xs font-bold text-white">B 類 混合重訓專班</h4>
+                <h4 class="text-xs font-bold text-white">B 類 混合重訓專班 (提供每週 1 堂)</h4>
                 <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">高強度多關節複合動作，結合肌力與爆發力挑戰自我極限。</p>
               </div>
             </label>
@@ -456,7 +462,7 @@
                    class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
               <input type="radio" value="C" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
               <div>
-                <h4 class="text-xs font-bold text-white">C 類 特殊專項專班</h4>
+                <h4 class="text-xs font-bold text-white">C 類 特殊專項專班 (提供每週 1 堂)</h4>
                 <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">針對特定肌群（如翹臀、核心、上肢）或特定器具的專項深入教學。</p>
               </div>
             </label>
@@ -504,9 +510,9 @@
                   <div class="text-[20px] leading-none mt-0.5" x-show="cls.status !== 'open'">🔒</div>
                   
                   <div>
-                    <h5 class="text-xs font-bold text-white" x-text="cls.class_name"></h5>
+                    <h5 class="text-xs font-bold text-white" x-text="cls.class_name + ' / ' + cls.period_weeks + '週'"></h5>
                     <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
-                      📅 每週<span x-text="cls.day_of_week"></span> <span x-text="cls.start_time + ' ~ ' + cls.end_time"></span>
+                      📅 每週<span x-text="cls.day_of_week"></span> <span x-text="formatTime(cls.start_time) + '~' + formatTime(cls.end_time)"></span> &nbsp;<span class="text-slate-500" x-text="formatDateMMDD(cls.period_start) + ' ~ ' + getPeriodEndMMDD(cls.period_start, cls.period_weeks)"></span>
                     </p>
                     <div class="flex gap-1.5 mt-1.5">
                       <span class="px-1 py-0.5 text-[8px] rounded border" 
@@ -893,6 +899,49 @@
         
         removeToast(id) {
           this.toasts = this.toasts.filter(t => t.id !== id);
+        },
+
+        formatTime(timeStr) {
+          if (!timeStr) return '';
+          try {
+            if (String(timeStr).includes('T')) {
+              const d = new Date(timeStr);
+              if (!isNaN(d.getTime())) {
+                const hours = String(d.getHours()).padStart(2, '0');
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+              }
+            }
+          } catch(e) {}
+          return String(timeStr).substring(0, 5);
+        },
+
+        formatDateMMDD(dateStr) {
+          if (!dateStr) return '';
+          try {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${m}/${day}`;
+            }
+          } catch(e) {}
+          return dateStr;
+        },
+
+        getPeriodEndMMDD(startStr, weeks) {
+          if (!startStr) return '';
+          try {
+            const d = new Date(startStr);
+            if (!isNaN(d.getTime())) {
+              const w = Number(weeks) || 12;
+              d.setDate(d.getDate() + (w * 7));
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${m}/${day}`;
+            }
+          } catch(e) {}
+          return '';
         },
 
         // Save backend settings
