@@ -232,6 +232,11 @@
                       <span class="text-slate-400">課堂紀錄表格 `Sessions`</span>
                       <span class="text-emerald-400 font-bold">連線正常</span>
                     </div>
+                    <!-- Premium One-click DB Reset Button for Independent GAS -->
+                    <button @click="resetDatabaseAndSeed()" class="w-full mt-4 py-2.5 px-4 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-rose-950/20 active:scale-95">
+                      <span>🗃️</span>
+                      <span>一鍵重置資料庫與課程種子</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1442,6 +1447,21 @@
             this.addToast('現場出席人數與完成紀錄已成功送出！日曆事件已即時重計出席。', 'success');
             this.coachSelectedSessionId = '';
             this.coachStudentList = [];
+            this.loadInitialData();
+          } catch (e) {
+            console.error(e);
+          }
+        },
+
+        // 一鍵重置資料庫與課程種子 (僅限 admin)
+        async resetDatabaseAndSeed() {
+          if (!confirm('⚠️ 確定要重置資料庫並導入最新的 17 班課程種子資料嗎？\n這將會清除所有舊資料，並自動為這 17 個班展開整整上百堂課的課堂 Sessions 與 Google 日曆事件！')) {
+            return;
+          }
+          try {
+            this.addToast('正在初始化資料庫與自動展開 Google 日曆事件，此過程大約需要 5~15 秒，請勿關閉視窗...', 'info');
+            const res = await this.apiCall('admin.resetDatabase');
+            this.addToast(res.message || '資料庫重置與課程種子排程展開成功！', 'success');
             this.loadInitialData();
           } catch (e) {
             console.error(e);
