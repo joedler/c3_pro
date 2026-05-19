@@ -239,28 +239,87 @@
                 <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4 lg:col-span-3">
                   <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (停課/代課)</h3>
                   <p class="text-[11px] text-slate-400">
-                    輸入特定的課堂 ID（例如 <code>SES-xxx</code>，可從試算表「課堂紀錄」或 Google 日曆活動中取得），即可一鍵與 Google 日曆及 LINE 系統完成同步調整！
+                    一律在網頁中完成，不需查看後台試算表！系統會自動即時與 Google 日曆及 LINE 完成同步。
                   </p>
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustSessionId: '', adjustReason: '', adjustSubCoach: '' }">
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 輸入課堂 ID (Session ID)</label>
-                      <input type="text" x-model="adjustSessionId" placeholder="例如: SES-1716075900" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                  
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustScope: 'session', selectedSessionId: '', selectedClassId: '', adjustReason: '', adjustSubCoach: '' }">
+                    <!-- Scope selection -->
+                    <div class="sm:col-span-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 flex items-center gap-6 text-xs text-slate-300">
+                      <span class="font-bold text-slate-400">調整範圍：</span>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" value="session" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
+                        <span>單堂課程調整</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" value="class" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
+                        <span class="text-rose-400 font-bold">整班未來所有課程 (全部停課)</span>
+                      </label>
                     </div>
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-400 mb-1">2. 輸入調整原因</label>
-                      <input type="text" x-model="adjustReason" placeholder="例如: 教練公假 / 國定假日停課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+
+                    <!-- Target selector -->
+                    <div class="sm:col-span-2">
+                      <!-- Dropdown for single session -->
+                      <div x-show="adjustScope === 'session'">
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 選擇要調整的課堂</label>
+                        <select x-model="selectedSessionId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                          <option value="">-- 請選擇課堂時段 --</option>
+                          <template x-for="s in adminSessions" :key="s.sessionId">
+                            <option :value="s.sessionId" x-text="s.date + ' ' + formatTime(s.startTime) + ' | ' + s.className"></option>
+                          </template>
+                        </select>
+                      </div>
+
+                      <!-- Dropdown for class bulk suspension -->
+                      <div x-show="adjustScope === 'class'">
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 選擇欲全部停課之班級</label>
+                        <select x-model="selectedClassId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                          <option value="">-- 請選擇班級 --</option>
+                          <template x-for="c in getUniqueClasses()" :key="c.classId">
+                            <option :value="c.classId" x-text="c.className"></option>
+                          </template>
+                        </select>
+                      </div>
                     </div>
+
+                    <!-- Reason -->
                     <div>
+                      <label class="block text-[10px] font-bold text-slate-400 mb-1">2. 調整/停課原因</label>
+                      <input type="text" x-model="adjustReason" placeholder="例如: 教練請假 / 國定假日停課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <!-- Substitute Coach (Only for single session) -->
+                    <div x-show="adjustScope === 'session'">
                       <label class="block text-[10px] font-bold text-slate-400 mb-1">3. 安排代課教練 (選填 LINE UID)</label>
-                      <input type="text" x-model="adjustSubCoach" placeholder="空白代表停課，填入即安排代課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                      <input type="text" x-model="adjustSubCoach" placeholder="留空代表停課，輸入即代表安排代課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
                     </div>
                     
+                    <!-- Action Submit -->
                     <div class="sm:col-span-3 flex justify-end gap-3 mt-2">
-                      <button @click="if(!adjustSessionId || !adjustReason) { addToast('請填妥課堂 ID 與調整原因！', 'error'); return; } 
-                                      apiCall('admin.suspendSession', { sessionIds: [adjustSessionId], reason: adjustReason, substituteCoachUid: adjustSubCoach || null })
-                                      .then(() => { addToast('🟢 課堂調整已成功執行，日曆與試算表已連動同步！', 'success'); adjustSessionId=''; adjustReason=''; adjustSubCoach=''; })" 
-                              class="px-4 py-2.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5">
-                        <span>⚠️</span> 送出課程停課/代課調整
+                      <button @click="
+                        if (!adjustReason) { addToast('請填寫調整/停課原因！', 'error'); return; }
+                        if (adjustScope === 'session') {
+                          if (!selectedSessionId) { addToast('請選擇要調整的課堂！', 'error'); return; }
+                          apiCall('admin.suspendSession', { sessionIds: [selectedSessionId], reason: adjustReason, substituteCoachUid: adjustSubCoach || null })
+                          .then(() => { 
+                            addToast('🟢 該單堂課程調整成功，日曆與試算表已連動同步！', 'success'); 
+                            selectedSessionId = ''; adjustReason = ''; adjustSubCoach = ''; 
+                            loadInitialData();
+                          });
+                        } else {
+                          if (!selectedClassId) { addToast('請選擇要全部停課的班級！', 'error'); return; }
+                          if (confirm('🚨 警告：確定要將該班級未來所有課堂「全部停課」並停用此班級嗎？此操作不可逆！')) {
+                            apiCall('admin.suspendSession', { classId: selectedClassId, reason: adjustReason })
+                            .then(() => { 
+                              addToast('🔴 整班未來所有課程已成功永久停課！', 'success'); 
+                              selectedClassId = ''; adjustReason = ''; 
+                              loadInitialData();
+                            });
+                          }
+                        }
+                      " 
+                              :class="adjustScope === 'class' ? 'bg-rose-700 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-500'"
+                              class="px-5 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5">
+                        <span x-text="adjustScope === 'class' ? '🚨 執行整班永久停課' : '⚠️ 送出單堂課程調整'"></span>
                       </button>
                     </div>
                   </div>
@@ -440,7 +499,7 @@
               <input type="radio" value="A" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
               <div>
                 <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>A 類 基礎重訓專班 (提供每週 1 堂 或 每週 2 堂)</span>
+                  <span>A 類 基礎重訓班 (每週 1 堂)</span>
                   <span class="px-1.5 py-0.5 text-[8px] bg-emerald-500/10 text-emerald-400 rounded">最推薦</span>
                 </h4>
                 <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">適合重訓新手，深入雕琢基礎動作、骨盆與肌群發力技巧。</p>
@@ -452,7 +511,7 @@
                    class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
               <input type="radio" value="B" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
               <div>
-                <h4 class="text-xs font-bold text-white">B 類 混合重訓專班 (提供每週 1 堂)</h4>
+                <h4 class="text-xs font-bold text-white">B 類 混合重訓班 (每週 2 堂)</h4>
                 <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">高強度多關節複合動作，結合肌力與爆發力挑戰自我極限。</p>
               </div>
             </label>
@@ -462,7 +521,7 @@
                    class="flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer hover:border-slate-700 transition-all text-left">
               <input type="radio" value="C" x-model="studentBindForm.classType" class="text-brand-600 focus:ring-brand-500 mt-1">
               <div>
-                <h4 class="text-xs font-bold text-white">C 類 特殊專項專班 (提供每週 1 堂)</h4>
+                <h4 class="text-xs font-bold text-white">C 類 特殊專班 (每週 1 堂)</h4>
                 <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">針對特定肌群（如翹臀、核心、上肢）或特定器具的專項深入教學。</p>
               </div>
             </label>
@@ -510,7 +569,7 @@
                   <div class="text-[20px] leading-none mt-0.5" x-show="cls.status !== 'open'">🔒</div>
                   
                   <div>
-                    <h5 class="text-xs font-bold text-white" x-text="cls.class_name + ' / ' + cls.period_weeks + '週'"></h5>
+                    <h5 class="text-xs font-bold text-white" x-text="cls.class_name + ' / ' + (cls.class_type === 'B' ? '1個月' : cls.period_weeks + '週')"></h5>
                     <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
                       📅 每週<span x-text="cls.day_of_week"></span> <span x-text="formatTime(cls.start_time) + '~' + formatTime(cls.end_time)"></span> &nbsp;<span class="text-slate-500" x-text="formatDateMMDD(cls.period_start) + ' ~ ' + getPeriodEndMMDD(cls.period_start, cls.period_weeks)"></span>
                     </p>
@@ -882,6 +941,7 @@
         coachSessions: [],
         coachSelectedSessionId: '',
         coachStudentList: [],
+        adminSessions: [],
         
         studentProfile: {
           realName: '',
@@ -942,6 +1002,20 @@
             }
           } catch(e) {}
           return '';
+        },
+
+        getUniqueClasses() {
+          const seen = new Set();
+          const list = [];
+          if (Array.isArray(this.adminSessions)) {
+            this.adminSessions.forEach(s => {
+              if (s.classId && !seen.has(s.classId)) {
+                seen.add(s.classId);
+                list.push({ classId: s.classId, className: s.className });
+              }
+            });
+          }
+          return list;
         },
 
         // Save backend settings
@@ -1083,7 +1157,7 @@
         async loadInitialData() {
           try {
             if (this.currentMode === 'admin') {
-              // Admin dashboard setup: we will render calendar dynamically on Tab click
+              this.adminSessions = await this.apiCall('admin.getSessions');
             } else if (this.currentMode === 'bind') {
               // Student binding
             } else if (this.currentMode === 'leave') {

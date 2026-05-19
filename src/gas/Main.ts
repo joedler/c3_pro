@@ -123,6 +123,32 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       },
 
       // --- 管理員模組 ---
+      'admin.getSessions': () => {
+        AuthService.requireRole(user, ['admin']);
+        const sessions = SheetHelper.getRows<any>('Sessions');
+        return sessions
+          .filter(s => s.status !== 'cancelled')
+          .map(s => {
+            let formattedDate = '';
+            try {
+              if (s.date) {
+                const d = new Date(s.date);
+                if (!isNaN(d.getTime())) {
+                  formattedDate = d.toISOString().split('T')[0];
+                }
+              }
+            } catch(e) {}
+            return {
+              sessionId: s.session_id,
+              classId: s.class_id,
+              className: s.class_name,
+              date: formattedDate || String(s.date).substring(0, 10),
+              startTime: s.start_time,
+              endTime: s.end_time
+            };
+          })
+          .sort((a, b) => b.date.localeCompare(a.date)); // Sort descending by date
+      },
       'admin.createClass': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.createClass(data, user);
@@ -137,11 +163,37 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       },
       'admin.suspendSession': () => {
         AuthService.requireRole(user, ['admin']);
-        if (!data || !data.sessionIds || !data.reason) {
-          throw new Error('缺少必要參數 (sessionIds / reason)');
+        if (!data || !data.reason) {
+          throw new Error('缺少必要參數 (reason)');
         }
-        ClassEngine.suspendSessions(data.sessionIds, data.reason, data.substituteCoachUid || null);
-        return { message: '已成功停課/調整課程，並同步至 Google 日曆' };
+        if (data.classId) {
+          const allSessions = SheetHelper.getRows<any>('Sessions');
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          
+          const targetSessionIds = allSessions
+            .filter(s => {
+              if (s.class_id !== data.classId || s.status === 'cancelled') return false;
+              try {
+                const sDate = new Date(s.date);
+                return sDate.getTime() >= today.getTime();
+              } catch(e) {
+                return false;
+              }
+            })
+            .map(s => s.session_id);
+          
+          if (targetSessionIds.length > 0) {
+            ClassEngine.suspendSessions(targetSessionIds, data.reason, null);
+          }
+          SheetHelper.updateRow('Classes', 'class_id', data.classId, { status: 'inactive' });
+          return { message: `已成功將該班級未來所有課堂永久停課，並停用班級設定` };
+        } else if (data.sessionIds) {
+          ClassEngine.suspendSessions(data.sessionIds, data.reason, data.substituteCoachUid || null);
+          return { message: '已成功停課/調整課程，並同步至 Google 日曆' };
+        } else {
+          throw new Error('缺少必要參數 (sessionIds 或 classId)');
+        }
       },
       'admin.announcement': () => {
         AuthService.requireRole(user, ['admin']);
