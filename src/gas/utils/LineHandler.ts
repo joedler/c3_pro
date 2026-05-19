@@ -120,6 +120,30 @@ class LineHandler {
    * 處理文字指令事件
    */
   private static handleTextMessage(replyToken: string, userId: string, text: string): void {
+    const cleanText = text.trim();
+    if (cleanText === '診斷' || cleanText === '我的ID' || cleanText === '身分') {
+      const staffRows = SheetHelper.getRows<any>('Staff');
+      const sampleStaff = staffRows[0] || {};
+      const staffHeaders = Object.keys(sampleStaff).filter(k => k !== '_rowNum');
+      
+      const memberRows = SheetHelper.getRows<any>('Members');
+      const sampleMember = memberRows[0] || {};
+      const memberHeaders = Object.keys(sampleMember).filter(k => k !== '_rowNum');
+      
+      const session = AuthService.verify(userId);
+      
+      const replyMsg = `🤖 GymOS 系統診斷報告\n` +
+                       `------------------------\n` +
+                       `🔹 您的真實 LINE UID:\n${userId}\n\n` +
+                       `🔹 系統識別角色: ${session.role}\n` +
+                       `🔹 識別姓名: ${session.name}\n\n` +
+                       `🔹 教職員表解析欄位:\n${staffHeaders.join(', ')}\n\n` +
+                       `🔹 學員表解析欄位:\n${memberHeaders.join(', ')}`;
+                       
+      this.sendReply(replyToken, [{ type: 'text', text: replyMsg }]);
+      return;
+    }
+
     const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
     const staff = SheetHelper.getRow<any>('Staff', 'line_uid', userId);
     const liffId = Config.get('LIFF_ID');
