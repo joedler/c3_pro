@@ -90,7 +90,33 @@
       background-color: #1e293b !important;
     }
 
-    /* 手機版日曆外觀極致美化與防擠壓 */
+    /* 美化 FullCalendar Day/Week (TimeGrid) 視圖的欄位標頭 (深灰底白字，絕非白色淺字) */
+    .fc-theme-standard th,
+    .fc .fc-col-header-cell,
+    .fc-col-header-cell {
+      background-color: #1e293b !important;
+      border-color: #1e293b !important;
+    }
+    .fc .fc-col-header-cell-cushion,
+    .fc-col-header-cell-cushion {
+      color: #f8fafc !important;
+      font-weight: 700 !important;
+      padding: 10px 0 !important;
+      display: inline-block !important;
+      text-decoration: none !important;
+    }
+
+    /* 美化 FullCalendar 左側時間軸標籤 */
+    .fc .fc-timegrid-slot-label,
+    .fc-timegrid-slot-label,
+    .fc .fc-timegrid-slot-label-cushion,
+    .fc-timegrid-slot-label-cushion {
+      color: #cbd5e1 !important; /* 淺灰色，高對比易讀 */
+      font-weight: 600 !important;
+      font-size: 11px !important;
+    }
+
+    /* 手機版日曆與表格外觀極致美化與防擠壓 */
     @media (max-width: 768px) {
       .fc .fc-header-toolbar,
       .fc .fc-toolbar,
@@ -154,6 +180,41 @@
       }
       .fc .fc-list-event-dot {
         display: none !important; /* 隱藏圓點以利排版 */
+      }
+
+      /* 將 Table 轉換為 Card-based Grid 佈局，實現手機版極致響應式，避免橫向滾動 */
+      .overflow-x-auto table, 
+      .overflow-x-auto thead, 
+      .overflow-x-auto tbody, 
+      .overflow-x-auto th, 
+      .overflow-x-auto td, 
+      .overflow-x-auto tr { 
+        display: block !important; 
+        width: 100% !important;
+      }
+      .overflow-x-auto thead {
+        display: none !important; /* 手機端隱藏表頭 */
+      }
+      .overflow-x-auto tr {
+        margin-bottom: 16px !important;
+        background-color: rgba(30, 41, 59, 0.4) !important;
+        border: 1px solid rgba(51, 65, 85, 0.5) !important;
+        border-radius: 16px !important;
+        padding: 14px 16px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+      }
+      .overflow-x-auto td {
+        padding: 6px 0 !important;
+        border: none !important;
+        text-align: left !important;
+      }
+      .overflow-x-auto td:last-child {
+        border-top: 1px solid rgba(51, 65, 85, 0.3) !important;
+        padding-top: 12px !important;
+        margin-top: 8px !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
       }
     }
   </style>
@@ -1878,6 +1939,11 @@
             initialView: window.innerWidth < 768 ? 'listWeek' : 'timeGridWeek',
             height: window.innerWidth < 768 ? 'auto' : 650,
             eventTimeFormat: {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            },
+            slotLabelFormat: {
               hour: '2-digit',
               minute: '2-digit',
               hour12: false
