@@ -158,7 +158,7 @@ class SheetHelper {
     return SpreadsheetApp.openById(spreadsheetId);
   }
 
-  private static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet {
+  public static getSheet(sheetName: string): GoogleAppsScript.Spreadsheet.Sheet {
     const ss = this.getSpreadsheet();
     const chineseSheetName = this.SHEET_NAME_MAP[sheetName] || sheetName;
     const sheet = ss.getSheetByName(chineseSheetName);
@@ -178,9 +178,50 @@ class SheetHelper {
     return reverseMap;
   }
 
-  /**
-   * 取得指定 Sheet 的所有資料並自動轉換為英文變數屬性的物件陣列
-   */
+  private static readonly HEADER_ALIASES: Record<string, string> = {
+    '職員id': 'staff_id',
+    '職員編號': 'staff_id',
+    '員工id': 'staff_id',
+    'staffid': 'staff_id',
+    'line帳號id': 'line_uid',
+    'line帳號': 'line_uid',
+    'lineid': 'line_uid',
+    'lineuid': 'line_uid',
+    'line_uid': 'line_uid',
+    '真實姓名': 'real_name',
+    '姓名': 'real_name',
+    'realname': 'real_name',
+    'name': 'real_name',
+    '角色職位': 'role',
+    '角色': 'role',
+    '職位': 'role',
+    'role': 'role',
+    '狀態': 'status',
+    'status': 'status',
+    '鐘點費率': 'hourly_rate',
+    '鐘點費': 'hourly_rate',
+    'hourlyrate': 'hourly_rate',
+    '建立時間': 'created_at',
+    'createdat': 'created_at',
+    '更新時間': 'updated_at',
+    'updatedat': 'updated_at'
+  };
+
+  public static getEnglishKey(sheetName: string, header: string): string {
+    if (!header) return '';
+    const cleanHeader = String(header).trim();
+    const reverseHeaderMap = this.getChineseToEnglishHeader(sheetName);
+    
+    let engKey = reverseHeaderMap[cleanHeader];
+    if (engKey) return engKey;
+    
+    const normHeader = cleanHeader.toLowerCase().replace(/[\s_-]/g, '');
+    engKey = this.HEADER_ALIASES[normHeader];
+    if (engKey) return engKey;
+    
+    return cleanHeader;
+  }
+
   public static getRows<T = any>(sheetName: string): T[] {
     const sheet = this.getSheet(sheetName);
     const lastRow = sheet.getLastRow();
@@ -190,13 +231,12 @@ class SheetHelper {
 
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0] as string[];
     const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    const reverseHeaderMap = this.getChineseToEnglishHeader(sheetName);
 
     return values.map((row, rowIndex) => {
       const obj: any = { _rowNum: rowIndex + 2 }; // 保留真實試算表行號以便後續更新
       headers.forEach((header, colIndex) => {
         if (header) {
-          const engKey = reverseHeaderMap[header] || header;
+          const engKey = this.getEnglishKey(sheetName, header);
           obj[engKey] = row[colIndex];
         }
       });
@@ -221,7 +261,6 @@ class SheetHelper {
     const sheet = this.getSheet(sheetName);
     const lastCol = sheet.getLastColumn();
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0] as string[];
-    const reverseHeaderMap = this.getChineseToEnglishHeader(sheetName);
 
     const now = new Date();
     const payload = { ...data };
@@ -231,7 +270,7 @@ class SheetHelper {
     if (!payload['updated_at']) payload['updated_at'] = now;
 
     const newRowValue = headers.map(header => {
-      const engKey = reverseHeaderMap[header] || header;
+      const engKey = this.getEnglishKey(sheetName, header);
       if (engKey in payload) {
         const val = payload[engKey];
         return val instanceof Date ? val : val ?? '';
@@ -242,9 +281,6 @@ class SheetHelper {
     sheet.appendRow(newRowValue);
   }
 
-  /**
-   * 根據指定 Key 更新單一列的指定欄位
-   */
   public static updateRow(
     sheetName: string,
     keyColumn: string,
@@ -261,14 +297,13 @@ class SheetHelper {
     const rowNum = found._rowNum;
     const lastCol = sheet.getLastColumn();
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0] as string[];
-    const reverseHeaderMap = this.getChineseToEnglishHeader(sheetName);
 
     const payload = { ...updateData };
     payload['updated_at'] = new Date();
 
     // 逐欄檢查是否有需要更新的屬性，優化只寫入變動部分
     headers.forEach((header, index) => {
-      const engKey = reverseHeaderMap[header] || header;
+      const engKey = this.getEnglishKey(sheetName, header);
       if (engKey in payload && engKey !== keyColumn) {
         const colNum = index + 1;
         sheet.getRange(rowNum, colNum).setValue(payload[engKey] ?? '');

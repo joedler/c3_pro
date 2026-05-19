@@ -33,7 +33,8 @@ function setupDatabase(): void {
     ['MODULE_LEAVE', 'true', '啟用模組：請假補課'],
     ['MODULE_ATTENDANCE', 'true', '啟用模組：出勤管理'],
     ['MODULE_NOTIFY', 'true', '啟用模組：通知系統'],
-    ['MODULE_FINANCE', 'true', '啟用模組：財務管理']
+    ['MODULE_FINANCE', 'true', '啟用模組：財務管理'],
+    ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)']
   ];
 
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表

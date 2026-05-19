@@ -74,9 +74,10 @@ class AuthService {
 
     if (staffUser) {
       const cleanRole = String(staffUser.role).trim().toLowerCase();
+      const isAdmin = cleanRole === 'admin' || cleanRole.includes('管理');
       return {
         uid: cleanLineUid,
-        role: cleanRole === 'admin' ? 'admin' : 'coach',
+        role: isAdmin ? 'admin' : 'coach',
         name: staffUser.real_name || fallbackName
       };
     }

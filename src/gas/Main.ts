@@ -42,6 +42,51 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
       },
       'public.getLiffId': () => {
         return { liffId: Config.get('LIFF_ID') };
+      },
+      'public.diagnose': () => {
+        const token = e.parameter.token;
+        let staffRows: any[] = [];
+        let memberRows: any[] = [];
+        try {
+          staffRows = SheetHelper.getRows<any>('Staff');
+        } catch(e){}
+        try {
+          memberRows = SheetHelper.getRows<any>('Members');
+        } catch(e){}
+        
+        let resolvedUser: any = null;
+        let verificationError: string | null = null;
+        if (token) {
+          try {
+            resolvedUser = AuthService.verify(token);
+          } catch(err) {
+            verificationError = err instanceof Error ? err.message : String(err);
+          }
+        }
+        
+        return {
+          systemLiffId: Config.get('LIFF_ID'),
+          inputToken: token || null,
+          resolvedUser: resolvedUser,
+          verificationError: verificationError,
+          staffCount: staffRows.length,
+          staffList: staffRows.map(s => ({
+            staff_id: s.staff_id,
+            line_uid_length: s.line_uid ? String(s.line_uid).length : 0,
+            line_uid_masked: s.line_uid ? (String(s.line_uid).substring(0, 8) + '...' + String(s.line_uid).substring(String(s.line_uid).length - 4)) : null,
+            real_name: s.real_name,
+            role: s.role,
+            status: s.status
+          })),
+          memberCount: memberRows.length,
+          memberListSample: memberRows.slice(0, 10).map(m => ({
+            member_id: m.member_id,
+            line_uid_length: m.line_uid ? String(m.line_uid).length : 0,
+            line_uid_masked: m.line_uid ? (String(m.line_uid).substring(0, 8) + '...' + String(m.line_uid).substring(String(m.line_uid).length - 4)) : null,
+            real_name: m.real_name,
+            status: m.status
+          }))
+        };
       }
     };
 
@@ -125,6 +170,13 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       // --- 管理員模組 ---
       'admin.resetDatabase': () => {
         AuthService.requireRole(user, ['admin']);
+        
+        // 安全門控檢驗：驗證是否啟用重置開關
+        const allowReset = Config.get('ALLOW_DATABASE_RESET', 'false');
+        if (allowReset !== 'true') {
+          throw new Error('【權限遭拒】系統目前處於安全鎖定狀態，拒絕重置資料庫！\n請先至後台「系統設定」分頁將 ALLOW_DATABASE_RESET 設定為 true 後再執行！');
+        }
+
         setupDatabase();
         seedClasses();
         return { message: '資料庫初始化與 17 班課程種子成功展開並同步至 Google Calendar！' };
@@ -155,6 +207,44 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           })
           .sort((a, b) => b.date.localeCompare(a.date)); // Sort descending by date
       },
+      'admin.getClasses': () => {
+        AuthService.requireRole(user, ['admin']);
+        const classes = SheetHelper.getRows<any>('Classes');
+        const staff = SheetHelper.getRows<any>('Staff');
+        const rooms = SheetHelper.getRows<any>('Rooms');
+        
+        return classes.map(c => {
+          const coach = staff.find(s => s.line_uid === c.coach_line_uid);
+          const room = rooms.find(r => r.room_id === c.room_id);
+          
+          let formattedStartDate = '';
+          try {
+            if (c.period_start) {
+              const d = new Date(c.period_start);
+              if (!isNaN(d.getTime())) {
+                formattedStartDate = d.toISOString().split('T')[0];
+              }
+            }
+          } catch(e) {}
+          
+          return {
+            classId: c.class_id,
+            className: c.class_name,
+            classType: c.class_type,
+            level: c.level,
+            coachName: coach ? coach.real_name : '未定教練',
+            roomName: room ? room.room_name : '未定教室',
+            maxCapacity: Number(c.max_capacity) || 0,
+            enrolled: Number(c.enrolled) || 0,
+            dayOfWeek: c.day_of_week,
+            startTime: c.start_time,
+            endTime: c.end_time,
+            periodStart: formattedStartDate || String(c.period_start).substring(0, 10),
+            periodWeeks: Number(c.period_weeks) || 0,
+            status: c.status
+          };
+        });
+      },
       'admin.createClass': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.createClass(data, user);
@@ -166,6 +256,215 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         }
         const result = ClassEngine.generate(data.classId);
         return { message: '課堂排程展開與 Google 日曆批次同步成功', data: result };
+      },
+      'admin.renewClass': () => {
+        AuthService.requireRole(user, ['admin']);
+        if (!data || !data.classId || !data.newStartDate || !data.renewMemberIds) {
+          throw new Error('缺少續期必要參數 (classId, newStartDate, renewMemberIds)');
+        }
+        const result = ClassEngine.renew(
+          data.classId,
+          data.newStartDate,
+          data.renewMemberIds,
+          data.termRemark || '續期'
+        );
+        return { message: '班級續期展開與學員轉移成功', data: result };
+      },
+      'admin.confirmPayment': () => {
+        AuthService.requireRole(user, ['admin']);
+        if (!data || !data.classId || !data.memberId) {
+          throw new Error('缺少確認繳費必要參數 (classId, memberId)');
+        }
+        
+        const enrollments = SheetHelper.getRows<any>('Enrollments');
+        const enrollIdx = enrollments.findIndex(
+          e => e.class_id === data.classId && e.member_id === data.memberId && e.status === 'pending_payment'
+        );
+        
+        if (enrollIdx === -1) {
+          throw new Error('找不到該學員對應該課程的「待繳費」選課紀錄');
+        }
+
+        const cls = SheetHelper.getRow<any>('Classes', 'class_id', data.classId);
+        if (!cls) {
+          throw new Error('找不到該班級設定');
+        }
+
+        const totalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
+        
+        // 1. 更新選課紀錄狀態為 active 並填入已繳堂數
+        const enrollSheet = SheetHelper.getSheet('Enrollments');
+        const rowNum = enrollIdx + 2;
+        
+        const colMap = SheetHelper.COLUMN_MAP['Enrollments'];
+        const headers = enrollSheet.getRange(1, 1, 1, enrollSheet.getLastColumn()).getValues()[0];
+        const statusCol = headers.indexOf(colMap.status) + 1;
+        const paidSessionsCol = headers.indexOf(colMap.total_paid_sessions) + 1;
+        
+        if (statusCol > 0) {
+          enrollSheet.getRange(rowNum, statusCol).setValue('active');
+        }
+        if (paidSessionsCol > 0) {
+          enrollSheet.getRange(rowNum, paidSessionsCol).setValue(totalSessions);
+        }
+
+        // 2. 獲取學員 LINE 資訊以進行 LINE Flex Push
+        const member = SheetHelper.getRow<any>('Members', 'member_id', data.memberId);
+        if (member && member.line_uid) {
+          try {
+            const flexContent = {
+              type: 'bubble',
+              size: 'mega',
+              header: {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'C3 Fitness 繳費核點收據 🧾',
+                    color: '#ffffff',
+                    weight: 'bold',
+                    size: 'md'
+                  }
+                ],
+                backgroundColor: '#10b981'
+              },
+              body: {
+                type: 'box',
+                layout: 'vertical',
+                spacing: 'md',
+                contents: [
+                  {
+                    type: 'text',
+                    text: `親愛的 ${member.real_name} 您好：`,
+                    weight: 'bold',
+                    size: 'sm',
+                    color: '#1e293b'
+                  },
+                  {
+                    type: 'text',
+                    text: '系統已成功核收您下一期班級的學費，課程狀態已正式啟用，祝您上課愉快！',
+                    wrap: true,
+                    size: 'xs',
+                    color: '#475569'
+                  },
+                  {
+                    type: 'separator',
+                    margin: 'lg'
+                  },
+                  {
+                    type: 'box',
+                    layout: 'vertical',
+                    margin: 'lg',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: '續期班級', size: 'xs', color: '#64748b', flex: 3 },
+                          { type: 'text', text: cls.class_name, size: 'xs', color: '#1e293b', flex: 7, weight: 'bold', wrap: true }
+                        ]
+                      },
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: '課程難度', size: 'xs', color: '#64748b', flex: 3 },
+                          { type: 'text', text: `${cls.level}`, size: 'xs', color: '#1e293b', flex: 7 }
+                        ]
+                      },
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: '本期堂數', size: 'xs', color: '#64748b', flex: 3 },
+                          { type: 'text', text: `${totalSessions} 堂 (共 ${cls.period_weeks} 週)`, size: 'xs', color: '#10b981', flex: 7, weight: 'bold' }
+                        ]
+                      },
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: '開始日期', size: 'xs', color: '#64748b', flex: 3 },
+                          { type: 'text', text: Utilities.formatDate(new Date(cls.period_start), 'Asia/Taipei', 'yyyy-MM-dd'), size: 'xs', color: '#1e293b', flex: 7 }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              footer: {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  {
+                    type: 'button',
+                    action: {
+                      type: 'uri',
+                      label: '📊 查看我的課表與點數',
+                      uri: `https://liff.line.me/${Config.get('LIFF_ID')}?mode=leave`
+                    },
+                    style: 'primary',
+                    color: '#10b981'
+                  }
+                ]
+              }
+            };
+
+            LineHandler.pushMessage(member.line_uid, [
+              {
+                type: 'flex',
+                altText: 'C3 Fitness 學費繳納成功收據',
+                contents: flexContent
+              }
+            ]);
+          } catch(e) {
+            Logger.log(`[繳費通知推送失敗] Member: ${member.real_name}, Error: ${e instanceof Error ? e.message : e}`);
+          }
+        }
+
+        return { message: '學員選課已啟用，繳費收據 Flex Message 已主動發送！' };
+      },
+      'admin.getPendingPayments': () => {
+        AuthService.requireRole(user, ['admin']);
+        const enrollments = SheetHelper.getRows<any>('Enrollments').filter(e => e.status === 'pending_payment');
+        const members = SheetHelper.getRows<any>('Members');
+        const classes = SheetHelper.getRows<any>('Classes');
+        
+        return enrollments.map(e => {
+          const member = members.find(m => m.member_id === e.member_id);
+          const cls = classes.find(c => c.class_id === e.class_id);
+          
+          return {
+            classId: e.class_id,
+            className: cls ? cls.class_name : '未知班級',
+            level: cls ? cls.level : '未知程度',
+            memberId: e.member_id,
+            realName: member ? member.real_name : '未知學員',
+            gender: member ? member.gender : '',
+            notes: e.notes,
+            enrollDate: e.enroll_date
+          };
+        });
+      },
+      'admin.getClassMembers': () => {
+        AuthService.requireRole(user, ['admin']);
+        if (!data || !data.classId) {
+          throw new Error('缺少 classId 參數');
+        }
+        const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
+          e => e.class_id === data.classId && e.status === 'active'
+        );
+        const members = SheetHelper.getRows<any>('Members');
+        return enrollments.map(e => {
+          const m = members.find(member => member.member_id === e.member_id);
+          return {
+            memberId: e.member_id,
+            realName: m ? m.real_name : '未知學員',
+            gender: m ? m.gender : ''
+          };
+        });
       },
       'admin.suspendSession': () => {
         AuthService.requireRole(user, ['admin']);

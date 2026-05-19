@@ -164,7 +164,8 @@ class LineHandler {
       
       if (staff && String(staff.status).trim().toLowerCase() === 'active') {
         const cleanRole = String(staff.role).trim().toLowerCase();
-        resolvedRole = cleanRole === 'admin' ? 'admin' : 'coach';
+        const isAdmin = cleanRole === 'admin' || cleanRole.includes('管理');
+        resolvedRole = isAdmin ? 'admin' : 'coach';
         realName = staff.real_name || '教職員';
       } else if (member && String(member.status).trim().toLowerCase() === 'active') {
         resolvedRole = 'member';
@@ -317,7 +318,7 @@ class LineHandler {
           contents: [
             {
               type: 'text',
-              text: `教練 ${staff.name} — 今日授課`,
+              text: `教練 ${staff.real_name || '教練'} — 今日授課`,
               color: '#ffffff',
               weight: 'bold',
               size: 'md'
@@ -627,5 +628,35 @@ class LineHandler {
 
     const response = UrlFetchApp.fetch(url, options);
     Logger.log(`[LINE Reply回傳] Code: ${response.getResponseCode()}, Body: ${response.getContentText()}`);
+  }
+
+  /**
+   * 向特定 LINE 用戶主動推送訊息 (Push Message API)
+   */
+  public static pushMessage(userId: string, messages: any[]): void {
+    const token = Config.get('LINE_CHANNEL_ACCESS_TOKEN');
+    if (!token || token === 'YOUR_LINE_TOKEN') {
+      Logger.log('[LINE Push] 尚未配置 LINE_CHANNEL_ACCESS_TOKEN，跳過推送。');
+      return;
+    }
+    
+    const url = 'https://api.line.me/v2/bot/message/push';
+    const payload = {
+      to: userId,
+      messages: messages
+    };
+
+    const options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    Logger.log(`[LINE Push回傳] To: ${userId}, Code: ${response.getResponseCode()}, Body: ${response.getContentText()}`);
   }
 }

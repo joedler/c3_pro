@@ -34,9 +34,9 @@
   - [x] 5. 本地 TypeScript 型別安全編譯檢測並上傳 GAS (`npm run push`)
   - [x] 6. 進行試算表結構格式化與種子課程聯調測試驗證
 
-- [ ] **階段六：營運管理升級與自動續期開發 (v3.0)**
+- [x] **階段六：營運管理升級與自動續期開發 (v3.0)**
   * 詳細規劃請參閱：[gym_os_v3_management_upgrade_plan.md](file:///d:/_LINE%20BOT/_C3_PRO/docs/gym_os_v3_management_upgrade_plan.md)
-  - [ ] 1. 🛡️ 實施「一鍵重置資料庫」防誤觸安全鎖定及操作手冊編寫
-  - [ ] 2. ⚡ 實作 Web App 管理端「單班獨立點擊開班/展開課表」
-  - [ ] 3. 🔄 開發後端 `admin.renewClass` API 與 Web App「一鍵自動續期/Rollover」彈窗
-  - [ ] 4. 💰 開發 Web App「待核繳學費面板」與收費自動觸發 LINE Flex Message 繳費收據推送
+  - [x] 1. 🛡️ 實施「一鍵重置資料庫」防誤觸安全鎖定及操作手冊編寫
+  - [x] 2. ⚡ 實作 Web App 管理端「單班獨立點擊開班/展開課表」
+  - [x] 3. 🔄 開發後端 `admin.renewClass` API 與 Web App「一鍵自動續期/Rollover」彈窗
+  - [x] 4. 💰 開發 Web App「待核繳學費面板」與收費自動觸發 LINE Flex Message 繳費收據推送

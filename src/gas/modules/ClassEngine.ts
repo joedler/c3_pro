@@ -152,6 +152,194 @@ class ClassEngine {
   }
 
   /**
+   * 為特定班級進行「續期開班」與「學員自動轉移 (Rollover)」
+   */
+  public static renew(classId: string, newStartDate: string, renewMemberIds: string[], termRemark: string): { generated: number } {
+    const cls = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+    if (!cls) {
+      throw new Error(`找不到班級代碼: ${classId}`);
+    }
+
+    // 1. 取得現有 Sessions，找出最後一堂的序列號 seq (比如 12)
+    const allSessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
+    let startSeq = 1;
+    if (allSessions.length > 0) {
+      const seqs = allSessions.map(s => Number(s.session_seq) || 0);
+      startSeq = Math.max(...seqs) + 1;
+    }
+
+    // 2. 更新 Classes 表中的「本期開始日期」與備註
+    const classesSheet = SheetHelper.getSheet('Classes');
+    const classesRows = SheetHelper.getRows<any>('Classes');
+    const classRowIndex = classesRows.findIndex(c => c.class_id === classId);
+    if (classRowIndex !== -1) {
+      const rowNum = classRowIndex + 2;
+      const colMap = SheetHelper.COLUMN_MAP['Classes'];
+      const headers = classesSheet.getRange(1, 1, 1, classesSheet.getLastColumn()).getValues()[0];
+      const periodStartCol = headers.indexOf(colMap.period_start) + 1;
+      const notesCol = headers.indexOf(colMap.notes) + 1;
+      
+      if (periodStartCol > 0) {
+        classesSheet.getRange(rowNum, periodStartCol).setValue(newStartDate);
+      }
+      if (notesCol > 0) {
+        const oldNotes = classesRows[classRowIndex].notes || '';
+        classesSheet.getRange(rowNum, notesCol).setValue(`${oldNotes} [續期: ${termRemark}]`.trim());
+      }
+    }
+
+    // 3. 展開新一期的 Sessions
+    const sessions: any[] = [];
+    const holidaysStr = Config.get('HOLIDAYS', '');
+    const holidays = holidaysStr ? holidaysStr.split(',').map(d => d.trim()) : [];
+
+    // 解析星期幾字串
+    function parseDaysOfWeek(dayStr: string): number[] {
+      const clean = String(dayStr || '').trim();
+      const days: number[] = [];
+      const map: Record<string, number> = {
+        '日': 0, '週日': 0, '星期日': 0,
+        '一': 1, '週一': 1, '星期一': 1,
+        '二': 2, '週二': 2, '星期二': 2,
+        '三': 3, '週三': 3, '星期三': 3,
+        '四': 4, '週四': 4, '星期四': 4,
+        '五': 5, '週五': 5, '星期五': 5,
+        '六': 6, '週六': 6, '星期六': 6
+      };
+      
+      if (clean.includes('+')) {
+        clean.split('+').forEach(part => {
+          const key = part.trim();
+          if (map[key] !== undefined) {
+            days.push(map[key]);
+          }
+        });
+      } else {
+        if (map[clean] !== undefined) {
+          days.push(map[clean]);
+        } else {
+          const num = Number(clean);
+          if (!isNaN(num)) {
+            days.push(num);
+          }
+        }
+      }
+      return days;
+    }
+
+    const daysOfWeek = parseDaysOfWeek(cls.day_of_week);
+    if (daysOfWeek.length === 0) {
+      daysOfWeek.push(1);
+    }
+
+    let currentDate = new Date(newStartDate);
+    currentDate.setHours(0, 0, 0, 0);
+
+    // 移動到第一個符合星期的日期
+    while (!daysOfWeek.includes(currentDate.getDay())) {
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const periodWeeks = Number(cls.period_weeks) || 12;
+    const sessionsPerWeek = Number(cls.sessions_per_week) || 1;
+    const totalSessionsToGenerate = periodWeeks * sessionsPerWeek;
+    
+    let seq = startSeq;
+    const endSeq = startSeq + totalSessionsToGenerate - 1;
+
+    while (seq <= endSeq) {
+      const dateStr = Utilities.formatDate(currentDate, 'Asia/Taipei', 'yyyy-MM-dd');
+
+      if (holidays.includes(dateStr)) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        while (!daysOfWeek.includes(currentDate.getDay())) {
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        continue;
+      }
+
+      sessions.push({
+        session_id: `SES-${classId}-${String(seq).padStart(2, '0')}`,
+        class_id: classId,
+        session_date: dateStr,
+        session_seq: seq,
+        start_time: cls.start_time,
+        end_time: cls.end_time,
+        status: 'scheduled',
+        actual_count: 0,
+        calendar_event_id: '',
+        notes: `[期數: ${termRemark}]`
+      });
+
+      // Advance
+      do {
+        currentDate.setDate(currentDate.getDate() + 1);
+      } while (!daysOfWeek.includes(currentDate.getDay()));
+      
+      seq++;
+    }
+
+    // 4. 取得相關關聯名稱 (教練、教室)
+    const coachRow = SheetHelper.getRow<any>('Staff', 'line_uid', cls.coach_line_uid);
+    const coachName = coachRow ? coachRow.real_name : '未指派教練';
+
+    const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
+    const roomName = roomRow ? roomRow.room_name : '未設定教室';
+
+    // 5. 批次建立 Google 日曆事件並回寫 ID
+    const calendar = this.getCalendar();
+    
+    const allMembers = SheetHelper.getRows<any>('Members');
+    const renewMemberNames = renewMemberIds.map(uid => {
+      const m = allMembers.find(member => member.member_id === uid);
+      return m ? m.real_name : uid;
+    });
+
+    sessions.forEach(session => {
+      try {
+        const startDateTime = new Date(`${session.session_date}T${session.start_time}:00`);
+        const endDateTime = new Date(`${session.session_date}T${session.end_time}:00`);
+
+        const title = `${cls.class_name} (預計 ${renewMemberNames.length} 人) [${termRemark}]`;
+        const studentLines = renewMemberNames.map(name => `• ${name} (已續期待繳費)`).join('\n');
+        
+        const description = `【課程資訊】\n班級：${cls.class_name} [${termRemark}]\n教練：${coachName}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (${renewMemberNames.length}人):\n${studentLines || '(無)'}\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
+
+        const event = calendar.createEvent(title, startDateTime, endDateTime, {
+          description: description,
+          location: roomName
+        });
+
+        session.calendar_event_id = event.getId();
+      } catch (e) {
+        Logger.log(`[續期日曆建立失敗] Session: ${session.session_id}, Error: ${e instanceof Error ? e.message : e}`);
+      }
+    });
+
+    // 6. 批次寫入 Sessions 工作表
+    SheetHelper.bulkInsert('Sessions', sessions);
+
+    // 7. 學員自動轉移 (Rollover) -> 寫入 Enrollments，狀態為 pending_payment
+    const newEnrollments: any[] = renewMemberIds.map(uid => {
+      return {
+        enrollment_id: `ENR-${classId}-${uid.substring(0, 6)}-${Utilities.formatDate(new Date(), 'Asia/Taipei', 'MMdd')}`,
+        member_id: uid,
+        class_id: classId,
+        enroll_date: Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd'),
+        status: 'pending_payment',
+        total_paid_sessions: 0,
+        notes: `學員自動續期 [${termRemark}]`
+      };
+    });
+
+    if (newEnrollments.length > 0) {
+      SheetHelper.bulkInsert('Enrollments', newEnrollments);
+    }
+
+    return { generated: sessions.length };
+  }
+
+  /**
    * 當請假、補課或報名名單變動時，即時更新與重新同步該堂課的 Google 日曆事件描述欄
    * @param sessionId 課堂ID
    */
