@@ -26,10 +26,17 @@
   - [x] 串接 FullCalendar.js 展示視覺化共享日曆名冊
   - [x] 學員端與教練端 LINE LIFF 整合（請假、補課預約、現場出席校正）
 
-- [ ] **階段五：實作 v2.0 學員綁定與 17 班課程種子對接**
-  - [ ] 1. 擴充 `SheetHelper.ts` 與 `Setup.ts` 資料庫欄位（性別、身高、體重、目前人數、性別限制、開放補課）
-  - [ ] 2. 實作 `Setup.ts` 內 `seedClasses()` 一鍵自動導入 17 班課程種子
-  - [ ] 3. 實作 `MemberService.ts` 內可用課程時段篩選 API (`classes.available`)，攔截男學員選限女班
-  - [ ] 4. 重構 `MemberService.bind` 以完整對接 4 步驟綁定資料，寫入 `Enrollments` 且對應 class `enrolled` 自動加 1
-  - [ ] 5. 本地 TypeScript 型別安全編譯檢測並上傳 GAS (`npm run push`)
-  - [ ] 6. 進行試算表結構格式化與種子課程聯調測試驗證
+- [x] **階段五：實作 v2.0 學員綁定與 17 班課程種子對接**
+  - [x] 1. 擴充 `SheetHelper.ts` 與 `Setup.ts` 資料庫欄位（性別、身高、體重、目前人數、性別限制、開放補課）
+  - [x] 2. 實作 `Setup.ts` 內 `seedClasses()` 一鍵自動導入 17 班課程種子
+  - [x] 3. 實作 `MemberService.ts` 內可用課程時段篩選 API (`classes.available`)，攔截男學員選限女班
+  - [x] 4. 重構 `MemberService.bind` 以完整對接 4 步驟綁定資料，寫入 `Enrollments` 且對應 class `enrolled` 自動加 1
+  - [x] 5. 本地 TypeScript 型別安全編譯檢測並上傳 GAS (`npm run push`)
+  - [x] 6. 進行試算表結構格式化與種子課程聯調測試驗證
+
+- [ ] **階段六：營運管理升級與自動續期開發 (v3.0)**
+  * 詳細規劃請參閱：[gym_os_v3_management_upgrade_plan.md](file:///d:/_LINE%20BOT/_C3_PRO/docs/gym_os_v3_management_upgrade_plan.md)
+  - [ ] 1. 🛡️ 實施「一鍵重置資料庫」防誤觸安全鎖定及操作手冊編寫
+  - [ ] 2. ⚡ 實作 Web App 管理端「單班獨立點擊開班/展開課表」
+  - [ ] 3. 🔄 開發後端 `admin.renewClass` API 與 Web App「一鍵自動續期/Rollover」彈窗
+  - [ ] 4. 💰 開發 Web App「待核繳學費面板」與收費自動觸發 LINE Flex Message 繳費收據推送
