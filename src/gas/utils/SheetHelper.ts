@@ -203,7 +203,8 @@ class SheetHelper {
    */
   public static getRow<T = any>(sheetName: string, keyColumn: string, keyValue: any): T | null {
     const rows = this.getRows<any>(sheetName);
-    const found = rows.find(row => String(row[keyColumn]) === String(keyValue));
+    const cleanKeyValue = String(keyValue).trim();
+    const found = rows.find(row => String(row[keyColumn]).trim() === cleanKeyValue);
     return found ? (found as T) : null;
   }
 
@@ -246,7 +247,8 @@ class SheetHelper {
   ): boolean {
     const sheet = this.getSheet(sheetName);
     const rows = this.getRows<any>(sheetName);
-    const found = rows.find(row => String(row[keyColumn]) === String(keyValue));
+    const cleanKeyValue = String(keyValue).trim();
+    const found = rows.find(row => String(row[keyColumn]).trim() === cleanKeyValue);
 
     if (!found) return false;
 
@@ -276,7 +278,8 @@ class SheetHelper {
   public static deleteRow(sheetName: string, keyColumn: string, keyValue: any): boolean {
     const sheet = this.getSheet(sheetName);
     const rows = this.getRows<any>(sheetName);
-    const found = rows.find(row => String(row[keyColumn]) === String(keyValue));
+    const cleanKeyValue = String(keyValue).trim();
+    const found = rows.find(row => String(row[keyColumn]).trim() === cleanKeyValue);
 
     if (!found) return false;
 

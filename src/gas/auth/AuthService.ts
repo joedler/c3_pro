@@ -58,16 +58,20 @@ class AuthService {
    * 比對資料庫，決定該 LINE UID 的使用者角色
    */
   private static resolveRoleFromDatabase(lineUid: string, fallbackName: string): UserSession {
+    const cleanLineUid = String(lineUid).trim();
+    
     // 1. 優先比對 Staff (管理與教練)
     const staffRows = SheetHelper.getRows<any>('Staff');
     const staffUser = staffRows.find(
-      row => String(row.line_uid) === lineUid && row.status === 'active'
+      row => String(row.line_uid).trim() === cleanLineUid && 
+             String(row.status).trim().toLowerCase() === 'active'
     );
 
     if (staffUser) {
+      const cleanRole = String(staffUser.role).trim().toLowerCase();
       return {
-        uid: lineUid,
-        role: staffUser.role === 'admin' ? 'admin' : 'coach',
+        uid: cleanLineUid,
+        role: cleanRole === 'admin' ? 'admin' : 'coach',
         name: staffUser.real_name || fallbackName
       };
     }
@@ -75,12 +79,13 @@ class AuthService {
     // 2. 次要比對 Members (學員)
     const memberRows = SheetHelper.getRows<any>('Members');
     const memberUser = memberRows.find(
-      row => String(row.line_uid) === lineUid && row.status === 'active'
+      row => String(row.line_uid).trim() === cleanLineUid && 
+             String(row.status).trim().toLowerCase() === 'active'
     );
 
     if (memberUser) {
       return {
-        uid: lineUid,
+        uid: cleanLineUid,
         role: 'member',
         name: memberUser.real_name || fallbackName
       };
@@ -88,7 +93,7 @@ class AuthService {
 
     // 3. 都查不到則判定為訪客 (未綁定)
     return {
-      uid: lineUid,
+      uid: cleanLineUid,
       role: 'guest',
       name: fallbackName
     };

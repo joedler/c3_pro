@@ -323,9 +323,13 @@ function setupRichMenus(): void {
 
     // 重新綁定所有職員的專屬選單
     const staffRows = SheetHelper.getRows<any>('Staff');
-    const activeStaff = staffRows.filter(row => row.status === 'active' && row.line_uid);
+    const activeStaff = staffRows.filter(row => 
+      row.line_uid && String(row.status).trim().toLowerCase() === 'active'
+    );
     activeStaff.forEach(staff => {
-      LineRichMenu.link(String(staff.line_uid), staff.role as 'admin' | 'coach');
+      const cleanUid = String(staff.line_uid).trim();
+      const cleanRole = String(staff.role).trim().toLowerCase();
+      LineRichMenu.link(cleanUid, cleanRole === 'admin' ? 'admin' : 'coach');
     });
     Logger.log(`[LINE RichMenu] 已成功重新綁定 ${activeStaff.length} 位職員的專屬選單。`);
   } catch (e) {
