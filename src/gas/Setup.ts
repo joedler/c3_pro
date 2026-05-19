@@ -291,6 +291,32 @@ function setupRichMenus(): void {
 
   // 強制重新載入 Config 記憶體快取
   Config.loadCache();
+
+  // E. 重新綁定預設選單與現有職員的選單
+  try {
+    const memberMenuId = Config.get('RICH_MENU_MEMBER');
+    if (memberMenuId) {
+      // 將學員選單設為所有用戶的預設選單
+      const defaultUrl = `https://api.line.me/v2/bot/user/all/richmenu/${memberMenuId}`;
+      UrlFetchApp.fetch(defaultUrl, {
+        method: 'post',
+        headers: { Authorization: `Bearer ${token}` },
+        muteHttpExceptions: true
+      });
+      Logger.log('[LINE RichMenu] 已將學員選單設為全域預設選單。');
+    }
+
+    // 重新綁定所有職員的專屬選單
+    const staffRows = SheetHelper.getRows<any>('Staff');
+    const activeStaff = staffRows.filter(row => row.status === 'active' && row.line_uid);
+    activeStaff.forEach(staff => {
+      LineRichMenu.link(String(staff.line_uid), staff.role as 'admin' | 'coach');
+    });
+    Logger.log(`[LINE RichMenu] 已成功重新綁定 ${activeStaff.length} 位職員的專屬選單。`);
+  } catch (e) {
+    Logger.log(`[⚠️ LINE RichMenu 綁定失敗] ${e instanceof Error ? e.message : e}`);
+  }
+
   Logger.log('=== GymOS 豪華三角色 LINE 圖文選單一鍵自動建立與數據對接完成！ ===');
 }
 
