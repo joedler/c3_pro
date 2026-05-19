@@ -79,27 +79,33 @@
 
     /* 手機版日曆外觀極致美化與防擠壓 */
     @media (max-width: 768px) {
-      .fc .fc-toolbar {
+      .fc .fc-header-toolbar,
+      .fc .fc-toolbar,
+      div.fc-header-toolbar {
         flex-direction: column !important;
-        gap: 10px !important;
+        gap: 8px !important;
         align-items: center !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 12px !important;
       }
-      .fc .fc-toolbar-title {
+      .fc .fc-toolbar-title,
+      .fc-toolbar-title {
         font-size: 1.15rem !important;
         text-align: center !important;
         font-weight: 800 !important;
-        background: linear-gradient(to right, #ffffff, #94a3b8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        background: linear-gradient(to right, #ffffff, #94a3b8) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        margin: 4px 0 !important;
       }
-      .fc .fc-toolbar-chunk {
+      .fc .fc-toolbar-chunk,
+      .fc-toolbar-chunk {
         display: flex !important;
         justify-content: center !important;
         flex-wrap: wrap !important;
-        gap: 6px !important;
+        gap: 4px !important;
       }
-      .fc .fc-button {
+      .fc .fc-button,
+      .fc-button {
         padding: 6px 12px !important;
         font-size: 11px !important;
       }
