@@ -21,6 +21,48 @@ class ClassEngine {
   }
 
   /**
+   * 將日期字串 (yyyy-MM-dd) 與時間值 (Date 物件或 "HH:mm" 字串) 組合為正確的 Date 物件，防止時區位移與 Invalid Date 錯誤
+   */
+  private static parseDateTime(dateStr: string, timeVal: any): Date {
+    const parts = String(dateStr).split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const day = parseInt(parts[2], 10);
+    
+    const d = new Date(year, month, day); // 台北時間 00:00:00 初始化
+    let hours = 0;
+    let minutes = 0;
+
+    if (timeVal instanceof Date) {
+      hours = timeVal.getHours();
+      minutes = timeVal.getMinutes();
+    } else if (timeVal) {
+      let cleanTime = String(timeVal).trim();
+      let isPM = false;
+      if (cleanTime.includes('下午')) {
+        isPM = true;
+        cleanTime = cleanTime.replace('下午', '').trim();
+      } else if (cleanTime.includes('上午')) {
+        cleanTime = cleanTime.replace('上午', '').trim();
+      }
+      
+      const timeParts = cleanTime.split(':');
+      if (timeParts.length >= 2) {
+        hours = parseInt(timeParts[0], 10);
+        minutes = parseInt(timeParts[1], 10);
+        if (isPM && hours < 12) {
+          hours += 12;
+        } else if (!isPM && hours === 12) {
+          hours = 0;
+        }
+      }
+    }
+    
+    d.setHours(hours, minutes, 0, 0);
+    return d;
+  }
+
+  /**
    * 依據 Classes 班級設定，批次產生 Sessions 課堂紀錄，並同步至 Google Calendar
    * @param classId 班級ID
    */
@@ -128,8 +170,8 @@ class ClassEngine {
     const calendar = this.getCalendar();
     sessions.forEach(session => {
       try {
-        const startDateTime = new Date(`${session.session_date}T${session.start_time}:00`);
-        const endDateTime = new Date(`${session.session_date}T${session.end_time}:00`);
+        const startDateTime = this.parseDateTime(session.session_date, session.start_time);
+        const endDateTime = this.parseDateTime(session.session_date, session.end_time);
 
         const title = `${cls.class_name} (預計 0 人)`;
         const description = `【課程資訊】\n班級：${cls.class_name}\n教練：${coachName}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (0人):\n(尚未有學員報名)\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
@@ -297,8 +339,8 @@ class ClassEngine {
 
     sessions.forEach(session => {
       try {
-        const startDateTime = new Date(`${session.session_date}T${session.start_time}:00`);
-        const endDateTime = new Date(`${session.session_date}T${session.end_time}:00`);
+        const startDateTime = this.parseDateTime(session.session_date, session.start_time);
+        const endDateTime = this.parseDateTime(session.session_date, session.end_time);
 
         const title = `${cls.class_name} (預計 ${renewMemberNames.length} 人) [${termRemark}]`;
         const studentLines = renewMemberNames.map(name => `• ${name} (已續期待繳費)`).join('\n');
