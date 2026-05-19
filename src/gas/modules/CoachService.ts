@@ -16,27 +16,30 @@ class CoachService {
       throw new Error('未驗證的教練身分，請重新登入。');
     }
 
-    // 1. 取得教練所有授課班級
+    const isAdmin = user.role === 'admin';
+
+    // 1. 取得教練所有授課班級 (管理員預設能查看全部班級)
     const allClasses = SheetHelper.getRows<any>('Classes');
     const myTaughtClassIds = allClasses
-      .filter(c => c.coach_line_uid === user.uid && c.status === 'active')
+      .filter(c => (isAdmin || c.coach_line_uid === user.uid) && c.status === 'active')
       .map(c => c.class_id);
 
-    // 2. 取得今日前後 14 天時間區間
+    // 2. 取得時間區間 (為相容網頁版月/週月曆展示，管理員放寬至前後 45 天，教練保持行動端 14 天)
     const refDate = data.date ? new Date(data.date) : new Date();
-    const startTime = new Date(refDate.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const endTime = new Date(refDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const windowDays = isAdmin ? 45 : 14;
+    const startTime = new Date(refDate.getTime() - windowDays * 24 * 60 * 60 * 1000);
+    const endTime = new Date(refDate.getTime() + windowDays * 24 * 60 * 60 * 1000);
 
     startTime.setHours(0, 0, 0, 0);
     endTime.setHours(23, 59, 59, 999);
 
-    // 3. 撈取所有符合條件的課堂 (自己授課 或 自己代課)
+    // 3. 撈取所有符合條件的課堂 (自己授課 或 自己代課，管理員則全撈)
     const allSessions = SheetHelper.getRows<any>('Sessions');
     const mySessions = allSessions.filter(s => {
       const isMyClass = myTaughtClassIds.includes(s.class_id);
       const isMySubstitute = s.substitute_coach_uid === user.uid;
       
-      if (!isMyClass && !isMySubstitute) return false;
+      if (!isAdmin && !isMyClass && !isMySubstitute) return false;
 
       // 時間範圍過濾
       const sDate = new Date(s.session_date);
