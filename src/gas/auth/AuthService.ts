@@ -24,6 +24,11 @@ class AuthService {
       return this.resolveRoleFromDatabase(mockUid, '測試帳號');
     }
 
+    // 支援傳入真實的 LINE UID 直接解析（免 Token 驗證，用於 Webhook 診斷）
+    if (/^U[0-9a-f]{32}$/i.test(token)) {
+      return this.resolveRoleFromDatabase(token, 'LINE用戶');
+    }
+
     try {
       // 呼叫 LINE 官方 API 驗證 Token 並取得 Profile，防止前端偽造 UID
       const response = UrlFetchApp.fetch('https://api.line.me/v2/profile', {

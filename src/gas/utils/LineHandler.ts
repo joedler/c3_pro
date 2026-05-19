@@ -155,6 +155,97 @@ class LineHandler {
       return;
     }
 
+    if (cleanText === '更新' || cleanText === '同步選單') {
+      const staff = SheetHelper.getRow<any>('Staff', 'line_uid', userId);
+      const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
+      
+      let resolvedRole: 'admin' | 'coach' | 'member' | 'guest' = 'guest';
+      let realName = '';
+      
+      if (staff && String(staff.status).trim().toLowerCase() === 'active') {
+        const cleanRole = String(staff.role).trim().toLowerCase();
+        resolvedRole = cleanRole === 'admin' ? 'admin' : 'coach';
+        realName = staff.real_name || '教職員';
+      } else if (member && String(member.status).trim().toLowerCase() === 'active') {
+        resolvedRole = 'member';
+        realName = member.real_name || '學員';
+      }
+      
+      // 執行 LINE 伺服器圖文選單綁定
+      if (resolvedRole === 'guest') {
+        try {
+          LineRichMenu.unlink(userId);
+        } catch(e) {}
+        const liffId = Config.get('LIFF_ID');
+        const bindUrl = `https://liff.line.me/${liffId}?mode=bind`;
+        const notBoundFlex = {
+          type: 'bubble',
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: '⚠️ 您尚未綁定帳號', weight: 'bold', size: 'md', color: '#dc2626', margin: 'md' },
+              { type: 'text', text: '系統中目前無您的資料或狀態為停用。請先點擊下方按鈕進行安全綁定！', wrap: true, size: 'xs', color: '#64748b', margin: 'lg' }
+            ]
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'button', action: { type: 'uri', label: '🔑 一鍵安全綁定', uri: bindUrl }, style: 'primary', color: '#8b5cf6' }
+            ]
+          }
+        };
+        this.sendReply(replyToken, [{ type: 'flex', altText: '請先完成 GymOS 帳號綁定', contents: notBoundFlex }]);
+        return;
+      }
+      
+      // 綁定對應選單
+      try {
+        LineRichMenu.link(userId, resolvedRole);
+      } catch(e) {
+        Logger.log(`[LINE RichMenu綁定出錯] ${e}`);
+      }
+      
+      const roleNameMap = {
+        admin: '👑 系統管理員 (Admin)',
+        coach: '📋 授課教練 (Coach)',
+        member: '📊 學員 (Member)'
+      };
+      
+      const syncFlex = {
+        type: 'bubble',
+        body: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            { type: 'text', text: '✅ 選單同步更新成功', weight: 'bold', size: 'md', color: '#10b981' },
+            { type: 'text', text: `${realName} 您好，系統已成功識別您的身分並完成最新的圖文選單綁定！`, wrap: true, size: 'xs', color: '#4b5563', margin: 'md' },
+            { type: 'separator', margin: 'md' },
+            {
+              type: 'box',
+              layout: 'vertical',
+              margin: 'md',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'horizontal',
+                  contents: [
+                    { type: 'text', text: '目前權限', size: 'xs', color: '#9ca3af', flex: 2 },
+                    { type: 'text', text: roleNameMap[resolvedRole], size: 'xs', color: '#1e293b', weight: 'bold', flex: 5 }
+                  ]
+                }
+              ]
+            },
+            { type: 'text', text: '💡 請關閉此對話視窗並重新進入，即可看見全新的功能按鈕鍵盤！', wrap: true, size: 'xxs', color: '#9ca3af', margin: 'lg' }
+          ]
+        }
+      };
+      
+      this.sendReply(replyToken, [{ type: 'flex', altText: '選單更新成功', contents: syncFlex }]);
+      return;
+    }
+
     const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
     const staff = SheetHelper.getRow<any>('Staff', 'line_uid', userId);
     const liffId = Config.get('LIFF_ID');
