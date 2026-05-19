@@ -245,6 +245,15 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           };
         });
       },
+      'admin.getFormMetaData': () => {
+        AuthService.requireRole(user, ['admin']);
+        const staff = SheetHelper.getRows<any>('Staff').filter(s => s.status === 'active' && (s.role === 'coach' || s.role === 'admin'));
+        const rooms = SheetHelper.getRows<any>('Rooms');
+        return {
+          coaches: staff.map(s => ({ lineUid: s.line_uid, name: s.real_name })),
+          rooms: rooms.map(r => ({ roomId: r.room_id, roomName: r.room_name }))
+        };
+      },
       'admin.createClass': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.createClass(data, user);

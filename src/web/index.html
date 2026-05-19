@@ -242,151 +242,7 @@
                   </div>
                 </div>
 
-                <!-- Session Suspension panel -->
-                <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4 lg:col-span-3">
-                  <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (停課/代課)</h3>
-                  <p class="text-[11px] text-slate-400">
-                    一律在網頁中完成，不需查看後台試算表！系統會自動即時與 Google 日曆及 LINE 完成同步。
-                  </p>
-                  
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustScope: 'session', selectedSessionId: '', suspendDate: '', adjustReason: '', adjustSubCoach: '', extendWeeks: 0, grantMakeupPoints: true }">
-                    <!-- Scope selection -->
-                    <div class="sm:col-span-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 flex items-center gap-6 text-xs text-slate-300">
-                      <span class="font-bold text-slate-400">調整範圍：</span>
-                      <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" value="session" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
-                        <span>單堂課程調整</span>
-                      </label>
-                      <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="radio" value="day" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
-                        <span class="text-rose-400 font-bold">當日所有班級 (停課一日) 🌪️ 颱風/國定假日適用</span>
-                      </label>
-                    </div>
 
-                    <!-- Target selector -->
-                    <div class="sm:col-span-2">
-                      <!-- Dropdown for single session -->
-                      <div x-show="adjustScope === 'session'">
-                        <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 選擇要調整的課堂</label>
-                        <select x-model="selectedSessionId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
-                          <option value="">-- 請選擇課堂時段 --</option>
-                          <template x-for="s in adminSessions" :key="s.sessionId">
-                            <option :value="s.sessionId" x-text="s.date + ' ' + formatTime(s.startTime) + ' | ' + s.className"></option>
-                          </template>
-                        </select>
-                      </div>
-
-                      <!-- Date Input for day suspension -->
-                      <div x-show="adjustScope === 'day'">
-                        <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 選擇要整天停課的日期</label>
-                        <input type="date" x-model="suspendDate" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
-                      </div>
-                    </div>
-
-                    <!-- Reason -->
-                    <div>
-                      <label class="block text-[10px] font-bold text-slate-400 mb-1">2. 調整/停課原因</label>
-                      <input type="text" x-model="adjustReason" placeholder="例如: 颱風假停課 / 教練請假" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
-                    </div>
-
-                    <!-- Compensation Policy Options -->
-                    <!-- Case A: Single session suspension (no substitute coach) -->
-                    <template x-if="adjustScope === 'session' && !adjustSubCoach">
-                      <div class="sm:col-span-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
-                        <span class="text-[10px] font-bold text-brand-400 flex items-center gap-1.5">📢 檢測到您將進行「停課」操作，請選擇該堂課的補償策略：</span>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label class="block text-[9px] font-bold text-slate-400 mb-1">12週課程 (A/C類)：順延結束日期選項</label>
-                            <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                              <option value="0">不順延 (結束日期不變)</option>
-                              <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
-                              <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label class="block text-[9px] font-bold text-slate-400 mb-1">1個月課程 (B類)：點數補償選項</label>
-                            <select x-model="grantMakeupPoints" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                              <option value="true">自動返還 1 點補課點數給所有學員</option>
-                              <option value="false">不返還點數</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-
-                    <!-- Case B: Whole day suspension -->
-                    <template x-if="adjustScope === 'day'">
-                      <div class="sm:col-span-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
-                        <span class="text-[10px] font-bold text-rose-400 flex items-center gap-1.5">🌪️ 檢測到您將進行「整天停課」操作，請選擇該日所有課堂的補償策略：</span>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label class="block text-[9px] font-bold text-slate-400 mb-1">12週課程 (A/C類)：順延結束日期選項</label>
-                            <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                              <option value="0">不順延 (結束日期不變)</option>
-                              <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
-                              <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label class="block text-[9px] font-bold text-slate-400 mb-1">1個月課程 (B類)：點數補償選項</label>
-                            <div class="text-[11px] text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 p-2 rounded-lg leading-relaxed">
-                              ✅ 系統將為所有受影響的 1 個月 B 類學員，**自動返還 1 點補課點數**！
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-
-                    <!-- Substitute Coach (Only for single session) -->
-                    <div x-show="adjustScope === 'session'" class="sm:col-span-3">
-                      <label class="block text-[10px] font-bold text-slate-400 mb-1">3. 安排代課教練 (選填，若填入則不觸發停課/補償)</label>
-                      <input type="text" x-model="adjustSubCoach" placeholder="留空代表停課，輸入代課教練 LINE UID 即代表安排代課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
-                    </div>
-                    
-                    <!-- Action Submit -->
-                    <div class="sm:col-span-3 flex justify-end gap-3 mt-2">
-                      <button @click="
-                        if (!adjustReason) { addToast('請填寫調整/停課原因！', 'error'); return; }
-                        if (adjustScope === 'session') {
-                          if (!selectedSessionId) { addToast('請選擇要調整的課堂！', 'error'); return; }
-                          apiCall('admin.suspendSession', { 
-                            sessionIds: [selectedSessionId], 
-                            reason: adjustReason, 
-                            substituteCoachUid: adjustSubCoach || null,
-                            extendWeeks: Number(extendWeeks),
-                            grantMakeupPoints: grantMakeupPoints === true || String(grantMakeupPoints) === 'true'
-                          })
-                          .then((res) => { 
-                            addToast(res.message || '🟢 單堂課程調整成功，日曆與試算表已連動同步！', 'success'); 
-                            selectedSessionId = ''; adjustReason = ''; adjustSubCoach = ''; extendWeeks = 0;
-                            loadInitialData();
-                          });
-                        } else {
-                          if (!suspendDate) { addToast('請選擇停課日期！', 'error'); return; }
-                          if (confirm('🚨 警告：確定要將 ' + suspendDate + ' 當天所有班級課程全部停課一日嗎？')) {
-                            apiCall('admin.suspendSession', { 
-                              suspendDate: suspendDate, 
-                              reason: adjustReason,
-                              extendWeeks: Number(extendWeeks),
-                              grantMakeupPoints: true
-                            })
-                            .then((res) => { 
-                              addToast(res.message || '🔴 當日所有課程已成功停課一日！', 'success'); 
-                              suspendDate = ''; adjustReason = ''; extendWeeks = 0;
-                              loadInitialData();
-                            });
-                          }
-                        }
-                      " 
-                              :class="adjustScope === 'day' ? 'bg-rose-700 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-500'"
-                              class="px-5 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5">
-                        <span x-text="adjustScope === 'day' ? '🌪️ 執行當日全部停課一日' : '⚠️ 送出單堂課程調整'"></span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -400,6 +256,157 @@
                 <button @click="showClassModal = true" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-500 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-brand-950/20 active:scale-95">
                   <span>➕ 新增課程藍圖</span>
                 </button>
+              </div>
+
+              <!-- Session Suspension panel -->
+              <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (停課/代課)</h3>
+                <p class="text-[11px] text-slate-400">
+                  一律在網頁中完成，不需查看後台試算表！系統會自動即時與 Google 日曆及 LINE 完成同步。
+                </p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustScope: 'session', selectedSessionId: '', suspendDate: '', adjustReason: '', adjustSubCoach: '', extendWeeks: 0, grantMakeupPoints: true }">
+                  <!-- Scope selection -->
+                  <div class="sm:col-span-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 flex items-center gap-6 text-xs text-slate-300">
+                    <span class="font-bold text-slate-400">調整範圍：</span>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="radio" value="session" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
+                      <span>單堂課程調整</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="radio" value="day" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
+                      <span class="text-rose-400 font-bold">當日所有班級 (停課一日) 🌪️ 颱風/國定假日適用</span>
+                    </label>
+                  </div>
+
+                  <!-- Target selector -->
+                  <div class="sm:col-span-2">
+                    <!-- Dropdown for single session -->
+                    <div x-show="adjustScope === 'session'">
+                      <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 選擇要調整的課堂</label>
+                      <select x-model="selectedSessionId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                        <option value="">-- 請選擇課堂時段 --</option>
+                        <template x-for="s in adminSessions" :key="s.sessionId">
+                          <option :value="s.sessionId" x-text="s.date + ' ' + formatTime(s.startTime) + ' | ' + s.className"></option>
+                        </template>
+                      </select>
+                    </div>
+
+                    <!-- Date Input for day suspension -->
+                    <div x-show="adjustScope === 'day'">
+                      <label class="block text-[10px] font-bold text-slate-400 mb-1">1. 選擇要整天停課的日期</label>
+                      <input type="date" x-model="suspendDate" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                    </div>
+                  </div>
+
+                  <!-- Reason -->
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1">2. 調整/停課原因</label>
+                    <input type="text" x-model="adjustReason" placeholder="例如: 颱風假停課 / 教練請假" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                  </div>
+
+                  <!-- Compensation Policy Options -->
+                  <!-- Case A: Single session suspension (no substitute coach) -->
+                  <template x-if="adjustScope === 'session' && !adjustSubCoach">
+                    <div class="sm:col-span-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                      <span class="text-[10px] font-bold text-brand-400 flex items-center gap-1.5">📢 檢測到您將進行「停課」操作，請選擇該堂課的補償策略：</span>
+                      
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-[9px] font-bold text-slate-400 mb-1">12週課程 (A/C類)：順延結束日期選項</label>
+                          <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                            <option value="0">不順延 (結束日期不變)</option>
+                            <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
+                            <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-[9px] font-bold text-slate-400 mb-1">1個月課程 (B類)：點數補償選項</label>
+                          <select x-model="grantMakeupPoints" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                            <option value="true">自動返還 1 點補課點數給所有學員</option>
+                            <option value="false">不返還點數</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Case B: Whole day suspension -->
+                  <template x-if="adjustScope === 'day'">
+                    <div class="sm:col-span-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                      <span class="text-[10px] font-bold text-rose-400 flex items-center gap-1.5">🌪️ 檢測到您將進行「整天停課」操作，請選擇該日所有課堂的補償策略：</span>
+                      
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-[9px] font-bold text-slate-400 mb-1">12週課程 (A/C類)：順延結束日期選項</label>
+                          <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                            <option value="0">不順延 (結束日期不變)</option>
+                            <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
+                            <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-[9px] font-bold text-slate-400 mb-1">1個月課程 (B類)：點數補償選項</label>
+                          <div class="text-[11px] text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 p-2 rounded-lg leading-relaxed">
+                            ✅ 系統將為所有受影響的 1 個月 B 類學員，**自動返還 1 點補課點數**！
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Substitute Coach (Only for single session) -->
+                  <div x-show="adjustScope === 'session'" class="sm:col-span-3">
+                    <label class="block text-[10px] font-bold text-slate-400 mb-1">3. 安排代課教練 (已連線試算表下拉選單)</label>
+                    <select x-model="adjustSubCoach" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none">
+                      <option value="">-- 請選擇代課教練 (留空代表直接停課) --</option>
+                      <template x-for="c in adminCoaches" :key="c.lineUid">
+                        <option :value="c.lineUid" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  
+                  <!-- Action Submit -->
+                  <div class="sm:col-span-3 flex justify-end gap-3 mt-2">
+                    <button @click="
+                      if (!adjustReason) { addToast('請填寫調整/停課原因！', 'error'); return; }
+                      if (adjustScope === 'session') {
+                        if (!selectedSessionId) { addToast('請選擇要調整的課堂！', 'error'); return; }
+                        apiCall('admin.suspendSession', { 
+                          sessionIds: [selectedSessionId], 
+                          reason: adjustReason, 
+                          substituteCoachUid: adjustSubCoach || null,
+                          extendWeeks: Number(extendWeeks),
+                          grantMakeupPoints: grantMakeupPoints === true || String(grantMakeupPoints) === 'true'
+                        })
+                        .then((res) => { 
+                          addToast(res.message || '🟢 單堂課程調整成功，日曆與試算表已連動同步！', 'success'); 
+                          selectedSessionId = ''; adjustReason = ''; adjustSubCoach = ''; extendWeeks = 0;
+                          loadInitialData();
+                        });
+                      } else {
+                        if (!suspendDate) { addToast('請選擇停課日期！', 'error'); return; }
+                        if (confirm('🚨 警告：確定要將 ' + suspendDate + ' 當天所有班級課程全部停課一日嗎？')) {
+                          apiCall('admin.suspendSession', { 
+                            suspendDate: suspendDate, 
+                            reason: adjustReason,
+                            extendWeeks: Number(extendWeeks),
+                            grantMakeupPoints: true
+                          })
+                          .then((res) => { 
+                            addToast(res.message || '🔴 當日所有課程已成功停課一日！', 'success'); 
+                            suspendDate = ''; adjustReason = ''; extendWeeks = 0;
+                            loadInitialData();
+                          });
+                        }
+                      }
+                    " 
+                            :class="adjustScope === 'day' ? 'bg-rose-700 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-500'"
+                            class="px-5 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5">
+                      <span x-text="adjustScope === 'day' ? '🌪️ 執行當日全部停課一日' : '⚠️ 送出單堂課程調整'"></span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div class="bg-slate-950/40 border border-slate-800 rounded-2xl overflow-hidden">
@@ -605,20 +612,39 @@
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">教室 ID</label>
-                <input type="text" x-model="classForm.roomId" placeholder="RM-01" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                <label class="block text-xs font-bold text-slate-400 mb-1">教室 (已連線試算表)</label>
+                <select x-model="classForm.roomId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  <option value="">-- 請選擇教室 --</option>
+                  <template x-for="r in adminRooms" :key="r.roomId">
+                    <option :value="r.roomId" x-text="r.roomName"></option>
+                  </template>
+                </select>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1">人數上限</label>
                 <input type="number" x-model.number="classForm.maxCapacity" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">星期幾上課 (0-6)</label>
-                <input type="number" x-model.number="classForm.dayOfWeek" placeholder="1代表星期一" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                <label class="block text-xs font-bold text-slate-400 mb-1">星期幾上課</label>
+                <select x-model.number="classForm.dayOfWeek" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  <option value="">-- 請選擇上課日 --</option>
+                  <option value="1">星期一</option>
+                  <option value="2">星期二</option>
+                  <option value="3">星期三</option>
+                  <option value="4">星期四</option>
+                  <option value="5">星期五</option>
+                  <option value="6">星期六</option>
+                  <option value="0">星期日</option>
+                </select>
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">授課教練 LINE UID</label>
-                <input type="text" x-model="classForm.coachLineUid" placeholder="U12345abcdef..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                <label class="block text-xs font-bold text-slate-400 mb-1">授課教練 (已連線試算表)</label>
+                <select x-model="classForm.coachLineUid" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  <option value="">-- 請選擇授課教練 --</option>
+                  <template x-for="c in adminCoaches" :key="c.lineUid">
+                    <option :value="c.lineUid" x-text="c.name"></option>
+                  </template>
+                </select>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1">開始時間</label>
@@ -1141,10 +1167,10 @@
           className: '',
           classType: 'group_1x',
           level: 'L1',
-          coachLineUid: 'Ucoach1234567890abcdef',
-          roomId: 'RM-01',
+          coachLineUid: '',
+          roomId: '',
           maxCapacity: 15,
-          dayOfWeek: 1,
+          dayOfWeek: '',
           startTime: '19:00',
           endTime: '20:00',
           periodStart: new Date().toISOString().split('T')[0],
@@ -1180,6 +1206,8 @@
         
         // Admin upgraded v3.0 states
         adminClasses: [],
+        adminRooms: [],
+        adminCoaches: [],
         pendingPayments: [],
         showRenewModal: false,
         renewForm: {
@@ -1430,6 +1458,14 @@
               this.adminSessions = await this.apiCall('admin.getSessions');
               this.adminClasses = await this.apiCall('admin.getClasses');
               this.pendingPayments = await this.apiCall('admin.getPendingPayments');
+              
+              try {
+                const meta = await this.apiCall('admin.getFormMetaData');
+                this.adminRooms = meta.rooms || [];
+                this.adminCoaches = meta.coaches || [];
+              } catch(e) {
+                console.warn('⚡ 無法載入表單中繼資料：', e);
+              }
             } else if (this.currentMode === 'bind') {
               // Student binding
             } else if (this.currentMode === 'leave') {
@@ -1753,11 +1789,12 @@
           }
           
           this.calendarInstance = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
+            initialView: window.innerWidth < 768 ? 'listWeek' : 'timeGridWeek',
+            height: window.innerWidth < 768 ? 'auto' : 650,
             headerToolbar: {
               left: 'prev,next today',
               center: 'title',
-              right: 'timeGridWeek,timeGridDay'
+              right: window.innerWidth < 768 ? 'listWeek,timeGridDay' : 'listWeek,timeGridWeek,timeGridDay'
             },
             slotMinTime: '08:00:00',
             slotMaxTime: '22:00:00',
