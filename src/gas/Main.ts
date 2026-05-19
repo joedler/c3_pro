@@ -166,33 +166,31 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         if (!data || !data.reason) {
           throw new Error('缺少必要參數 (reason)');
         }
-        if (data.classId) {
+        
+        const extendWeeks = Number(data.extendWeeks) || 0;
+        const grantMakeupPoints = data.grantMakeupPoints === true || String(data.grantMakeupPoints).toLowerCase() === 'true';
+
+        if (data.suspendDate) {
+          // 整日停課一日
           const allSessions = SheetHelper.getRows<any>('Sessions');
-          const today = new Date();
-          today.setHours(0,0,0,0);
-          
           const targetSessionIds = allSessions
             .filter(s => {
-              if (s.class_id !== data.classId || s.status === 'cancelled') return false;
-              try {
-                const sDate = new Date(s.date);
-                return sDate.getTime() >= today.getTime();
-              } catch(e) {
-                return false;
-              }
+              if (s.status === 'cancelled') return false;
+              // 比對日期字串
+              const sDateStr = String(s.date || s.session_date).substring(0, 10);
+              return sDateStr === data.suspendDate;
             })
             .map(s => s.session_id);
           
           if (targetSessionIds.length > 0) {
-            ClassEngine.suspendSessions(targetSessionIds, data.reason, null);
+            ClassEngine.suspendSessions(targetSessionIds, data.reason, null, extendWeeks, grantMakeupPoints);
           }
-          SheetHelper.updateRow('Classes', 'class_id', data.classId, { status: 'inactive' });
-          return { message: `已成功將該班級未來所有課堂永久停課，並停用班級設定` };
+          return { message: `成功將 ${data.suspendDate} 當日全部 ${targetSessionIds.length} 堂班級課堂停課一日！` };
         } else if (data.sessionIds) {
-          ClassEngine.suspendSessions(data.sessionIds, data.reason, data.substituteCoachUid || null);
+          ClassEngine.suspendSessions(data.sessionIds, data.reason, data.substituteCoachUid || null, extendWeeks, grantMakeupPoints);
           return { message: '已成功停課/調整課程，並同步至 Google 日曆' };
         } else {
-          throw new Error('缺少必要參數 (sessionIds 或 classId)');
+          throw new Error('缺少必要參數 (sessionIds 或 suspendDate)');
         }
       },
       'admin.announcement': () => {

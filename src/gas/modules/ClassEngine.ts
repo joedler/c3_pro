@@ -220,9 +220,15 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
   }
 
   /**
-   * 停課或調整特定課堂，連動停用日曆事件
+   * 停課或調整特定課堂，連動停用日曆事件，支援順延與返還點數 (Spec v3.0)
    */
-  public static suspendSessions(sessionIds: string[], reason: string, substituteCoachUid: string | null = null): void {
+  public static suspendSessions(
+    sessionIds: string[], 
+    reason: string, 
+    substituteCoachUid: string | null = null,
+    extendWeeks: number = 0,
+    grantMakeupPoints: boolean = false
+  ): void {
     const calendar = this.getCalendar();
     
     sessionIds.forEach(id => {
@@ -244,6 +250,116 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
       // 2. 同步更新日曆
       this.syncCalendarEvent(id);
+
+      // 如果是「停課」而非「代課教練」
+      if (!substituteCoachUid) {
+        const classId = session.class_id;
+        const cls = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+        if (!cls) return;
+
+        // A. 針對一期一個月的班 (B 類) 或管理員勾選返還點數者：發放請假補償以返還補課點數
+        if (grantMakeupPoints || cls.class_type === 'B') {
+          const enrollments = SheetHelper.getRows<any>('Enrollments');
+          const enrolledMembers = enrollments.filter(e => e.class_id === classId && e.status === 'active');
+          
+          enrolledMembers.forEach(e => {
+            const leaveId = `LV-SYS-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            // 寫入請假申請 (Leave_Requests)，預設自動審查通過，且 makeup_session_id 為空代表擁有 1 點可補課點數
+            SheetHelper.addRow('Leave_Requests', {
+              leave_id: leaveId,
+              member_id: e.member_id,
+              session_id: id,
+              request_time: new Date(),
+              status: 'approved',
+              approved_by: 'system',
+              makeup_session_id: '',
+              notes: `[系統停課補償] 課堂因故停課，自動發送補課點數。原因: ${reason}`
+            });
+
+            // 同步寫入出勤紀錄為 'leave'
+            SheetHelper.addRow('Attendance', {
+              attendance_id: `ATT-SYS-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              session_id: id,
+              member_id: e.member_id,
+              type: 'leave',
+              checkin_time: new Date(),
+              checkin_by: 'system',
+              original_session_id: '',
+              notes: `[系統停課請假] 原因: ${reason}`
+            });
+          });
+          Logger.log(`[系統停課補償] 已為班級 ${classId} 的 ${enrolledMembers.length} 位學員發放請假返還補課點數`);
+        }
+
+        // B. 針對 12 週者 (A 類 / C 類) 或勾選順延者：順延結束日期
+        if (extendWeeks > 0 && cls.class_type !== 'B') {
+          // 1. 取得該班級所有現有課堂，找出最後一堂課的日期
+          const sessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
+          let latestDate = new Date(cls.period_start);
+          sessions.forEach(s => {
+            if (s.date) {
+              const d = new Date(s.date);
+              if (!isNaN(d.getTime()) && d.getTime() > latestDate.getTime()) {
+                latestDate = d;
+              }
+            }
+          });
+
+          // 2. 依序產生順延新課堂 (例如順延 1 週或 2 週)
+          for (let i = 1; i <= extendWeeks; i++) {
+            const nextDate = new Date(latestDate);
+            nextDate.setDate(nextDate.getDate() + (7 * i)); // 順延 i 週
+
+            const newSessionId = `SES-${Math.floor(nextDate.getTime() / 1000)}`;
+            const dateStr = nextDate.toISOString().split('T')[0];
+
+            // 建立日曆活動
+            let calendarEventId = '';
+            try {
+              const calendar = this.getCalendar();
+              const startTimeStr = `${dateStr}T${cls.start_time}:00`;
+              const endTimeStr = `${dateStr}T${cls.end_time}:00`;
+              const event = calendar.createEvent(
+                `${cls.class_name} (0/8人)`,
+                new Date(startTimeStr),
+                new Date(endTimeStr),
+                {
+                  description: `【課程資訊】\n班級：${cls.class_name}\n停課順延生成課堂`
+                }
+              );
+              calendarEventId = event.getId();
+            } catch (err) {
+              Logger.log(`[順延建立日曆活動失敗] ${err}`);
+            }
+
+            // 新增 Session 記錄
+            SheetHelper.addRow('Sessions', {
+              session_id: newSessionId,
+              class_id: classId,
+              class_name: cls.class_name,
+              coach_line_uid: cls.coach_line_uid,
+              room_id: cls.room_id,
+              date: dateStr,
+              session_date: dateStr,
+              start_time: cls.start_time,
+              end_time: cls.end_time,
+              status: 'open',
+              calendar_event_id: calendarEventId,
+              notes: `[停課順延生成] 代替已停課時段: ${session.date}`
+            });
+            Logger.log(`[停課順延] 已成功為班級 ${classId} 生成新的課堂：${dateStr} (${newSessionId})`);
+          }
+
+          // 3. 更新 Classes 中的總週數 (period_weeks)
+          const newPeriodWeeks = (Number(cls.period_weeks) || 12) + extendWeeks;
+          const newTotalSessions = (Number(cls.total_sessions) || 12) + extendWeeks;
+          SheetHelper.updateRow('Classes', 'class_id', classId, {
+            period_weeks: newPeriodWeeks,
+            total_sessions: newTotalSessions
+          });
+          Logger.log(`[停課順延] 班級 ${classId} 的總週數已增加為: ${newPeriodWeeks}週，總堂數變更為: ${newTotalSessions}堂`);
+        }
+      }
     });
   }
 }
