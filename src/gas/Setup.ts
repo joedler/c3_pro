@@ -227,20 +227,34 @@ function setupRichMenus(): void {
       const richMenuId = createResJson.richMenuId;
       Logger.log(`[LINE RichMenu] ${menu.role} 選單結構建立成功! ID: ${richMenuId}`);
 
-      // B. 取得背景圖 Blob (支援 Google Drive 解析或 Unsplash 網址)
+      // B. 取得背景圖 Blob (支援多種 Google Drive 解析或 Unsplash 網址)
       let imgBlob: GoogleAppsScript.Base.Blob;
       const customImgUrl = Config.get(`IMG_MENU_${menu.role.toUpperCase()}`);
       const finalImgUrl = customImgUrl ? customImgUrl : menu.imageUrl;
       
       try {
+        let driveId: string | null = null;
         if (finalImgUrl.includes('drive.google.com/file/d/')) {
           const match = finalImgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-          if (match && match[1]) {
-            imgBlob = DriveApp.getFileById(match[1]).getBlob();
-            Logger.log(`[LINE RichMenu] 成功從 Google Drive 讀取 ${menu.role} 的圖片`);
-          } else {
-            throw new Error('無法解析 Google Drive 網址中的檔案 ID');
+          if (match) driveId = match[1];
+        } else if (finalImgUrl.includes('drive.google.com/open?id=')) {
+          const match = finalImgUrl.match(/id=([a-zA-Z0-9_-]+)/);
+          if (match) driveId = match[1];
+        } else if (finalImgUrl.includes('drive.google.com/uc?id=')) {
+          const match = finalImgUrl.match(/id=([a-zA-Z0-9_-]+)/);
+          if (match) driveId = match[1];
+        }
+
+        if (driveId) {
+          const file = DriveApp.getFileById(driveId);
+          // 安全檢查：確保檔案小於 1MB 以符合 LINE API 規範
+          if (file.getSize() > 1048576) {
+            throw new Error('圖片檔案過大！LINE 規定圖文選單圖片不可超過 1MB。');
           }
+          imgBlob = file.getBlob();
+          Logger.log(`[LINE RichMenu] 成功從 Google Drive 讀取 ${menu.role} 的圖片`);
+        } else if (finalImgUrl.includes('drive.google.com')) {
+          throw new Error('無法解析您的 Google 雲端硬碟網址！請確保網址是「單一圖片」的共用連結，不能是資料夾連結。');
         } else {
           const imgRes = UrlFetchApp.fetch(finalImgUrl);
           imgBlob = imgRes.getBlob();
@@ -261,11 +275,11 @@ function setupRichMenus(): void {
       
       const uploadRes = UrlFetchApp.fetch(uploadUrl, uploadOptions);
       if (uploadRes.getResponseCode() !== 200) {
-        throw new Error(`上傳背景圖片失敗: ${uploadRes.getContentText()}`);
+        throw new Error(`上傳背景圖片失敗: ${uploadRes.getContentText()} (若顯示 invalid image dimension，請確認您的圖片剛好是 2500x843 像素且格式為 JPG/PNG)`);
       }
       Logger.log(`[LINE RichMenu] ${menu.role} 背景圖片自動上傳綁定成功!`);
 
-      // D. 回寫更新至 Google 試算表的 Config 系統設定 (具備自我修復機制：若無則自動新增欄位)
+      // D. 回寫更新至 Google 試算表的 Config 系統設定
       const configRows = SheetHelper.getRows<any>('Config');
       const targetRow = configRows.find(row => row.key === menu.configKey);
       if (targetRow) {
@@ -282,10 +296,11 @@ function setupRichMenus(): void {
           value: richMenuId,
           description: descMap[menu.configKey] || ''
         });
-        Logger.log(`[LINE Config自動新增] 成功建立並填入 ${menu.configKey} 欄位，值為 ${richMenuId}！`);
       }
     } catch (e) {
-      Logger.log(`[⚠️ LINE RichMenu 建立失敗 - ${menu.role}] ${e instanceof Error ? e.message : e}`);
+      const errMsg = e instanceof Error ? e.message : String(e);
+      Logger.log(`[⚠️ LINE RichMenu 建立失敗 - ${menu.role}] ${errMsg}`);
+      throw new Error(`【${menu.role}選單失敗】${errMsg}`);
     }
   });
 
