@@ -142,12 +142,63 @@ class CoachService {
         });
       });
 
+      let formattedDate = '';
+      if (s.session_date instanceof Date) {
+        formattedDate = Utilities.formatDate(s.session_date, 'Asia/Taipei', 'yyyy-MM-dd');
+      } else {
+        formattedDate = String(s.session_date || '').split('T')[0];
+      }
+
+      let formattedStart = '';
+      if (s.start_time instanceof Date) {
+        formattedStart = Utilities.formatDate(s.start_time, 'Asia/Taipei', 'HH:mm');
+      } else {
+        formattedStart = String(s.start_time || '').trim();
+        let isPM = false;
+        if (formattedStart.includes('下午')) {
+          isPM = true;
+          formattedStart = formattedStart.replace('下午', '').trim();
+        } else if (formattedStart.includes('上午')) {
+          formattedStart = formattedStart.replace('上午', '').trim();
+        }
+        const parts = formattedStart.split(':');
+        if (parts.length >= 2) {
+          let h = parseInt(parts[0], 10);
+          const m = parts[1].substring(0, 2);
+          if (isPM && h < 12) h += 12;
+          else if (!isPM && h === 12) h = 0;
+          formattedStart = `${String(h).padStart(2, '0')}:${m}`;
+        }
+      }
+
+      let formattedEnd = '';
+      if (s.end_time instanceof Date) {
+        formattedEnd = Utilities.formatDate(s.end_time, 'Asia/Taipei', 'HH:mm');
+      } else {
+        formattedEnd = String(s.end_time || '').trim();
+        let isPM = false;
+        if (formattedEnd.includes('下午')) {
+          isPM = true;
+          formattedEnd = formattedEnd.replace('下午', '').trim();
+        } else if (formattedEnd.includes('上午')) {
+          formattedEnd = formattedEnd.replace('上午', '').trim();
+        }
+        const parts = formattedEnd.split(':');
+        if (parts.length >= 2) {
+          let h = parseInt(parts[0], 10);
+          const m = parts[1].substring(0, 2);
+          if (isPM && h < 12) h += 12;
+          else if (!isPM && h === 12) h = 0;
+          formattedEnd = `${String(h).padStart(2, '0')}:${m}`;
+        }
+      }
+
       return {
         sessionId: s.session_id,
         className: cls.class_name,
-        date: s.session_date,
-        startTime: s.start_time,
-        endTime: s.end_time,
+        date: formattedDate,
+        startTime: formattedStart,
+        endTime: formattedEnd,
         status: s.status,
         actualCount: Number(s.actual_count) || 0,
         maxCapacity: maxCapacity,

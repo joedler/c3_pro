@@ -67,6 +67,43 @@
     .fc .fc-button-primary:hover {
       background-color: #8b5cf6 !important;
     }
+    
+    /* 隱藏橫向滾動條 */
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 手機版日曆外觀極致美化與防擠壓 */
+    @media (max-width: 768px) {
+      .fc .fc-toolbar {
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: center !important;
+        margin-bottom: 15px !important;
+      }
+      .fc .fc-toolbar-title {
+        font-size: 1.15rem !important;
+        text-align: center !important;
+        font-weight: 800 !important;
+        background: linear-gradient(to right, #ffffff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .fc .fc-toolbar-chunk {
+        display: flex !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+      }
+      .fc .fc-button {
+        padding: 6px 12px !important;
+        font-size: 11px !important;
+      }
+    }
   </style>
 </head>
 <body class="text-slate-200 min-h-screen flex flex-col antialiased" x-data="gymApp" x-init="init()" x-cloak>
@@ -189,11 +226,11 @@
               <span>📊</span>
               <span x-text="activeTab === 'dashboard' ? '首頁摘要與公告欄' : (activeTab === 'classes' ? '班級管理與一鍵續期中心' : (activeTab === 'ledger' ? '學費待繳核點與 LINE 收據中心' : '課程視覺化排程'))"></span>
             </h2>
-            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800 space-x-1">
-              <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all">首頁摘要</button>
-              <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all">🏫 班級管理</button>
-              <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all">💰 學費核點 🧾</button>
-              <button @click="activeTab = 'schedule'; setTimeout(() => renderCalendar(), 100)" :class="activeTab === 'schedule' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all">共享課表</button>
+            <div class="flex overflow-x-auto whitespace-nowrap bg-slate-900 p-1 rounded-xl border border-slate-800 space-x-1 max-w-full scrollbar-none">
+              <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all shrink-0">首頁摘要</button>
+              <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all shrink-0">🏫 班級管理</button>
+              <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all shrink-0">💰 學費核點 🧾</button>
+              <button @click="activeTab = 'schedule'; setTimeout(() => renderCalendar(), 100)" :class="activeTab === 'schedule' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'" class="px-3 py-2 text-[11px] font-semibold rounded-lg transition-all shrink-0">共享課表</button>
             </div>
           </div>
 
