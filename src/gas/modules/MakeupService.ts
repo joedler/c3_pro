@@ -87,17 +87,28 @@ class MakeupService {
       if (!validClassIds.has(s.class_id) || s.status !== 'scheduled') {
         return false;
       }
-      // 判斷是否在未來 (session_date 與 start_time 組合)
+      // 判斷是否在未來：GAS 從試算表讀回的欄位可能是 Date 物件，也可能是字串，必須兩者都處理
       try {
-        const parts = String(s.session_date).split('T')[0].split('-');
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const day = parseInt(parts[2], 10);
-        const sessionStart = new Date(year, month, day);
-        
+        let sessionStart: Date;
+        if (s.session_date instanceof Date) {
+          // GAS Date 欄位直接回傳 Date 物件
+          sessionStart = new Date(
+            s.session_date.getFullYear(),
+            s.session_date.getMonth(),
+            s.session_date.getDate()
+          );
+        } else {
+          const parts = String(s.session_date).split('T')[0].split('-');
+          sessionStart = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+
         let hours = 0;
         let minutes = 0;
-        if (s.start_time) {
+        if (s.start_time instanceof Date) {
+          // GAS 純時間欄位以 1899-12-30 為 epoch 的 Date 物件回傳
+          hours = s.start_time.getHours();
+          minutes = s.start_time.getMinutes();
+        } else if (s.start_time) {
           const tParts = String(s.start_time).trim().replace('上午', '').replace('下午', '').split(':');
           if (tParts.length >= 2) {
             hours = parseInt(tParts[0], 10);
