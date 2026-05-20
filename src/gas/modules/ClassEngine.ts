@@ -320,10 +320,41 @@ class ClassEngine {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const periodWeeks = Number(cls.period_weeks) || 12;
-    const sessionsPerWeek = Number(cls.sessions_per_week) || 1;
-    const totalSessionsToGenerate = periodWeeks * sessionsPerWeek;
-    
+    const periodType = String(cls.period_type || 'weekly').trim().toLowerCase();
+    let totalSessionsToGenerate = 0;
+
+    if (periodType === 'monthly') {
+      const startDate = new Date(newStartDate.split('T')[0]);
+      const year = startDate.getFullYear();
+      const month = startDate.getMonth(); // 0-indexed
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        if (daysOfWeek.includes(new Date(year, month, d).getDay())) {
+          totalSessionsToGenerate++;
+        }
+      }
+      Logger.log(`[ClassEngine.renew] ${classId} (月費制) 新一期 ${year}/${month + 1} 動態堂數: ${totalSessionsToGenerate} 堂`);
+
+      // 順便更新 Classes 表的總堂數欄位
+      const classesSheet = SheetHelper.getSheet('Classes');
+      const classesRows = SheetHelper.getRows<any>('Classes');
+      const classRowIndex = classesRows.findIndex(c => c.class_id === classId);
+      if (classRowIndex !== -1) {
+        const rowNum = classRowIndex + 2;
+        const colMap = SheetHelper.COLUMN_MAP['Classes'];
+        const headers = classesSheet.getRange(1, 1, 1, classesSheet.getLastColumn()).getValues()[0];
+        const totalSessionsCol = headers.indexOf(colMap.total_sessions) + 1;
+        if (totalSessionsCol > 0) {
+          classesSheet.getRange(rowNum, totalSessionsCol).setValue(totalSessionsToGenerate);
+        }
+      }
+    } else {
+      const periodWeeks = Number(cls.period_weeks) || 12;
+      const sessionsPerWeek = Number(cls.sessions_per_week) || 1;
+      totalSessionsToGenerate = periodWeeks * sessionsPerWeek;
+    }
+
     let seq = startSeq;
     const endSeq = startSeq + totalSessionsToGenerate - 1;
 
