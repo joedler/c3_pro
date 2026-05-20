@@ -258,7 +258,7 @@ class MemberService {
 
     // 2. 取得選課紀錄 (Enrollments)
     const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
-      e => e.member_id === memberId && e.status === 'active'
+      e => e.member_id === memberId && (e.status === 'active' || e.status === 'pending_payment')
     );
 
     if (enrollments.length === 0) {
@@ -275,7 +275,7 @@ class MemberService {
 
     // 3. 取得班級與課程設定 (Classes)
     const allClasses = SheetHelper.getRows<any>('Classes');
-    const myClasses = allClasses.filter(c => classIds.includes(c.class_id) && c.status === 'active');
+    const myClasses = allClasses.filter(c => classIds.includes(c.class_id) && (c.status === 'active' || c.status === 'open'));
 
     // 4. 取得出勤與請假統計
     const attendances = SheetHelper.getRows<any>('Attendance').filter(a => a.member_id === memberId);

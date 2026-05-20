@@ -300,8 +300,8 @@
     <span class="text-xs text-slate-400 mt-4 font-bold tracking-widest">系統處理中，請稍候...</span>
   </div>
 
-  <!-- MAIN APP CONTAINER -->
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- MAIN APP CONTAINER (等待 appReady 才顯示，防止初始化期間閃跳管理頁面) -->
+  <main x-show="appReady" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
     <!-- ================= ADMIN CONSOLE PANEL ================= -->
     <template x-if="currentMode === 'admin'">
@@ -1043,120 +1043,116 @@
             <h4 class="font-bold text-white border-b border-slate-800 pb-2 text-center text-xs">📝 預約綁定學員檔案清單摘要</h4>
             
             <div class="grid grid-cols-2 gap-y-2 gap-x-4">
-              <span class="text-slate-400">學員姓名:</span>
-              <span class="text-white text-right font-semibold" x-text="studentBindForm.realName"></span>
-              
-              <span class="text-slate-400">學員性別:</span>
-              <span class="text-white text-right font-semibold" x-text="studentBindForm.gender"></span>
-              
-              <span class="text-slate-400">出生年月:</span>
-              <span class="text-white text-right font-semibold" x-text="studentBindForm.birthday"></span>
-              
-              <span class="text-slate-400">身高體重:</span>
-              <span class="text-white text-right font-semibold" x-text="studentBindForm.height + ' cm / ' + studentBindForm.weight + ' kg'"></span>
-              
-              <span class="text-slate-400">預報時段:</span>
-              <span class="text-brand-400 text-right font-extrabold truncate" 
-                    x-text="studentBindForm.availableClasses.find(c => c.class_id === studentBindForm.classId)?.class_name || studentBindForm.classId"></span>
+      <!-- ================= STUDENT PROFILE DASHBOARD (F-M02) ================= -->
+    <template x-if="currentMode === 'profile'">
+      <div class="max-w-md mx-auto space-y-6">
+        <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
+          <span class="text-3xl">👤</span>
+          <h2 class="text-xl font-bold text-white"><span x-text="studentProfile.realName || '學員'"></span> 的課程資訊</h2>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            歡迎回來！以下是您的當前課程與學務統計數據。
+          </p>
+        </div>
+
+        <!-- 課程與學務卡片 -->
+        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-slate-400">目前學員身分</span>
+            <span class="px-2 py-0.5 text-[9px] font-bold bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full" x-text="studentProfile.level || ''"></span>
+          </div>
+
+          <!-- 4格主數據 (F-M02) -->
+          <div class="grid grid-cols-2 gap-3" x-show="studentProfile.classNames">
+            <div class="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-900">
+              <p class="text-2xl font-black text-white" x-text="studentProfile.remainingCount ?? '-'"></p>
+              <p class="text-[10px] text-slate-500 mt-1 font-bold">📊 剩餘堂數</p>
+            </div>
+            <div class="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-900">
+              <p class="text-2xl font-black text-emerald-400" x-text="studentProfile.attendedCount ?? '-'"></p>
+              <p class="text-[10px] text-slate-500 mt-1 font-bold">✅ 已上堂數</p>
+            </div>
+            <div class="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-900">
+              <p class="text-2xl font-black text-amber-400" x-text="studentProfile.leaveCount ?? '-'"></p>
+              <p class="text-[10px] text-slate-500 mt-1 font-bold">❌ 請假堂數</p>
+            </div>
+            <div class="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-900">
+              <p class="text-2xl font-black text-blue-400" x-text="studentProfile.totalPaid ?? '-'"></p>
+              <p class="text-[10px] text-slate-500 mt-1 font-bold">💰 總繳堂數</p>
             </div>
           </div>
 
-          <div class="p-3 bg-brand-500/10 border border-brand-500/25 rounded-2xl text-[10px] text-brand-400 leading-relaxed">
-            ⚠️ <b>名額鎖定提醒</b>：送出綁定後，後端將自動將您的 LINE 帳號完成認證，為您鎖定該時段課程名額，並為您存入一期 12 堂選課紀錄。
-          </div>
-
-          <div class="flex gap-3 mt-4">
-            <button @click="studentBindForm.step = 3" class="flex-grow w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
-              ⬅️ 返回
-            </button>
-            <button @click="submitStudentBind()" 
-                    class="flex-grow w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5">
-              <span x-show="loading" class="animate-spin">⏳</span>
-              確認綁定並送出選課 ➡️
-            </button>
-          </div>
-        </div>
-
-        <!-- STEP 5: Success View -->
-        <div x-show="studentBindForm.step === 5" class="bg-slate-900/40 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl text-center space-y-6" x-transition>
-          <div class="w-20 h-20 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 text-4xl animate-bounce">
-            🎉
-          </div>
-          
-          <div class="space-y-2">
-            <h2 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
-              帳號安全綁定與選課預約成功！
-            </h2>
-            <p class="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
-              系統已成功為您的 LINE 帳號關聯學員檔案，並為您鎖定課程上課名額與額度！
+          <!-- 課程詳細資訊 -->
+          <div class="text-xs text-slate-400 space-y-2 border-t border-slate-800/60 pt-4" x-show="studentProfile.classNames">
+            <p class="flex justify-between">
+              <span>📅 班級名稱：</span>
+              <span class="text-slate-200 font-bold text-right" x-text="studentProfile.classNames"></span>
+            </p>
+            <p class="flex justify-between">
+              <span>🗓️ 本期區間：</span>
+              <span class="text-slate-200 text-right" x-text="studentProfile.periodInfo"></span>
+            </p>
+            <p class="flex justify-between">
+              <span>🔄 補課統計：</span>
+              <span class="text-slate-200 text-right" x-text="studentProfile.makeupInfo"></span>
             </p>
           </div>
 
-          <div class="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl inline-block w-full text-xs space-y-1">
-            <p class="text-slate-400">已關聯學員姓名：<span class="text-white font-bold" x-text="studentBindForm.realName"></span></p>
-            <p class="text-slate-400">已選修時段：<span class="text-brand-400 font-extrabold" 
-                                           x-text="studentBindForm.availableClasses.find(c => c.class_id === studentBindForm.classId)?.class_name || studentBindForm.classId"></span></p>
+          <div x-show="!studentProfile.classNames" class="text-center py-6">
+            <p class="text-xs text-slate-500">尚無報名或待核收之課程資訊。</p>
           </div>
 
-          <p class="text-[10px] text-slate-500 animate-pulse">
-            * 後端正在推送最新的「學員圖文選單」至您的手機底欄，請重新開啟此官方對話視窗即可體驗！
-          </p>
-
-          <button @click="if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); } else { switchMode('leave'); }" 
-                  class="w-full bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 text-xs font-bold transition-all">
-            關閉此視窗
-          </button>
+          <!-- 三大捷徑按鈕 (F-M02) -->
+          <div class="grid grid-cols-3 gap-2 border-t border-slate-800/60 pt-5">
+            <button @click="showLocalSchedule = !showLocalSchedule" :class="showLocalSchedule ? 'bg-brand-600 text-white border-brand-500' : 'bg-slate-900/60 text-slate-300 border-slate-800/80 hover:bg-slate-850'" class="py-3 px-1 text-xs font-bold rounded-xl border transition-all text-center">
+              📅 查看課表
+            </button>
+            <button @click="switchMode('leave')" class="bg-slate-900/60 hover:bg-slate-850 text-slate-300 py-3 px-1 text-xs font-bold rounded-xl border border-slate-800/80 transition-all text-center">
+              🚫 申請請假
+            </button>
+            <button @click="switchMode('makeup')" class="bg-slate-900/60 hover:bg-slate-850 text-slate-300 py-3 px-1 text-xs font-bold rounded-xl border border-slate-800/80 transition-all text-center">
+              🔄 補課
+            </button>
+          </div>
         </div>
 
+        <!-- 展開顯示未來 4 週課堂 (查看課表) -->
+        <div x-show="showLocalSchedule" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
+          <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🗓️ 未來 4 週課表行程</h3>
+          <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <template x-for="s in upcomingSessions" :key="s.sessionId">
+              <div class="flex items-center justify-between p-3 rounded-xl border border-slate-800 bg-slate-950/20">
+                <div>
+                  <p class="text-xs font-bold text-white" x-text="s.className"></p>
+                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + s.startTime + ' ~ ' + s.endTime"></p>
+                </div>
+                <span class="text-[9px] px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">預排上課</span>
+              </div>
+            </template>
+            <template x-if="upcomingSessions.length === 0">
+              <p class="text-xs text-slate-500 text-center py-4">近期無排定之課程行程。</p>
+            </template>
+          </div>
+        </div>
       </div>
     </template>
 
-    <!-- ================= STUDENT SCHEDULE & LEAVE PORTAL ================= -->
+    <!-- ================= STUDENT LEAVE PORTAL ================= -->
     <template x-if="currentMode === 'leave'">
       <div class="max-w-md mx-auto space-y-6">
         <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
-          <span class="text-3xl">📊</span>
-          <h2 class="text-xl font-bold text-white">我的課表與學習狀態</h2>
+          <span class="text-3xl">🚫</span>
+          <h2 class="text-xl font-bold text-white">線上請假申請</h2>
           <p class="text-xs text-slate-400 leading-relaxed">
-            查看您的班級資訊、出席統計與線上請假功能。
+            下課前均可請假。請假無次數上限，請假後之課程均保留補課額度。
           </p>
-        </div>
-
-        <!-- 學員儀表板摘要卡片 -->
-        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-bold text-white" x-text="studentProfile.realName || '載入中...'"></span>
-            <span class="px-2 py-0.5 text-[9px] font-bold bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full" x-text="studentProfile.level || ''"></span>
-          </div>
-          <div class="grid grid-cols-2 gap-2.5" x-show="studentProfile.classNames">
-            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
-              <p class="text-lg font-black text-white" x-text="studentProfile.remainingCount ?? '-'"></p>
-              <p class="text-[9px] text-slate-500 mt-0.5">本期剩餘堂數</p>
-            </div>
-            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
-              <p class="text-lg font-black text-emerald-400" x-text="studentProfile.attendedCount ?? '-'"></p>
-              <p class="text-[9px] text-slate-500 mt-0.5">已出席堂數</p>
-            </div>
-            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
-              <p class="text-lg font-black text-amber-400" x-text="studentProfile.leaveCount ?? '-'"></p>
-              <p class="text-[9px] text-slate-500 mt-0.5">請假堂數</p>
-            </div>
-            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
-              <p class="text-lg font-black text-blue-400" x-text="studentProfile.totalPaid ?? '-'"></p>
-              <p class="text-[9px] text-slate-500 mt-0.5">繳費總堂數</p>
-            </div>
-          </div>
-          <div class="text-[10px] text-slate-500 space-y-0.5" x-show="studentProfile.classNames">
-            <p>🏋️ 班級：<span class="text-slate-300" x-text="studentProfile.classNames"></span></p>
-            <p>📅 當期：<span class="text-slate-300" x-text="studentProfile.periodInfo"></span></p>
-            <p>🔄 補課：<span class="text-slate-300" x-text="studentProfile.makeupInfo"></span></p>
-          </div>
         </div>
 
         <!-- 請假申請區塊 -->
         <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
-          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">🚫 線上請假申請</h3>
-          <p class="text-[10px] text-slate-500 -mt-2">下課前均可請假，請假後自動釋出補課額度。</p>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold text-slate-400">目前學員身分</span>
+            <span class="text-xs font-bold text-white" x-text="studentProfile.realName || '載入中...'"></span>
+          </div>
 
           <div>
             <label class="block text-xs font-bold text-slate-400 mb-2">選擇欲請假之課堂 (4週內)</label>
@@ -1184,9 +1180,14 @@
             <input type="text" x-model="leaveForm.reason" placeholder="例如: 身體不適、出差..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none">
           </div>
 
-          <button @click="submitLeaveRequest()" class="w-full bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
-            送出請假申請 (秒速自動審核)
-          </button>
+          <div class="flex gap-2 pt-2">
+            <button @click="switchMode('profile')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              返回主頁
+            </button>
+            <button @click="submitLeaveRequest()" class="w-2/3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              送出請假申請
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -1247,9 +1248,14 @@
             </div>
           </div>
 
-          <button x-show="makeupForm.targetSessionId !== ''" @click="submitMakeupRequest()" class="w-full bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all mt-2">
-            確認跨班補課預約 (不可取消)
-          </button>
+          <div class="flex gap-2 pt-2">
+            <button @click="switchMode('profile')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              返回主頁
+            </button>
+            <button x-show="makeupForm.targetSessionId !== ''" @click="submitMakeupRequest()" class="w-2/3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+              確認預約補課
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -1322,11 +1328,12 @@
         showConfig: false,
         loading: false,
         liffReady: false,
+        appReady: false,
         activeLiffId: '初始化中...',
         toasts: [],
         
         // Navigation / Routing
-        currentMode: 'admin', // 'admin' | 'bind' | 'leave' | 'makeup' | 'coach'
+        currentMode: '', // 空字串防止閃跳管理頁，init() 完成後才設定真實 mode
         activeTab: 'dashboard', // For admin panel: 'dashboard' | 'schedule'
         
         // Mock profile / Session State
@@ -1414,6 +1421,7 @@
           makeupInfo: '',
           remainingCount: 0
         },
+        showLocalSchedule: false,
         
         calendarInstance: null,
 
@@ -1514,9 +1522,7 @@
           
           const params = new URLSearchParams(searchStr);
           const mode = params.get('mode');
-          if (mode) {
-            this.currentMode = mode;
-          }
+          // 此時還不設定 currentMode，等 LIFF 初始化完成後才決定真實的 mode
           
           const apiParam = params.get('api') || mainParams.get('api');
           if (apiParam) {
@@ -1581,15 +1587,25 @@
           }
 
           // 4. 當連線設定與身份驗證都就緒後，再執行資料加載！
-          if (!this.gasUrl) {
-            this.showConfig = true;
-          } else {
-            // 強大防呆防爆：在 LINE 環境中，若無指定特定的 mode 參數（例如點選「我的課表」選單），
-            // 自動將學員的 currentMode 路由重導向至學員課表 'leave' 模式，防範跑進 admin 後台導致「權限不足」
-            if (typeof liff !== 'undefined' && liff.isLoggedIn() && !mode) {
-              this.currentMode = 'leave';
+          try {
+            if (!this.gasUrl) {
+              this.showConfig = true;
+            } else {
+              // 強大防呆防爆：若無指定特定的 mode 參數（例如點選「我的課表」選單），
+              // 自動重導向至學員首頁卡片 'profile' 模式，防範跑進 admin 後台導致「權限不足」
+              const params = new URLSearchParams(searchStr);
+              const mode = params.get('mode');
+              if (mode) {
+                this.currentMode = mode;
+              } else {
+                this.currentMode = 'profile';
+              }
+              await this.loadInitialData();
             }
-            await this.loadInitialData();
+          } catch (e) {
+            console.error('Initial load data failed:', e);
+          } finally {
+            this.appReady = true;
           }
         },
         
@@ -1654,7 +1670,7 @@
               }
             } else if (this.currentMode === 'bind') {
               // Student binding
-            } else if (this.currentMode === 'leave') {
+            } else if (this.currentMode === 'profile' || this.currentMode === 'leave' || this.currentMode === 'makeup') {
               // 單一 API 呼叫即取得學員資料 + 未來課堂 + 請假紀錄（極速載入！）
               const info = await this.apiCall('member.getInfo');
               if (info.bound) {
@@ -1668,18 +1684,12 @@
                 this.studentProfile.makeupInfo = info.makeupInfo || '';
                 this.studentProfile.remainingCount = info.remainingCount || 0;
                 
-                // 直接從 getInfo 回傳值中提取已內嵌的即時課堂列表
+                // 直接從 getInfo 回傳值中提取已內嵌的即時課堂與請假紀錄
                 this.upcomingSessions = info.upcomingSessions || [];
+                this.pendingLeaves = info.pendingLeaves || [];
               } else {
                 this.addToast('您尚未綁定學員檔案，請先進行綁定。', 'info');
                 this.currentMode = 'bind';
-              }
-            } else if (this.currentMode === 'makeup') {
-              // 單一 API 呼叫即取得學員資料 + 待補課紀錄
-              const info = await this.apiCall('member.getInfo');
-              if (info.bound) {
-                // 直接從 getInfo 回傳值中提取已內嵌的即時請假紀錄
-                this.pendingLeaves = info.pendingLeaves || [];
               }
             } else if (this.currentMode === 'coach') {
               // Load coach classes and sessions
