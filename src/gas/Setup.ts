@@ -432,6 +432,7 @@ function seedClasses(): void {
   }
 
   // 1. 同步清理與刪除先前產生的日曆事件以避免重置時產生重複日曆髒資料
+  // 注意：無條件按日期範圍全掃刪除，即使試算表已被手動清空也能正確清理日曆
   try {
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     let calendar;
@@ -442,27 +443,34 @@ function seedClasses(): void {
     }
     if (!calendar) calendar = CalendarApp.getDefaultCalendar();
 
+    // 優先：透過 Sessions 表中記錄的 calendar_event_id 精準刪除
     const sessions = SheetHelper.getRows<any>('Sessions');
-    const sessionEventIds = new Set(sessions.map(s => s.calendar_event_id).filter(Boolean));
+    const sessionEventIds = new Set(sessions.map((s: any) => s.calendar_event_id).filter(Boolean));
 
-    if (sessionEventIds.size > 0) {
-      // 獲取種子資料設定的日期範圍內的所有日曆行程 (2026-05-01 至 2026-08-31)
-      const events = calendar.getEvents(new Date('2026-05-01T00:00:00'), new Date('2026-08-31T23:59:59'));
-      let deletedCount = 0;
-      events.forEach(event => {
-        if (sessionEventIds.has(event.getId())) {
-          try {
-            event.deleteEvent();
-            deletedCount++;
-          } catch (e) {
-            // 忽略已手動刪除的日曆事件錯誤
-          }
+    // 無論 Sessions 是否為空，都對種子資料日期範圍做全面掃描刪除
+    // 這樣即使試算表被手動清空後重跑，仍能刪除殘留的日曆事件
+    // 注意：掃描起始日從最早可能的開課日往前抓到月初（不可引用尚未宣告的 START_DATES）
+    const rangeStart = new Date('2026-05-01T00:00:00');
+    const rangeEnd = new Date(rangeStart);
+    rangeEnd.setMonth(rangeEnd.getMonth() + 6); // 掃描往後 6 個月
+
+    const events = calendar.getEvents(rangeStart, rangeEnd);
+    let deletedCount = 0;
+    events.forEach(event => {
+      // 若 Sessions 有記錄：憑 ID 精準比對；若 Sessions 已清空：刪除範圍內所有事件
+      const shouldDelete = sessionEventIds.size > 0
+        ? sessionEventIds.has(event.getId())
+        : true; // Sessions 空時，範圍內全部視為舊事件刪除
+      if (shouldDelete) {
+        try {
+          event.deleteEvent();
+          deletedCount++;
+        } catch (e) {
+          // 忽略已手動刪除的日曆事件錯誤
         }
-      });
-      Logger.log(`[自動重置] 已刪除 ${deletedCount} 個舊的 Google 日曆事件。`);
-    } else {
-      Logger.log('[自動重置] 無任何舊日曆事件需要清理。');
-    }
+      }
+    });
+    Logger.log(`[自動重置] 已刪除 ${deletedCount} 個舊的 Google 日曆事件。`);
   } catch (err) {
     Logger.log(`[清理舊日曆失敗] ${err instanceof Error ? err.message : err}`);
   }
