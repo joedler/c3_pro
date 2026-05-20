@@ -186,15 +186,15 @@ function setupRichMenus(): void {
         areas: [
           {
             bounds: { x: 0, y: 0, width: 833, height: 843 },
-            action: { type: 'message', label: '📊 我的課程', text: '我的課程' }
+            action: { type: 'uri', label: '📅 我的課表', uri: `https://liff.line.me/${liffId}` }
           },
           {
-            bounds: { x: 833, y: 0, width: 833, height: 843 },
-            action: { type: 'uri', label: '🚫 線上請假', uri: `https://liff.line.me/${liffId}?mode=leave` }
+            bounds: { x: 833, y: 0, width: 834, height: 843 },
+            action: { type: 'uri', label: '✍️ 我要請假', uri: `https://liff.line.me/${liffId}?mode=leave` }
           },
           {
-            bounds: { x: 1666, y: 0, width: 834, height: 843 },
-            action: { type: 'uri', label: '🔄 跨班補課', uri: `https://liff.line.me/${liffId}?mode=makeup` }
+            bounds: { x: 1667, y: 0, width: 833, height: 843 },
+            action: { type: 'uri', label: '⚡ 我要補課', uri: `https://liff.line.me/${liffId}?mode=makeup` }
           }
         ]
       }
