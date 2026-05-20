@@ -1550,6 +1550,11 @@
           if (!this.gasUrl) {
             this.showConfig = true;
           } else {
+            // 強大防呆防爆：在 LINE 環境中，若無指定特定的 mode 參數（例如點選「我的課表」選單），
+            // 自動將學員的 currentMode 路由重導向至學員課表 'leave' 模式，防範跑進 admin 後台導致「權限不足」
+            if (typeof liff !== 'undefined' && liff.isLoggedIn() && !mode) {
+              this.currentMode = 'leave';
+            }
             await this.loadInitialData();
           }
         },
@@ -1622,11 +1627,8 @@
                 this.studentProfile.realName = info.realName;
                 this.studentProfile.level = info.level;
                 
-                // Fetch mock upcoming sessions for simulation
-                this.upcomingSessions = [
-                  { sessionId: 'SES-001', className: info.classNames || '壺鈴基礎班 (週一晚間)', date: '2026-05-18', startTime: '19:00' },
-                  { sessionId: 'SES-002', className: info.classNames || '壺鈴基礎班 (週一晚間)', date: '2026-05-25', startTime: '19:00' }
-                ];
+                // 實時獲取學員未來 4 週內可請假的真實課堂列表（剔除已請假及停課課堂）
+                this.upcomingSessions = await this.apiCall('member.getUpcomingSessions');
               } else {
                 this.addToast('您尚未綁定學員檔案，請先進行綁定。', 'info');
                 this.currentMode = 'bind';
@@ -1635,10 +1637,8 @@
               // Load student leave requests pending makeup
               const info = await this.apiCall('member.getInfo');
               if (info.bound) {
-                // Pre-populate mock leave requests that are approved and pending makeup
-                this.pendingLeaves = [
-                  { leaveId: 'LV-MOCK-001', className: info.classNames || '壺鈴基礎班', date: '2026-05-11' }
-                ];
+                // 實時獲取學員已審核通過且尚未安排補課的真實請假紀錄，拒絕 Mock 偽裝！
+                this.pendingLeaves = await this.apiCall('member.getPendingLeaves');
               }
             } else if (this.currentMode === 'coach') {
               // Load coach classes and sessions

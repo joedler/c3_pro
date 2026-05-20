@@ -140,6 +140,14 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'member.getInfo': () => {
         return MemberService.getInfo(user);
       },
+      'member.getUpcomingSessions': () => {
+        AuthService.requireRole(user, ['member']);
+        return MemberService.getUpcomingSessions(user);
+      },
+      'member.getPendingLeaves': () => {
+        AuthService.requireRole(user, ['member']);
+        return MemberService.getPendingLeaves(user);
+      },
       'leave.request': () => {
         AuthService.requireRole(user, ['member']);
         return LeaveService.request(data, user);

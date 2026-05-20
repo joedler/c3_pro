@@ -338,6 +338,123 @@ class MemberService {
   }
 
   /**
+   * 取得學員未來 4 週內可請假的實時課堂列表
+   */
+  public static getUpcomingSessions(user: UserSession): Record<string, any>[] {
+    if (!user || !user.uid) {
+      return [];
+    }
+
+    const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    if (!member || member.status !== 'active') {
+      return [];
+    }
+
+    const memberId = member.member_id;
+
+    const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
+      e => e.member_id === memberId && e.status === 'active'
+    );
+    if (enrollments.length === 0) {
+      return [];
+    }
+
+    const classIds = enrollments.map(e => e.class_id);
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    const now = new Date();
+    const fourWeeksLater = new Date(now.getTime() + 4 * 7 * 24 * 60 * 60 * 1000);
+
+    const leaveRequests = SheetHelper.getRows<any>('Leave_Requests').filter(
+      l => l.member_id === memberId && l.status === 'approved'
+    );
+    const leaveSessionIds = leaveRequests.map(l => l.session_id);
+
+    const upcoming = allSessions
+      .filter(s => {
+        if (!classIds.includes(s.class_id)) return false;
+        if (s.status === 'cancelled') return false;
+        
+        const sessionDate = new Date(`${s.session_date || s.date}T${s.start_time}:00`);
+        if (isNaN(sessionDate.getTime())) return false;
+        
+        return sessionDate >= now && sessionDate <= fourWeeksLater;
+      })
+      .filter(s => !leaveSessionIds.includes(s.session_id))
+      .map(s => {
+        let formattedDate = '';
+        try {
+          if (s.session_date || s.date) {
+            const d = new Date(s.session_date || s.date);
+            if (!isNaN(d.getTime())) {
+              formattedDate = d.toISOString().split('T')[0];
+            }
+          }
+        } catch(e) {}
+        
+        return {
+          sessionId: s.session_id,
+          classId: s.class_id,
+          className: s.class_name,
+          date: formattedDate || String(s.session_date || s.date).substring(0, 10),
+          startTime: s.start_time,
+          endTime: s.end_time
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return upcoming;
+  }
+
+  /**
+   * 取得學員所有已審核通過、且尚未安排補課的請假紀錄
+   */
+  public static getPendingLeaves(user: UserSession): Record<string, any>[] {
+    if (!user || !user.uid) {
+      return [];
+    }
+
+    const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    if (!member || member.status !== 'active') {
+      return [];
+    }
+
+    const memberId = member.member_id;
+    const allLeaves = SheetHelper.getRows<any>('Leave_Requests');
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    const allClasses = SheetHelper.getRows<any>('Classes');
+
+    const pending = allLeaves
+      .filter(l => 
+        l.member_id === memberId && 
+        l.status === 'approved' && 
+        (!l.makeup_session_id || l.makeup_session_id === '')
+      )
+      .map(l => {
+        const session = allSessions.find(s => s.session_id === l.session_id);
+        const cls = session ? allClasses.find(c => c.class_id === session.class_id) : null;
+        
+        let formattedDate = '';
+        try {
+          if (session && (session.session_date || session.date)) {
+            const d = new Date(session.session_date || session.date);
+            if (!isNaN(d.getTime())) {
+              formattedDate = d.toISOString().split('T')[0];
+            }
+          }
+        } catch(e) {}
+
+        return {
+          leaveId: l.leave_id,
+          className: cls ? cls.class_name : '未知的課程',
+          date: formattedDate || (session ? String(session.session_date || session.date).substring(0, 10) : '未知日期')
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    return pending;
+  }
+
+  /**
    * 輔助函數：日期轉成字串 yyyy/MM/dd
    */
   private static formatDate(dateInput: any): string {
