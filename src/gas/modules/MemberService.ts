@@ -406,7 +406,14 @@ class MemberService {
       makeupInfo: `已登記 ${reservedMakeups} 堂`,
       remainingCount,
       upcomingSessions,
-      pendingLeaves
+      pendingLeaves,
+      _debug: {
+        leaveCount,
+        reservedMakeups,
+        makeupCount,
+        availableMakeupCount,
+        makeupRequestsRaw: makeupRequests.map(m => ({ id: m.makeup_id, status: m.status, target: m.target_session_id }))
+      }
     };
   }
 
