@@ -1297,8 +1297,18 @@
           <!-- Step 2: Choose target makeup slot -->
           <div x-show="makeupForm.leaveId !== ''">
             <label class="block text-xs font-bold text-slate-400 mb-2">第二步：選擇欲預約之補課時段</label>
-            <div class="space-y-2 max-h-48 overflow-y-auto">
-              <template x-for="slot in availableSlots" :key="slot.sessionId">
+            
+            <!-- 方案 B: 快速篩選標籤 (Quick Filter Chips) -->
+            <div class="flex overflow-x-auto gap-2 mb-3 pb-1 hide-scrollbar">
+              <button @click="makeupForm.filterDate = 'all'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === 'all' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">全部</button>
+              <button @click="makeupForm.filterDate = '7days'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === '7days' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">未來7天</button>
+              <button @click="makeupForm.filterDate = '14days'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === '14days' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">未來14天</button>
+              <button @click="makeupForm.filterDate = 'morning'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === 'morning' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">上午班(13:00前)</button>
+              <button @click="makeupForm.filterDate = 'evening'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === 'evening' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">晚間班(17:00後)</button>
+            </div>
+
+            <div class="space-y-2">
+              <template x-for="slot in getFilteredMakeups().slice(0, makeupForm.displayLimit)" :key="slot.sessionId">
                 <label :class="makeupForm.targetSessionId === slot.sessionId ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:border-slate-700 transition-all">
                   <div class="flex items-center gap-2">
                     <input type="radio" :value="slot.sessionId" x-model="makeupForm.targetSessionId" class="text-brand-600 focus:ring-brand-500">
@@ -1310,8 +1320,16 @@
                   <span class="text-[10px] font-semibold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20" x-text="'剩餘 ' + slot.vacancy + ' 位'"></span>
                 </label>
               </template>
-              <template x-if="availableSlots.length === 0">
-                <p class="text-xs text-slate-500 text-center py-4">目前無其他同程度且有剩餘名額的未來時段可供補課。</p>
+
+              <!-- 方案 C: 載入更多按鈕 -->
+              <template x-if="getFilteredMakeups().length > makeupForm.displayLimit">
+                <button @click="makeupForm.displayLimit += 5" class="w-full py-2.5 mt-2 text-xs text-brand-400 font-bold border border-brand-500/30 rounded-xl hover:bg-brand-500/10 transition-all">
+                  ⬇️ 顯示更多未來時段 (還有 <span x-text="getFilteredMakeups().length - makeupForm.displayLimit"></span> 堂)
+                </button>
+              </template>
+
+              <template x-if="getFilteredMakeups().length === 0">
+                <p class="text-xs text-slate-500 text-center py-4" x-text="makeupForm.filterDate === 'all' ? '目前無其他同程度且有剩餘名額的未來時段可供補課。' : '此篩選條件下無符合課程，請嘗試切換標籤。'"></p>
               </template>
             </div>
           </div>
@@ -1450,7 +1468,9 @@
         
         makeupForm: {
           leaveId: '',
-          targetSessionId: ''
+          targetSessionId: '',
+          filterDate: 'all',
+          displayLimit: 5
         },
         
         // Admin upgraded v3.0 states
@@ -1565,6 +1585,30 @@
                 seen.add(s.classId);
                 list.push({ classId: s.classId, className: s.className });
               }
+            });
+          }
+          return list;
+        },
+
+        getFilteredMakeups() {
+          let list = this.availableSlots || [];
+          const now = new Date();
+          
+          if (this.makeupForm.filterDate === '7days') {
+            const limit = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            list = list.filter(s => new Date(s.date) <= limit);
+          } else if (this.makeupForm.filterDate === '14days') {
+            const limit = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+            list = list.filter(s => new Date(s.date) <= limit);
+          } else if (this.makeupForm.filterDate === 'morning') {
+            list = list.filter(s => {
+              const h = parseInt((s.startTime || '0').split(':')[0], 10);
+              return h < 13;
+            });
+          } else if (this.makeupForm.filterDate === 'evening') {
+            list = list.filter(s => {
+              const h = parseInt((s.startTime || '0').split(':')[0], 10);
+              return h >= 17;
             });
           }
           return list;
@@ -1984,6 +2028,10 @@
           try {
             const slots = await this.apiCall('makeup.available', { leaveId });
             this.availableSlots = slots;
+            // 每次重新選擇請假額度，重置篩選與顯示數量
+            this.makeupForm.filterDate = 'all';
+            this.makeupForm.displayLimit = 5;
+            this.makeupForm.targetSessionId = '';
           } catch (e) {
             console.error(e);
           }
@@ -2002,6 +2050,8 @@
             this.addToast(`補課預約成功！目標時段: ${result.sessionDate} ${result.startTime} (${result.className})`, 'success');
             this.makeupForm.leaveId = '';
             this.makeupForm.targetSessionId = '';
+            this.makeupForm.filterDate = 'all';
+            this.makeupForm.displayLimit = 5;
             this.availableSlots = [];
             this.loadInitialData();
           } catch (e) {

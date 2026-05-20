@@ -21,13 +21,21 @@ class ClassEngine {
   }
 
   /**
-   * 將日期字串 (yyyy-MM-dd) 與時間值 (Date 物件或 "HH:mm" 字串) 組合為正確的 Date 物件，防止時區位移與 Invalid Date 錯誤
+   * 將日期字串 (yyyy-MM-dd) 或 Date 物件與時間值 (Date 物件或 "HH:mm" 字串) 組合為正確的 Date 物件，防止時區位移與 Invalid Date 錯誤
    */
-  private static parseDateTime(dateStr: string, timeVal: any): Date {
-    const parts = String(dateStr).split('-');
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // 0-indexed
-    const day = parseInt(parts[2], 10);
+  private static parseDateTime(dateVal: any, timeVal: any): Date {
+    let year = 0, month = 0, day = 0;
+    
+    if (dateVal instanceof Date) {
+      year = dateVal.getFullYear();
+      month = dateVal.getMonth();
+      day = dateVal.getDate();
+    } else {
+      const parts = String(dateVal).split('T')[0].split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1; // 0-indexed
+      day = parseInt(parts[2], 10);
+    }
     
     const d = new Date(year, month, day); // 台北時間 00:00:00 初始化
     let hours = 0;
