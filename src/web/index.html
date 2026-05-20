@@ -1171,20 +1171,20 @@
 
           <!-- 三大捷徑按鈕 (F-M02) -->
           <div class="grid grid-cols-3 gap-2 border-t border-slate-800/60 pt-5">
-            <button @click="showLocalSchedule = !showLocalSchedule" :class="showLocalSchedule ? 'bg-brand-600 text-white border-brand-500' : 'bg-slate-900/60 text-slate-300 border-slate-800/80 hover:bg-slate-850'" class="py-3 px-1 text-xs font-bold rounded-xl border transition-all text-center">
+            <button @click="activeSubView = activeSubView === 'schedule' ? '' : 'schedule'" :class="activeSubView === 'schedule' ? 'bg-brand-600 text-white border-brand-500' : 'bg-slate-900/60 text-slate-300 border-slate-800/80 hover:bg-slate-850'" class="py-3 px-1 text-xs font-bold rounded-xl border transition-all text-center">
               📅 查看課表
             </button>
-            <button @click="switchMode('leave')" class="bg-slate-900/60 hover:bg-slate-850 text-slate-300 py-3 px-1 text-xs font-bold rounded-xl border border-slate-800/80 transition-all text-center">
-              🚫 申請請假
+            <button @click="activeSubView = activeSubView === 'leave' ? '' : 'leave'; if(activeSubView === 'leave') makeupForm.leaveId = '';" :class="activeSubView === 'leave' ? 'bg-amber-600 text-white border-amber-500' : 'bg-slate-900/60 hover:bg-slate-850 text-slate-300 border-slate-800/80'" class="py-3 px-1 text-xs font-bold rounded-xl border transition-all text-center">
+              🏖️ 申請請假
             </button>
-            <button @click="switchMode('makeup')" class="bg-slate-900/60 hover:bg-slate-850 text-slate-300 py-3 px-1 text-xs font-bold rounded-xl border border-slate-800/80 transition-all text-center">
-              🔄 補課
+            <button @click="activeSubView = activeSubView === 'makeup' ? '' : 'makeup'; if(activeSubView === 'makeup') { makeupForm.leaveId = ''; makeupForm.filterDate = '7days'; }" :class="activeSubView === 'makeup' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900/60 hover:bg-slate-850 text-slate-300 border-slate-800/80'" class="py-3 px-1 text-xs font-bold rounded-xl border transition-all text-center">
+              🔄 預約補課
             </button>
           </div>
         </div>
 
         <!-- 展開顯示未來 4 週課堂 (查看課表) -->
-        <div x-show="showLocalSchedule" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
+        <div x-show="activeSubView === 'schedule'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
           <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🗓️ 未來 4 週課表行程</h3>
           <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
             <template x-for="s in upcomingSessions" :key="s.sessionId">
@@ -1201,40 +1201,23 @@
             </template>
           </div>
         </div>
-      </div>
-    </template>
 
-    <!-- ================= STUDENT SCHEDULE & LEAVE PORTAL ================= -->
-    <template x-if="currentMode === 'leave'">
-      <div class="max-w-md mx-auto space-y-6">
-        <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
-          <span class="text-3xl">🚫</span>
-          <h2 class="text-xl font-bold text-white">線上請假申請</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            下課前均可請假。請假無次數上限，請假後之課程均保留補課額度。
-          </p>
-        </div>
-
-        <!-- 請假申請區塊 -->
-        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <span class="text-xs font-bold text-slate-400">目前學員身分</span>
-            <span class="text-xs font-bold text-white" x-text="studentProfile.realName || '載入中...'"></span>
-          </div>
-
+        <!-- 展開顯示請假表單 -->
+        <div x-show="activeSubView === 'leave'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-4">
+          <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 線上請假申請</h3>
           <div>
             <label class="block text-xs font-bold text-slate-400 mb-2">選擇欲請假之課堂 (4週內)</label>
             <div class="space-y-2 max-h-60 overflow-y-auto">
               <template x-for="s in upcomingSessions" :key="s.sessionId">
-                <label :class="leaveForm.sessionId === s.sessionId ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:border-slate-700 transition-all">
+                <label :class="leaveForm.sessionId === s.sessionId ? 'border-amber-500 bg-amber-500/5' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:border-slate-700 transition-all">
                   <div class="flex items-center gap-2">
-                    <input type="radio" :value="s.sessionId" x-model="leaveForm.sessionId" class="text-brand-600 focus:ring-brand-500">
+                    <input type="radio" :value="s.sessionId" x-model="leaveForm.sessionId" class="text-amber-600 focus:ring-amber-500">
                     <div class="text-left">
                       <p class="text-xs font-bold text-white" x-text="s.className"></p>
                       <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + s.startTime"></p>
                     </div>
                   </div>
-                  <span class="text-[10px] font-bold text-brand-400">可請假</span>
+                  <span class="text-[10px] font-bold text-amber-400">可請假</span>
                 </label>
               </template>
               <template x-if="upcomingSessions.length === 0">
@@ -1248,34 +1231,21 @@
             <input type="text" x-model="leaveForm.reason" placeholder="例如: 身體不適、出差..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none">
           </div>
 
-          <div class="flex gap-2 pt-2">
-            <button @click="switchMode('profile')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
-              返回主頁
-            </button>
-            <button @click="submitLeaveRequest()" class="w-2/3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+          <div class="pt-2">
+            <button @click="submitLeaveRequest()" class="w-full bg-amber-600 hover:bg-amber-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-amber-600/20">
               送出請假申請
             </button>
           </div>
         </div>
-      </div>
-    </template>
 
-    <!-- ================= STUDENT MAKEUP PORTAL ================= -->
-    <template x-if="currentMode === 'makeup'">
-      <div class="max-w-md mx-auto space-y-6">
-        <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
-          <span class="text-3xl">🔄</span>
-          <h2 class="text-xl font-bold text-white">跨班補課預約</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            可選擇同難度等級之課堂進行預約。名額即時防爆！一經預約即不可更改/取消。
-          </p>
-        </div>
-
-        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
+        <!-- 展開顯示補課表單 -->
+        <div x-show="activeSubView === 'makeup'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-4">
+          <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 跨班補課預約</h3>
+          
           <!-- Step 1: Choose original leave request -->
           <div>
-            <label class="block text-xs font-bold text-slate-400 mb-2">第一步：選擇哪次請假額度進行補課</label>
-            <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-400 mb-2">第一步：選擇欲折抵之請假額度</label>
+            <div class="space-y-2 max-h-40 overflow-y-auto">
               <template x-for="l in pendingLeaves" :key="l.leaveId">
                 <label :class="makeupForm.leaveId === l.leaveId ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:border-slate-700 transition-all">
                   <div class="flex items-center gap-2">
@@ -1298,13 +1268,9 @@
           <div x-show="makeupForm.leaveId !== ''">
             <label class="block text-xs font-bold text-slate-400 mb-2">第二步：選擇欲預約之補課時段</label>
             
-            <!-- 方案 B: 快速篩選標籤 (Quick Filter Chips) -->
             <div class="flex overflow-x-auto gap-2 mb-3 pb-1 hide-scrollbar">
-              <button @click="makeupForm.filterDate = 'all'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === 'all' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">全部</button>
               <button @click="makeupForm.filterDate = '7days'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === '7days' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">未來7天</button>
               <button @click="makeupForm.filterDate = '14days'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === '14days' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">未來14天</button>
-              <button @click="makeupForm.filterDate = 'morning'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === 'morning' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">上午班(13:00前)</button>
-              <button @click="makeupForm.filterDate = 'evening'; makeupForm.displayLimit = 5" :class="makeupForm.filterDate === 'evening' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'" class="whitespace-nowrap px-3 py-1 text-[10px] font-bold rounded-full transition-all">晚間班(17:00後)</button>
             </div>
 
             <div class="space-y-2">
@@ -1329,20 +1295,18 @@
               </template>
 
               <template x-if="getFilteredMakeups().length === 0">
-                <p class="text-xs text-slate-500 text-center py-4" x-text="makeupForm.filterDate === 'all' ? '目前無其他同程度且有剩餘名額的未來時段可供補課。' : '此篩選條件下無符合課程，請嘗試切換標籤。'"></p>
+                <p class="text-xs text-slate-500 text-center py-4" x-text="'此篩選條件下無符合課程，請嘗試切換標籤。'"></p>
               </template>
             </div>
           </div>
 
-          <div class="flex gap-2 pt-2">
-            <button @click="switchMode('profile')" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
-              返回主頁
-            </button>
-            <button x-show="makeupForm.targetSessionId !== ''" @click="submitMakeupRequest()" class="w-2/3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all">
+          <div class="pt-2">
+            <button x-show="makeupForm.targetSessionId !== ''" @click="submitMakeupRequest()" class="w-full bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-600/20">
               確認預約補課
             </button>
           </div>
         </div>
+
       </div>
     </template>
 
@@ -1469,7 +1433,7 @@
         makeupForm: {
           leaveId: '',
           targetSessionId: '',
-          filterDate: 'all',
+          filterDate: '7days',
           displayLimit: 5
         },
         
@@ -1492,6 +1456,7 @@
         upcomingSessions: [],
         pendingLeaves: [],
         availableSlots: [],
+        activeSubView: '',
         
         coachSessions: [],
         coachSelectedSessionId: '',
@@ -2012,6 +1977,8 @@
             this.studentProfile.leaveCount = (this.studentProfile.leaveCount || 0) + 1;
             this.studentProfile.remainingCount = Math.max(0, (this.studentProfile.remainingCount || 0) - 1);
             
+            this.activeSubView = '';
+            
             this.addToast(`✅ 請假成功！已自動釋出補課額度。`, 'success');
             
             // 在 LINE App 內，2 秒後自動關閉 LIFF 視窗
@@ -2029,7 +1996,7 @@
             const slots = await this.apiCall('makeup.available', { leaveId });
             this.availableSlots = slots;
             // 每次重新選擇請假額度，重置篩選與顯示數量
-            this.makeupForm.filterDate = 'all';
+            this.makeupForm.filterDate = '7days';
             this.makeupForm.displayLimit = 5;
             this.makeupForm.targetSessionId = '';
           } catch (e) {
@@ -2050,9 +2017,10 @@
             this.addToast(`補課預約成功！目標時段: ${result.sessionDate} ${result.startTime} (${result.className})`, 'success');
             this.makeupForm.leaveId = '';
             this.makeupForm.targetSessionId = '';
-            this.makeupForm.filterDate = 'all';
+            this.makeupForm.filterDate = '7days';
             this.makeupForm.displayLimit = 5;
             this.availableSlots = [];
+            this.activeSubView = '';
             this.loadInitialData();
           } catch (e) {
             console.error(e);

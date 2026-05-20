@@ -289,10 +289,15 @@ class MemberService {
     // 各項計數器
     const totalPaid = enrollments.reduce((sum, e) => sum + (Number(e.total_paid_sessions) || 0), 0);
     
-    // 已出席堂數 (Attendance 中類型為 regular 且有簽到時間的紀錄)
-    const attendedCount = attendances.filter(
-      a => a.type === 'regular' && a.checkin_time && a.checkin_time !== ''
-    ).length;
+    // 已出席堂數：以系統自動防呆結案 (completed) 為基準，扣除學員已請假的堂數
+    const completedSessions = SheetHelper.getRows<any>('Sessions').filter(
+      s => classIds.includes(s.class_id) && s.status === 'completed'
+    );
+    const completedSessionIds = completedSessions.map(s => s.session_id);
+    const leaveForCompletedCount = leaveRequests.filter(l => completedSessionIds.includes(l.session_id)).length;
+    
+    // 真正的已上堂數 = (該班級已結案的總堂數) - (已結案中他請假的堂數) + (他額外補課完成的堂數)
+    const attendedCount = completedSessions.length - leaveForCompletedCount + totalMakeupsDone;
 
     // 請假堂數 (Leave_Requests 中已審核通過的紀錄)
     const leaveCount = leaveRequests.length;
