@@ -64,6 +64,7 @@ class MakeupService {
       // 班級必須為 active 或 open，且開放補課
       if (c.status !== 'active' && c.status !== 'open') return;
       if (c.allow_makeup !== true && String(c.allow_makeup).toLowerCase() !== 'true') return;
+      if (c.level === '不固定') return; // 一律禁止補入不固定班級
 
       // 級別限制：學員級別 >= 班級級別
       const classLevelNum = this.getLevelNumber(c.level);
@@ -230,13 +231,30 @@ class MakeupService {
       throw new Error('不能選擇過去或已經開始的課堂作為補課目標。');
     }
 
-    // 5. 驗證程度等級
-    const origSession = SheetHelper.getRow<any>('Sessions', 'session_id', leave.session_id);
-    const origClass = origSession ? SheetHelper.getRow<any>('Classes', 'class_id', origSession.class_id) : null;
+    // 5. 驗證補課資格與程度
     const targetClass = SheetHelper.getRow<any>('Classes', 'class_id', targetSession.class_id);
+    if (!targetClass) {
+      throw new Error('找不到目標補課課堂的班級資料。');
+    }
 
-    if (!origClass || !targetClass || origClass.level !== targetClass.level) {
-      throw new Error(`程度不相符！您只能選擇「${origClass ? origClass.level : '同等'}」難度等級的班級進行跨班補課。`);
+    // 目標班級必須允許補課，且禁止補入「不固定」班級
+    if (targetClass.allow_makeup !== true && String(targetClass.allow_makeup).toLowerCase() !== 'true') {
+      throw new Error('目標班級目前未開放補課。');
+    }
+    if (targetClass.level === '不固定') {
+      throw new Error('「不固定」難度等級的班級一律禁止作為補課目標。');
+    }
+
+    const memberLevelNum = this.getLevelNumber(member.level);
+    const targetClassLevelNum = this.getLevelNumber(targetClass.level);
+
+    if (memberLevelNum < targetClassLevelNum) {
+      throw new Error(`程度不相符！您的學員級別 (${member.level}) 無法預約難度較高 (${targetClass.level}) 的班級進行補課。`);
+    }
+
+    // 性別限制防呆
+    if (member.gender === '男' && targetClass.gender_limit === 'female') {
+      throw new Error('男生不能預約女性專班。');
     }
 
     // 6. 精準檢查目標課堂是否還有剩餘空額
