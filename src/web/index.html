@@ -13,8 +13,7 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- LINE LIFF SDK (必須引入才能解鎖手機版 LINE 的 CORS 沙盒限制) -->
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- LINE LIFF SDK 已移至下方統一載入，避免重複引入浪費載入時間 -->
   
   <script>
     tailwind.config = {
@@ -222,7 +221,7 @@
 <body class="text-slate-200 min-h-screen flex flex-col antialiased" x-data="gymApp" x-init="init()" x-cloak>
 
   <!-- Global Toast Alerts -->
-  <div class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm">
+  <div class="fixed top-5 right-5 z-[60] flex flex-col gap-2 max-w-sm">
     <template x-for="toast in toasts" :key="toast.id">
       <div :class="{
         'bg-slate-900/90 border-emerald-500/30 text-emerald-400': toast.type === 'success',
@@ -1112,28 +1111,56 @@
       </div>
     </template>
 
-    <!-- ================= STUDENT LEAVE PORTAL ================= -->
+    <!-- ================= STUDENT SCHEDULE & LEAVE PORTAL ================= -->
     <template x-if="currentMode === 'leave'">
       <div class="max-w-md mx-auto space-y-6">
         <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
-          <span class="text-3xl">🚫</span>
-          <h2 class="text-xl font-bold text-white">線上請假申請</h2>
+          <span class="text-3xl">📊</span>
+          <h2 class="text-xl font-bold text-white">我的課表與學習狀態</h2>
           <p class="text-xs text-slate-400 leading-relaxed">
-            下課前均可請假。請假無次數上限，請假後之課程均保留補課額度。
+            查看您的班級資訊、出席統計與線上請假功能。
           </p>
         </div>
 
-        <!-- Profile detail summary card -->
-        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <span class="text-xs font-bold text-slate-400">目前學員身分</span>
-            <span class="text-xs font-bold text-white" x-text="studentProfile.realName || '載入中...'"></span>
+        <!-- 學員儀表板摘要卡片 -->
+        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold text-white" x-text="studentProfile.realName || '載入中...'"></span>
+            <span class="px-2 py-0.5 text-[9px] font-bold bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full" x-text="studentProfile.level || ''"></span>
           </div>
+          <div class="grid grid-cols-2 gap-2.5" x-show="studentProfile.classNames">
+            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
+              <p class="text-lg font-black text-white" x-text="studentProfile.remainingCount ?? '-'"></p>
+              <p class="text-[9px] text-slate-500 mt-0.5">本期剩餘堂數</p>
+            </div>
+            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
+              <p class="text-lg font-black text-emerald-400" x-text="studentProfile.attendedCount ?? '-'"></p>
+              <p class="text-[9px] text-slate-500 mt-0.5">已出席堂數</p>
+            </div>
+            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
+              <p class="text-lg font-black text-amber-400" x-text="studentProfile.leaveCount ?? '-'"></p>
+              <p class="text-[9px] text-slate-500 mt-0.5">請假堂數</p>
+            </div>
+            <div class="bg-slate-950/50 rounded-xl p-3 text-center">
+              <p class="text-lg font-black text-blue-400" x-text="studentProfile.totalPaid ?? '-'"></p>
+              <p class="text-[9px] text-slate-500 mt-0.5">繳費總堂數</p>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-500 space-y-0.5" x-show="studentProfile.classNames">
+            <p>🏋️ 班級：<span class="text-slate-300" x-text="studentProfile.classNames"></span></p>
+            <p>📅 當期：<span class="text-slate-300" x-text="studentProfile.periodInfo"></span></p>
+            <p>🔄 補課：<span class="text-slate-300" x-text="studentProfile.makeupInfo"></span></p>
+          </div>
+        </div>
+
+        <!-- 請假申請區塊 -->
+        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-4">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">🚫 線上請假申請</h3>
+          <p class="text-[10px] text-slate-500 -mt-2">下課前均可請假，請假後自動釋出補課額度。</p>
 
           <div>
-            <label class="block text-xs font-bold text-slate-400 mb-2">選擇欲請假之課堂 (4週內課程)</label>
+            <label class="block text-xs font-bold text-slate-400 mb-2">選擇欲請假之課堂 (4週內)</label>
             <div class="space-y-2 max-h-60 overflow-y-auto">
-              <!-- Dynamically populated or stub list -->
               <template x-for="s in upcomingSessions" :key="s.sessionId">
                 <label :class="leaveForm.sessionId === s.sessionId ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:border-slate-700 transition-all">
                   <div class="flex items-center gap-2">
@@ -1378,7 +1405,14 @@
         
         studentProfile: {
           realName: '',
-          level: 'L1'
+          level: 'L1',
+          classNames: '',
+          periodInfo: '',
+          totalPaid: 0,
+          attendedCount: 0,
+          leaveCount: 0,
+          makeupInfo: '',
+          remainingCount: 0
         },
         
         calendarInstance: null,
@@ -1626,6 +1660,13 @@
               if (info.bound) {
                 this.studentProfile.realName = info.realName;
                 this.studentProfile.level = info.level;
+                this.studentProfile.classNames = info.classNames || '';
+                this.studentProfile.periodInfo = info.periodInfo || '';
+                this.studentProfile.totalPaid = info.totalPaid || 0;
+                this.studentProfile.attendedCount = info.attendedCount || 0;
+                this.studentProfile.leaveCount = info.leaveCount || 0;
+                this.studentProfile.makeupInfo = info.makeupInfo || '';
+                this.studentProfile.remainingCount = info.remainingCount || 0;
                 
                 // 直接從 getInfo 回傳值中提取已內嵌的即時課堂列表
                 this.upcomingSessions = info.upcomingSessions || [];
@@ -1836,15 +1877,28 @@
             this.addToast('請選擇欲請假的課堂！', 'error');
             return;
           }
+          const submittedSessionId = this.leaveForm.sessionId;
           try {
             const result = await this.apiCall('leave.request', {
-              sessionId: this.leaveForm.sessionId,
+              sessionId: submittedSessionId,
               reason: this.leaveForm.reason
             });
-            this.addToast(`請假成功！已自動釋出該堂課之補課名額。`, 'success');
+            
+            // 成功後直接從本地狀態移除已請假的課堂，不再走第二次 API ！
+            this.upcomingSessions = this.upcomingSessions.filter(s => s.sessionId !== submittedSessionId);
             this.leaveForm.sessionId = '';
             this.leaveForm.reason = '';
-            this.loadInitialData();
+            
+            // 更新儀表板計數器
+            this.studentProfile.leaveCount = (this.studentProfile.leaveCount || 0) + 1;
+            this.studentProfile.remainingCount = Math.max(0, (this.studentProfile.remainingCount || 0) - 1);
+            
+            this.addToast(`✅ 請假成功！已自動釋出補課額度。`, 'success');
+            
+            // 在 LINE App 內，2 秒後自動關閉 LIFF 視窗
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+              setTimeout(() => { liff.closeWindow(); }, 2000);
+            }
           } catch (e) {
             console.error(e);
           }
