@@ -443,19 +443,26 @@ function seedClasses(): void {
     if (!calendar) calendar = CalendarApp.getDefaultCalendar();
 
     const sessions = SheetHelper.getRows<any>('Sessions');
-    sessions.forEach(s => {
-      if (s.calendar_event_id) {
-        try {
-          const event = calendar.getEventById(s.calendar_event_id);
-          if (event) {
+    const sessionEventIds = new Set(sessions.map(s => s.calendar_event_id).filter(Boolean));
+
+    if (sessionEventIds.size > 0) {
+      // 獲取種子資料設定的日期範圍內的所有日曆行程 (2026-05-01 至 2026-08-31)
+      const events = calendar.getEvents(new Date('2026-05-01T00:00:00'), new Date('2026-08-31T23:59:59'));
+      let deletedCount = 0;
+      events.forEach(event => {
+        if (sessionEventIds.has(event.getId())) {
+          try {
             event.deleteEvent();
+            deletedCount++;
+          } catch (e) {
+            // 忽略已手動刪除的日曆事件錯誤
           }
-        } catch (e) {
-          // 忽略已手動刪除的日曆事件錯誤
         }
-      }
-    });
-    Logger.log('[自動重置] 舊的 Google 日曆事件已全部清除。');
+      });
+      Logger.log(`[自動重置] 已刪除 ${deletedCount} 個舊的 Google 日曆事件。`);
+    } else {
+      Logger.log('[自動重置] 無任何舊日曆事件需要清理。');
+    }
   } catch (err) {
     Logger.log(`[清理舊日曆失敗] ${err instanceof Error ? err.message : err}`);
   }
