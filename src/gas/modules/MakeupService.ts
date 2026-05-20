@@ -159,9 +159,15 @@ class MakeupService {
           sessionId: s.session_id,
           classId: s.class_id,
           className: cls.class_name,
-          date: s.session_date instanceof Date ? Utilities.formatDate(s.session_date, 'Asia/Taipei', 'yyyy-MM-dd') : String(s.session_date).split('T')[0],
-          startTime: s.start_time,
-          endTime: s.end_time,
+          date: s.session_date instanceof Date
+            ? Utilities.formatDate(s.session_date, 'Asia/Taipei', 'yyyy-MM-dd')
+            : String(s.session_date).split('T')[0],
+          startTime: s.start_time instanceof Date
+            ? Utilities.formatDate(s.start_time, 'Asia/Taipei', 'HH:mm')
+            : String(s.start_time || '').trim().replace('上午', '').replace('下午', ''),
+          endTime: s.end_time instanceof Date
+            ? Utilities.formatDate(s.end_time, 'Asia/Taipei', 'HH:mm')
+            : String(s.end_time || '').trim().replace('上午', '').replace('下午', ''),
           level: cls.level,
           vacancy: vacancy
         });
