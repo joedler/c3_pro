@@ -430,16 +430,49 @@ function seedClasses(): void {
     }
     ss = SpreadsheetApp.openById(spreadsheetId);
   }
-  const chineseSheetName = SheetHelper.SHEET_NAME_MAP['Classes'];
-  let sheet = ss.getSheetByName(chineseSheetName);
-  if (!sheet) {
-    throw new Error('未找到班級設定工作表，請先執行初始化資料庫');
+
+  // 1. 同步清理與刪除先前產生的日曆事件以避免重置時產生重複日曆髒資料
+  try {
+    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
+    let calendar;
+    if (calendarId && calendarId !== 'primary') {
+      try {
+        calendar = CalendarApp.getCalendarById(calendarId);
+      } catch (e) {}
+    }
+    if (!calendar) calendar = CalendarApp.getDefaultCalendar();
+
+    const sessions = SheetHelper.getRows<any>('Sessions');
+    sessions.forEach(s => {
+      if (s.calendar_event_id) {
+        try {
+          const event = calendar.getEventById(s.calendar_event_id);
+          if (event) {
+            event.deleteEvent();
+          }
+        } catch (e) {
+          // 忽略已手動刪除的日曆事件錯誤
+        }
+      }
+    });
+    Logger.log('[自動重置] 舊的 Google 日曆事件已全部清除。');
+  } catch (err) {
+    Logger.log(`[清理舊日曆失敗] ${err instanceof Error ? err.message : err}`);
   }
 
-  // 清除除了 Header 以外的所有資料
-  if (sheet.getLastRow() > 1) {
-    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
-  }
+  // 2. 清空相關資料表除了首代表頭外的內容
+  const sheetsToClear = ['Classes', 'Sessions', 'Enrollments', 'Leave_Requests', 'Makeup_Requests', 'Attendance'];
+  sheetsToClear.forEach(sheetName => {
+    try {
+      const s = ss.getSheetByName(SheetHelper.SHEET_NAME_MAP[sheetName] || sheetName);
+      if (s && s.getLastRow() > 1) {
+        s.getRange(2, 1, s.getLastRow() - 1, s.getLastColumn()).clearContent();
+      }
+    } catch (e) {
+      Logger.log(`[清理 ${sheetName} 失敗] ${e}`);
+    }
+  });
+  Logger.log('[自動重置] Classes、Sessions、Enrollments 等業務資料表已清空。');
 
   const defaultClasses: any[] = [
     // === A 類：基礎重訓 (每週1次，難度2-5，上限8人，開放補課) ===
@@ -449,8 +482,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 4,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 4,
       gender_limit: null,
       allow_makeup: true,
@@ -471,8 +504,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 5,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 5,
       gender_limit: 'female',
       allow_makeup: true,
@@ -493,8 +526,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 7,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 7,
       gender_limit: null,
       allow_makeup: true,
@@ -515,8 +548,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 7,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 7,
       gender_limit: 'female',
       allow_makeup: true,
@@ -537,8 +570,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 4,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 4,
       gender_limit: 'female',
       allow_makeup: true,
@@ -559,8 +592,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 6,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 6,
       gender_limit: 'female',
       allow_makeup: true,
@@ -581,8 +614,8 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
-      max_capacity: 6,
+      room_id: 'RM-02',
+      max_capacity: 8,
       enrolled: 6,
       gender_limit: 'female',
       allow_makeup: true,
@@ -603,7 +636,7 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
+      room_id: 'RM-02',
       max_capacity: 8,
       enrolled: 0,
       gender_limit: null,
@@ -625,7 +658,7 @@ function seedClasses(): void {
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      room_id: 'RM-01',
+      room_id: 'RM-02',
       max_capacity: 8,
       enrolled: 8,
       gender_limit: null,
