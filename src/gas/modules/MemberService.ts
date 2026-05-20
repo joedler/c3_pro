@@ -332,9 +332,18 @@ class MemberService {
     const leaveSessionIds = leaveRequests.map(l => l.session_id);
     const classMap = new Map(allClasses.map(c => [c.class_id, c]));
 
+    // 補課已預約的 target_session_id 清單
+    const makeupTargetSessionIds = makeupRequests
+      .filter(m => m.status === 'approved' || m.status === 'completed')
+      .map(m => m.target_session_id)
+      .filter(id => !!id);
+
     const upcomingSessions = allSessions
       .filter(s => {
-        if (!classIds.includes(s.class_id)) return false;
+        // 自己班級的課 OR 已預約補課的課堂
+        const isMyClass = classIds.includes(s.class_id);
+        const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
+        if (!isMyClass && !isMakeupTarget) return false;
         if (s.status === 'cancelled') return false;
 
         const dateStr = this.safeFormatSessionDate(s.session_date);
@@ -346,16 +355,23 @@ class MemberService {
 
         return sessionDate >= now && sessionDate <= fourWeeksLater;
       })
-      .filter(s => !leaveSessionIds.includes(s.session_id))
+      .filter(s => {
+        // 如果是自己班的課，過濾掉請假的；如果是補課的課，一律顯示
+        const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
+        if (isMakeupTarget) return true;
+        return !leaveSessionIds.includes(s.session_id);
+      })
       .map(s => {
         const cls = classMap.get(s.class_id);
+        const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
         return {
           sessionId: s.session_id,
           classId: s.class_id,
           className: cls ? cls.class_name : s.class_id,
           date: this.safeFormatSessionDate(s.session_date),
           startTime: this.safeFormatTime(s.start_time),
-          endTime: this.safeFormatTime(s.end_time)
+          endTime: this.safeFormatTime(s.end_time),
+          isMakeup: isMakeupTarget
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));

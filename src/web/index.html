@@ -1196,12 +1196,13 @@
           <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🗓️ 未來 4 週課表行程</h3>
           <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
             <template x-for="s in upcomingSessions" :key="s.sessionId">
-              <div class="flex items-center justify-between p-3 rounded-xl border border-slate-800 bg-slate-950/20">
+              <div :class="s.isMakeup ? 'border-brand-700 bg-brand-950/20' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border">
                 <div>
                   <p class="text-xs font-bold text-white" x-text="s.className"></p>
                   <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + s.startTime + ' ~ ' + s.endTime"></p>
                 </div>
-                <span class="text-[9px] px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">預排上課</span>
+                <span x-show="!s.isMakeup" class="text-[9px] px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">預排上課</span>
+                <span x-show="s.isMakeup" class="text-[9px] px-2 py-0.5 bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold">🔄 補課</span>
               </div>
             </template>
             <template x-if="upcomingSessions.length === 0">
@@ -1216,7 +1217,7 @@
           <div>
             <label class="block text-xs font-bold text-slate-400 mb-2">選擇欲請假之課堂 (4週內)</label>
             <div class="space-y-2 max-h-60 overflow-y-auto">
-              <template x-for="s in upcomingSessions" :key="s.sessionId">
+              <template x-for="s in upcomingSessions.filter(x => !x.isMakeup)" :key="s.sessionId">
                 <label :class="leaveForm.sessionId === s.sessionId ? 'border-amber-500 bg-amber-500/5' : 'border-slate-800 bg-slate-950/20'" class="flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:border-slate-700 transition-all">
                   <div class="flex items-center gap-2">
                     <input type="radio" :value="s.sessionId" x-model="leaveForm.sessionId" class="text-amber-600 focus:ring-amber-500">
