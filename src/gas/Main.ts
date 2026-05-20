@@ -167,6 +167,16 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         AuthService.requireRole(user, ['member']);
         return MakeupService.getAvailable(data, user);
       },
+      'makeup.diagnose': () => {
+        const logs: string[] = [];
+        const logFn = (msg: string) => { logs.push(msg); Logger.log(msg); };
+        try {
+          testDiagnoseMakeup(logFn);
+        } catch(e: any) {
+          logs.push('Error during execution: ' + (e.message || e));
+        }
+        return { logs };
+      },
 
       // --- 教練模組 ---
       'coach.getSchedule': () => {
