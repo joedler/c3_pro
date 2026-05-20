@@ -296,14 +296,14 @@ class MemberService {
     const completedSessionIds = completedSessions.map(s => s.session_id);
     const leaveForCompletedCount = leaveRequests.filter(l => completedSessionIds.includes(l.session_id)).length;
     
+    // 補課統計
+    const totalMakeupsDone = makeupRequests.filter(m => m.status === 'completed' || m.status === 'approved').length;
+
     // 真正的已上堂數 = (該班級已結案的總堂數) - (已結案中他請假的堂數) + (他額外補課完成的堂數)
     const attendedCount = completedSessions.length - leaveForCompletedCount + totalMakeupsDone;
 
     // 請假堂數 (Leave_Requests 中已審核通過的紀錄)
     const leaveCount = leaveRequests.length;
-
-    // 補課統計
-    const totalMakeupsDone = makeupRequests.filter(m => m.status === 'completed' || m.status === 'approved').length;
     
     // 可補課額度：請假堂數 - 已安排或已完成的補課堂數
     // 預防出現負數，最少為 0
