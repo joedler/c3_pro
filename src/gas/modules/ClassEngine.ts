@@ -123,15 +123,45 @@ class ClassEngine {
       daysOfWeek.push(1); // 預設週一
     }
 
-    let currentDate = new Date(cls.period_start);
-    currentDate.setHours(0, 0, 0, 0); // 確保在台北時間的午夜開始計算
+    const periodType = String(cls.period_type || 'weekly').trim().toLowerCase();
+
+    let totalSessions: number;
+
+    if (periodType === 'monthly') {
+      // === 方案 B：動態計算當月實際上課堂數 ===
+      // 根據 period_start 所在月份，計算 daysOfWeek 每個星期幾各出現幾次加總
+      const startDate = cls.period_start instanceof Date
+        ? cls.period_start
+        : new Date(String(cls.period_start).split('T')[0]);
+      const year = startDate.getFullYear();
+      const month = startDate.getMonth(); // 0-indexed
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      totalSessions = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        if (daysOfWeek.includes(new Date(year, month, d).getDay())) {
+          totalSessions++;
+        }
+      }
+      Logger.log(`[ClassEngine] ${classId} (月費制) ${year}/${month + 1} 動態計算堂數: ${totalSessions} 堂 (星期: ${daysOfWeek.join(',')})`);
+
+      // 將計算出的實際堂數回寫至 Classes 表，確保後續 activateEnrollment 時能直接讀到正確的數字
+      SheetHelper.updateRow('Classes', 'class_id', classId, { total_sessions: totalSessions });
+    } else {
+      // === 固定週期制 ===
+      totalSessions = Number(cls.total_sessions || (Number(cls.period_weeks) * Number(cls.sessions_per_week)));
+    }
+
+    let currentDate = new Date(cls.period_start instanceof Date
+      ? cls.period_start
+      : new Date(String(cls.period_start).split('T')[0]));
+    currentDate.setHours(0, 0, 0, 0);
 
     // 1. 移動到第一個符合上課星期的日期
     while (!daysOfWeek.includes(currentDate.getDay())) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const totalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
     let seq = 1;
 
     // 2. 展開所有上課日期並跳過國定假日

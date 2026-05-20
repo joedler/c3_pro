@@ -59,6 +59,7 @@ class SheetHelper {
       start_time: '開始時間',
       end_time: '結束時間',
       period_start: '本期開始日期',
+      period_type: '計費週期類型',
       period_weeks: '期數週數',
       sessions_per_week: '每週堂數',
       total_sessions: '總堂數',
