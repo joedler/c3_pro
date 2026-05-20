@@ -1480,6 +1480,8 @@
           totalPaid: 0,
           attendedCount: 0,
           leaveCount: 0,
+          makeupCount: 0,
+          availableMakeupCount: 0,
           makeupInfo: '',
           remainingCount: 0
         },
@@ -1766,11 +1768,16 @@
                 this.studentProfile.attendedCount = info.attendedCount || 0;
                 this.studentProfile.leaveCount = info.leaveCount || 0;
                 this.studentProfile.makeupInfo = info.makeupInfo || '';
+                this.studentProfile.makeupCount = info.makeupCount ?? 0;
+                this.studentProfile.availableMakeupCount = info.availableMakeupCount ?? 0;
                 this.studentProfile.remainingCount = info.remainingCount || 0;
                 
-                // 直接從 getInfo 回傳值中提取已內嵌的即時課堂與請假紀錄
+                // 直接從 getInfo 回傳値中提取已內嵌的即時課堂與請假紀錄
                 this.upcomingSessions = info.upcomingSessions || [];
                 this.pendingLeaves = info.pendingLeaves || [];
+                
+                // Debug: 印出原始計數支持檢查
+                if (info._debug) console.log('[GymOS Debug]', JSON.stringify(info._debug, null, 2));
               } else {
                 this.addToast('您尚未綁定學員檔案，請先進行綁定。', 'info');
                 this.currentMode = 'bind';
