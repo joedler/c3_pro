@@ -1676,16 +1676,12 @@
             if (!this.gasUrl) {
               this.showConfig = true;
             } else {
-              // 統一路由決策：有指定 mode 就用，沒有就預設 'profile' 學員首頁
-              if (mode) {
-                if (mode === 'leave' || mode === 'makeup') {
-                  this.currentMode = 'profile';
-                  this.activeSubView = mode;
-                } else {
-                  this.currentMode = mode;
-                }
+              // 統一路由決策：全部強制導向 profile 首頁，不再自動展開任何頁籤
+              if (mode && mode !== 'leave' && mode !== 'makeup') {
+                this.currentMode = mode;
               } else {
                 this.currentMode = 'profile';
+                this.activeSubView = '';
               }
               await this.loadInitialData();
             }
