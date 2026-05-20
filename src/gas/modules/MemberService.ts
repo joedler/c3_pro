@@ -387,6 +387,8 @@ class MemberService {
       totalPaid,
       attendedCount,
       leaveCount,
+      makeupCount: totalMakeupsDone,
+      availableMakeupCount,
       makeupInfo: `已補 ${totalMakeupsDone} 堂 / 可補 ${availableMakeupCount} 堂`,
       remainingCount,
       upcomingSessions,
