@@ -13,7 +13,7 @@ function setupDatabase(): void {
     }
     ss = SpreadsheetApp.openById(spreadsheetId);
   }
-  
+
   const defaultSettings: [string, string, string][] = [
     ['GYM_NAME', 'C3 Fitness', '健身房名稱'],
     ['LINE_CHANNEL_ACCESS_TOKEN', 'YOUR_LINE_TOKEN', 'LINE Bot Channel Access Token'],
@@ -48,7 +48,7 @@ function setupDatabase(): void {
       sheet = ss.insertSheet(chineseSheetName);
       sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
       sheet.setFrozenRows(1); // 凍結首列
-      
+
       // 美化表頭風格
       sheet.getRange(1, 1, 1, targetHeaders.length)
         .setBackground('#1e293b')
@@ -60,7 +60,7 @@ function setupDatabase(): void {
       if (engSheetName === 'Config') {
         sheet.getRange(2, 1, defaultSettings.length, 3).setValues(defaultSettings);
       }
-      
+
       // 寫入預設教室 (僅在全新建立 Rooms 時寫入)
       if (engSheetName === 'Rooms') {
         const defaultRooms = [
@@ -79,18 +79,18 @@ function setupDatabase(): void {
 
       // 找出缺失的目標表頭欄位並依序追加到後面
       const missingHeaders = targetHeaders.filter(header => !currentHeaders.includes(header));
-      
+
       if (missingHeaders.length > 0) {
         const startColForAppend = lastCol + 1;
         sheet.getRange(1, startColForAppend, 1, missingHeaders.length).setValues([missingHeaders]);
-        
+
         // 僅美化新追加的表頭樣式
         sheet.getRange(1, startColForAppend, 1, missingHeaders.length)
           .setBackground('#1e293b')
           .setFontColor('#ffffff')
           .setFontWeight('bold')
           .setHorizontalAlignment('center');
-        
+
         Logger.log(`【無損升級】在工作表「${chineseSheetName}」中追加了新欄位：${missingHeaders.join(', ')}`);
       }
 
@@ -136,7 +136,7 @@ function setupDatabase(): void {
 function setupRichMenus(): void {
   // 強制刷新 Config 快取
   Config.loadCache();
-  
+
   const token = Config.get('LINE_CHANNEL_ACCESS_TOKEN');
   const liffId = Config.get('LIFF_ID');
 
@@ -151,7 +151,7 @@ function setupRichMenus(): void {
   const configRows = SheetHelper.getRows<any>('Config');
   const imageKeys = ['IMG_MENU_MEMBER', 'IMG_MENU_COACH', 'IMG_MENU_ADMIN'];
   let fieldsAdded = false;
-  
+
   imageKeys.forEach(key => {
     if (!configRows.find(r => r.key === key)) {
       const descMap: Record<string, string> = {
@@ -243,7 +243,7 @@ function setupRichMenus(): void {
         payload: JSON.stringify(menu.payload),
         muteHttpExceptions: true
       };
-      
+
       const createRes = UrlFetchApp.fetch(createUrl, createOptions);
       const createResJson = JSON.parse(createRes.getContentText());
 
@@ -258,7 +258,7 @@ function setupRichMenus(): void {
       let imgBlob: GoogleAppsScript.Base.Blob;
       const customImgUrl = Config.get(`IMG_MENU_${menu.role.toUpperCase()}`);
       const finalImgUrl = customImgUrl ? customImgUrl : menu.imageUrl;
-      
+
       try {
         let driveId: string | null = null;
         if (finalImgUrl.includes('drive.google.com/file/d/')) {
@@ -299,7 +299,7 @@ function setupRichMenus(): void {
         payload: imgBlob.getBytes(),
         muteHttpExceptions: true
       };
-      
+
       const uploadRes = UrlFetchApp.fetch(uploadUrl, uploadOptions);
       if (uploadRes.getResponseCode() !== 200) {
         throw new Error(`上傳背景圖片失敗: ${uploadRes.getContentText()} (若顯示 invalid image dimension，請確認您的圖片剛好是 2500x843 像素且格式為 JPG/PNG)`);
@@ -350,7 +350,7 @@ function setupRichMenus(): void {
 
     // 重新綁定所有職員的專屬選單
     const staffRows = SheetHelper.getRows<any>('Staff');
-    const activeStaff = staffRows.filter(row => 
+    const activeStaff = staffRows.filter(row =>
       row.line_uid && String(row.status).trim().toLowerCase() === 'active'
     );
     activeStaff.forEach(staff => {
@@ -373,12 +373,12 @@ function setupRichMenus(): void {
 function uiUpdateRichMenus() {
   try {
     const ui = SpreadsheetApp.getUi();
-    
+
     // 確保有預留圖片網址的欄位
     const configRows = SheetHelper.getRows<any>('Config');
     const imageKeys = ['IMG_MENU_MEMBER', 'IMG_MENU_COACH', 'IMG_MENU_ADMIN'];
     let fieldsAdded = false;
-    
+
     imageKeys.forEach(key => {
       if (!configRows.find(r => r.key === key)) {
         SheetHelper.addRow('Config', {
@@ -396,10 +396,10 @@ function uiUpdateRichMenus() {
     }
 
     ui.alert('⏳ 開始為您重新建立並覆蓋圖文選單...\n處理時間約 5~10 秒，請稍候。');
-    
+
     // 呼叫主函式
     setupRichMenus();
-    
+
     ui.alert('🎉 圖文選單更新成功！\n請至 LINE 查看最新畫面。');
   } catch (error) {
     const ui = SpreadsheetApp.getUi();
@@ -438,7 +438,7 @@ function seedClasses(): void {
     if (calendarId && calendarId !== 'primary') {
       try {
         calendar = CalendarApp.getCalendarById(calendarId);
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!calendar) calendar = CalendarApp.getDefaultCalendar();
 
@@ -516,7 +516,7 @@ function seedClasses(): void {
     // === A 類：基礎重訓 (每週1次，難度2-5，上限8人，開放補課) ===
     {
       class_id: 'A-MON-1000',
-      class_name: '基礎重訓 週一班',
+      class_name: '基礎重訓 週一上午班',
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -538,7 +538,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'A-MON-1900',
-      class_name: '基礎重訓 週一女性專班',
+      class_name: '基礎重訓 週一晚女專班',
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -560,7 +560,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'A-MON-2000',
-      class_name: '基礎重訓 週一晚間班',
+      class_name: '基礎重訓 週一晚班',
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -582,7 +582,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'A-TUE-1000',
-      class_name: '基礎重訓 週二女性專班',
+      class_name: '基礎重訓 週二上午女專班',
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -604,7 +604,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'A-WED-1900',
-      class_name: '基礎重訓 週三女性專班',
+      class_name: '基礎重訓 週三晚女專A班',
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -626,7 +626,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'A-WED-2000',
-      class_name: '基礎重訓 週三晚間限女班',
+      class_name: '基礎重訓 週三晚女專B班',
       class_type: 'A',
       level: 'Lv.2',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -648,7 +648,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'A-THU-2000',
-      class_name: '基礎重訓 週四晚間限女班',
+      class_name: '基礎重訓 週四晚女專班',
       class_type: 'A',
       level: 'Lv.4',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -716,7 +716,7 @@ function seedClasses(): void {
     // === B 類：混合重訓 (每週2次，難度6-9，上限15人，開放補課，不限性別) ===
     {
       class_id: 'B-MONWED-1840',
-      class_name: '混合重訓 週一三晚間A班',
+      class_name: '混合重訓 週一三晚A班',
       class_type: 'B',
       level: 'Lv.8',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -739,7 +739,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'B-MONWED-1950',
-      class_name: '混合重訓 週一三晚間B班',
+      class_name: '混合重訓 週一三晚B班',
       class_type: 'B',
       level: 'Lv.6',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -762,7 +762,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'B-MONWED-2100',
-      class_name: '混合重訓 週一三夜間班',
+      class_name: '混合重訓 週一三晚C班',
       class_type: 'B',
       level: 'Lv.6',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -785,7 +785,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'B-TUETHU-1840',
-      class_name: '混合重訓 週二四晚間A班',
+      class_name: '混合重訓 週二四晚A班',
       class_type: 'B',
       level: 'Lv.8',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -808,7 +808,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'B-TUETHU-1950',
-      class_name: '混合重訓 週二四晚間B班',
+      class_name: '混合重訓 週二四晚B班',
       class_type: 'B',
       level: 'Lv.6',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
@@ -831,7 +831,7 @@ function seedClasses(): void {
     },
     {
       class_id: 'B-TUETHU-2100',
-      class_name: '混合重訓 週二四夜間班',
+      class_name: '混合重訓 週二四晚C班',
       class_type: 'B',
       level: 'Lv.8',
       coach_line_uid: 'U028285d818d2fb6acc952c416b833e33',
