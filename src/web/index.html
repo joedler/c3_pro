@@ -1621,24 +1621,24 @@
             } else if (this.currentMode === 'bind') {
               // Student binding
             } else if (this.currentMode === 'leave') {
-              // Load student profile & classes to choose
+              // 單一 API 呼叫即取得學員資料 + 未來課堂 + 請假紀錄（極速載入！）
               const info = await this.apiCall('member.getInfo');
               if (info.bound) {
                 this.studentProfile.realName = info.realName;
                 this.studentProfile.level = info.level;
                 
-                // 實時獲取學員未來 4 週內可請假的真實課堂列表（剔除已請假及停課課堂）
-                this.upcomingSessions = await this.apiCall('member.getUpcomingSessions');
+                // 直接從 getInfo 回傳值中提取已內嵌的即時課堂列表
+                this.upcomingSessions = info.upcomingSessions || [];
               } else {
                 this.addToast('您尚未綁定學員檔案，請先進行綁定。', 'info');
                 this.currentMode = 'bind';
               }
             } else if (this.currentMode === 'makeup') {
-              // Load student leave requests pending makeup
+              // 單一 API 呼叫即取得學員資料 + 待補課紀錄
               const info = await this.apiCall('member.getInfo');
               if (info.bound) {
-                // 實時獲取學員已審核通過且尚未安排補課的真實請假紀錄，拒絕 Mock 偽裝！
-                this.pendingLeaves = await this.apiCall('member.getPendingLeaves');
+                // 直接從 getInfo 回傳值中提取已內嵌的即時請假紀錄
+                this.pendingLeaves = info.pendingLeaves || [];
               }
             } else if (this.currentMode === 'coach') {
               // Load coach classes and sessions

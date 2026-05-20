@@ -322,8 +322,58 @@ class MemberService {
       periodInfo = `${start} ~ ${this.formatDate(endDate)}`;
     }
 
+    // === 一併內嵌 upcomingSessions（未來4週可請假課堂），避免額外 API 往返 ===
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    const now = new Date();
+    const fourWeeksLater = new Date(now.getTime() + 4 * 7 * 24 * 60 * 60 * 1000);
+    const leaveSessionIds = leaveRequests.map(l => l.session_id);
+    const classMap = new Map(allClasses.map(c => [c.class_id, c]));
+
+    const upcomingSessions = allSessions
+      .filter(s => {
+        if (!classIds.includes(s.class_id)) return false;
+        if (s.status === 'cancelled') return false;
+
+        const dateStr = this.safeFormatSessionDate(s.session_date);
+        const timeStr = this.safeFormatTime(s.start_time);
+        if (!dateStr || !timeStr) return false;
+
+        const sessionDate = new Date(`${dateStr}T${timeStr}:00`);
+        if (isNaN(sessionDate.getTime())) return false;
+
+        return sessionDate >= now && sessionDate <= fourWeeksLater;
+      })
+      .filter(s => !leaveSessionIds.includes(s.session_id))
+      .map(s => {
+        const cls = classMap.get(s.class_id);
+        return {
+          sessionId: s.session_id,
+          classId: s.class_id,
+          className: cls ? cls.class_name : s.class_id,
+          date: this.safeFormatSessionDate(s.session_date),
+          startTime: this.safeFormatTime(s.start_time),
+          endTime: this.safeFormatTime(s.end_time)
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // === 一併內嵌 pendingLeaves（已核准且尚未補課的請假紀錄），避免額外 API 往返 ===
+    const pendingLeaves = leaveRequests
+      .filter(l => !l.makeup_session_id || l.makeup_session_id === '')
+      .map(l => {
+        const session = allSessions.find(s => s.session_id === l.session_id);
+        const cls = session ? classMap.get(session.class_id) : null;
+        return {
+          leaveId: l.leave_id,
+          className: cls ? cls.class_name : '未知的課程',
+          date: session ? this.safeFormatSessionDate(session.session_date) : '未知日期'
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+
     return {
       bound: true,
+      role: user.role,
       realName: member.real_name,
       level: member.level,
       hasClasses: true,
@@ -333,8 +383,36 @@ class MemberService {
       attendedCount,
       leaveCount,
       makeupInfo: `已補 ${totalMakeupsDone} 堂 / 可補 ${availableMakeupCount} 堂`,
-      remainingCount
+      remainingCount,
+      upcomingSessions,
+      pendingLeaves
     };
+  }
+
+  /**
+   * 安全格式化 Sheets 回傳的日期值（可能是 Date 物件或字串）為 yyyy-MM-dd
+   */
+  private static safeFormatSessionDate(dateVal: any): string {
+    if (!dateVal) return '';
+    if (dateVal instanceof Date) {
+      return Utilities.formatDate(dateVal, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    return String(dateVal).substring(0, 10);
+  }
+
+  /**
+   * 安全格式化 Sheets 回傳的時間值（可能是 Date 物件或 "HH:mm" 字串）為 HH:mm
+   */
+  private static safeFormatTime(timeVal: any): string {
+    if (!timeVal) return '';
+    if (timeVal instanceof Date) {
+      return Utilities.formatDate(timeVal, 'Asia/Taipei', 'HH:mm');
+    }
+    return String(timeVal).trim();
   }
 
   /**
@@ -360,6 +438,11 @@ class MemberService {
     }
 
     const classIds = enrollments.map(e => e.class_id);
+
+    // JOIN Classes 表取得班級名稱（Sessions 表本身沒有 class_name 欄位！）
+    const allClasses = SheetHelper.getRows<any>('Classes');
+    const classMap = new Map(allClasses.map(c => [c.class_id, c]));
+
     const allSessions = SheetHelper.getRows<any>('Sessions');
     const now = new Date();
     const fourWeeksLater = new Date(now.getTime() + 4 * 7 * 24 * 60 * 60 * 1000);
@@ -373,31 +456,26 @@ class MemberService {
       .filter(s => {
         if (!classIds.includes(s.class_id)) return false;
         if (s.status === 'cancelled') return false;
-        
-        const sessionDate = new Date(`${s.session_date || s.date}T${s.start_time}:00`);
+
+        const dateStr = this.safeFormatSessionDate(s.session_date);
+        const timeStr = this.safeFormatTime(s.start_time);
+        if (!dateStr || !timeStr) return false;
+
+        const sessionDate = new Date(`${dateStr}T${timeStr}:00`);
         if (isNaN(sessionDate.getTime())) return false;
-        
+
         return sessionDate >= now && sessionDate <= fourWeeksLater;
       })
       .filter(s => !leaveSessionIds.includes(s.session_id))
       .map(s => {
-        let formattedDate = '';
-        try {
-          if (s.session_date || s.date) {
-            const d = new Date(s.session_date || s.date);
-            if (!isNaN(d.getTime())) {
-              formattedDate = d.toISOString().split('T')[0];
-            }
-          }
-        } catch(e) {}
-        
+        const cls = classMap.get(s.class_id);
         return {
           sessionId: s.session_id,
           classId: s.class_id,
-          className: s.class_name,
-          date: formattedDate || String(s.session_date || s.date).substring(0, 10),
-          startTime: s.start_time,
-          endTime: s.end_time
+          className: cls ? cls.class_name : s.class_id,
+          date: this.safeFormatSessionDate(s.session_date),
+          startTime: this.safeFormatTime(s.start_time),
+          endTime: this.safeFormatTime(s.end_time)
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
@@ -432,21 +510,11 @@ class MemberService {
       .map(l => {
         const session = allSessions.find(s => s.session_id === l.session_id);
         const cls = session ? allClasses.find(c => c.class_id === session.class_id) : null;
-        
-        let formattedDate = '';
-        try {
-          if (session && (session.session_date || session.date)) {
-            const d = new Date(session.session_date || session.date);
-            if (!isNaN(d.getTime())) {
-              formattedDate = d.toISOString().split('T')[0];
-            }
-          }
-        } catch(e) {}
 
         return {
           leaveId: l.leave_id,
           className: cls ? cls.class_name : '未知的課程',
-          date: formattedDate || (session ? String(session.session_date || session.date).substring(0, 10) : '未知日期')
+          date: session ? this.safeFormatSessionDate(session.session_date) : '未知日期'
         };
       })
       .sort((a, b) => b.date.localeCompare(a.date));
