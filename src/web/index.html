@@ -1678,7 +1678,7 @@
             } else {
               // 統一路由決策：有指定 mode 就用，沒有就預設 'profile' 學員首頁
               if (mode) {
-                if (mode === 'leave' || mode === 'makeup' || mode === 'schedule') {
+                if (mode === 'leave' || mode === 'makeup') {
                   this.currentMode = 'profile';
                   this.activeSubView = mode;
                 } else {

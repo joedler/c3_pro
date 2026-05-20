@@ -289,28 +289,26 @@ class MemberService {
     // 各項計數器
     const totalPaid = enrollments.reduce((sum, e) => sum + (Number(e.total_paid_sessions) || 0), 0);
     
-    // 已出席堂數：以系統自動防呆結案 (completed) 為基準，扣除學員已請假的堂數
+    // 已上堂數：指實際經過的周數或次數（不扣除請假）
     const completedSessions = SheetHelper.getRows<any>('Sessions').filter(
       s => classIds.includes(s.class_id) && s.status === 'completed'
     );
-    const completedSessionIds = completedSessions.map(s => s.session_id);
-    const leaveForCompletedCount = leaveRequests.filter(l => completedSessionIds.includes(l.session_id)).length;
-    
-    // 補課統計
-    const totalMakeupsDone = makeupRequests.filter(m => m.status === 'completed' || m.status === 'approved').length;
+    const attendedCount = completedSessions.length;
 
-    // 真正的已上堂數 = (該班級已結案的總堂數) - (已結案中他請假的堂數) + (他額外補課完成的堂數)
-    const attendedCount = completedSessions.length - leaveForCompletedCount + totalMakeupsDone;
-
-    // 請假堂數 (Leave_Requests 中已審核通過的紀錄)
+    // 請假堂數：實際成功請假的次數
     const leaveCount = leaveRequests.length;
     
-    // 可補課額度：請假堂數 - 已安排或已完成的補課堂數
-    // 預防出現負數，最少為 0
-    const availableMakeupCount = Math.max(0, leaveCount - totalMakeupsDone);
+    // 補課完成：預約成功且已結案(completed)的補課次數
+    const makeupCount = makeupRequests.filter(m => m.status === 'completed').length;
 
-    // 剩餘堂數 = 總繳費堂數 - 已出席堂數 - 請假堂數 (請假在下期結算前不計入已上，但從本期可用剩餘中扣除，由補課或下期折抵處理)
-    const remainingCount = Math.max(0, totalPaid - attendedCount - leaveCount);
+    // 已預約補課次數 (包含 completed 與 approved)
+    const reservedMakeups = makeupRequests.filter(m => m.status === 'completed' || m.status === 'approved').length;
+
+    // 可補額度：請假堂數 - 已預約補課次數
+    const availableMakeupCount = Math.max(0, leaveCount - reservedMakeups);
+
+    // 剩餘堂數 = 總堂數 - 經過週數 (即 attendedCount)
+    const remainingCount = Math.max(0, totalPaid - attendedCount);
 
     // 組裝班級名稱清單與日期範圍
     const classNames = myClasses.map(c => c.class_name).join('、');
@@ -387,9 +385,9 @@ class MemberService {
       totalPaid,
       attendedCount,
       leaveCount,
-      makeupCount: totalMakeupsDone,
+      makeupCount,
       availableMakeupCount,
-      makeupInfo: `已補 ${totalMakeupsDone} 堂 / 可補 ${availableMakeupCount} 堂`,
+      makeupInfo: `已登記 ${reservedMakeups} 堂`,
       remainingCount,
       upcomingSessions,
       pendingLeaves
