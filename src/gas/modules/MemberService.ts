@@ -279,9 +279,9 @@ class MemberService {
 
     // 4. 取得出勤與請假統計
     const attendances = SheetHelper.getRows<any>('Attendance').filter(a => a.member_id === memberId);
-    const leaveRequests = SheetHelper.getRows<any>('Leave_Requests').filter(
-      l => l.member_id === memberId && l.status === 'approved'
-    );
+    const allLeaveRows = SheetHelper.getRows<any>('Leave_Requests').filter(l => l.member_id === memberId);
+    Logger.log(`[Debug] 請假原始資料(member=${memberId}): ${JSON.stringify(allLeaveRows.map(l => ({ id: l.leave_id, status: l.status, memberId: l.member_id })))}`);
+    const leaveRequests = allLeaveRows.filter(l => l.status === 'approved');
     const makeupRequests = SheetHelper.getRows<any>('Makeup_Requests').filter(
       m => m.member_id === memberId
     );

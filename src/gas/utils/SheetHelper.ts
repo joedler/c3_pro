@@ -197,6 +197,7 @@ class SheetHelper {
     '職位': 'role',
     'role': 'role',
     '狀態': 'status',
+    '審核狀態': 'status',
     'status': 'status',
     '鐘點費率': 'hourly_rate',
     '鐘點費': 'hourly_rate',
