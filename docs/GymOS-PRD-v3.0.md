@@ -142,22 +142,26 @@
 
 | 欄位 | 類型 | 說明 |
 |------|------|------|
-| class_id | String | 主鍵 (e.g., `CLS-2025-001`) |
-| class_name | String | 班級名稱 (e.g., `初階A班`) |
-| class_type | Enum | `group_1x` / `group_2x` / `personal` |
-| level | Enum | `初級` / `中級` / `高級` |
+| class_id | String | 主鍵 (e.g., `A-MON-1000`) |
+| class_name | String | 班級名稱，命名規範：`{課程類型} {上課星期}{時段}{班別}` (e.g., `基礎重訓 週一上午班`、`混合重訓 週一三晚A班`) |
+| class_type | Enum | `A` (基礎重訓 週1次 12週) / `B` (混合重訓 週2次 按月計費) / `C` (特殊專班 週1次 12週) |
+| level | Enum | `Lv.2` / `Lv.4` / `Lv.6` / `Lv.8` / `不固定` |
 | coach_line_uid | String | 授課教練 LINE UID (FK → Staff.line_uid) |
-| room_id | String | 教室 ID (FK → Rooms.room_id) |
-| max_capacity | Integer | 班級人數上限（留空則預設套用 Rooms 表設定值） |
-| day_of_week | Integer | 0-6 (0=週日) |
-| time_slot | Enum | `morning` / `afternoon` / `evening` |
-| start_time | Time | e.g., `09:00` |
-| end_time | Time | e.g., `10:00` |
-| period_start | Date | 本期開始日期 |
-| period_weeks | Integer | 期數週數（預設12） |
-| sessions_per_week | Integer | 每週堂數（1 或 2） |
-| total_sessions | Integer | 計算欄：一期12週(12堂) 或 一期1個月(24堂) |
-| status | Enum | `active` / `closed` / `suspended` |
+| room_id | String | 教室 ID (FK → Rooms.room_id)。A類使用 RM-02 (小教室)，B/C類使用 RM-01 (大教室) |
+| max_capacity | Integer | 班級人數上限。A類上限 8 人，B/C類上限 15 人 |
+| enrolled | Integer | 目前已報名人數（系統自動維護） |
+| gender_limit | Enum | `null` (不限) / `female` (僅限女性) |
+| allow_makeup | Boolean | 是否允許跨班補課 |
+| day_of_week | String | 上課星期，支援複合格式。單天：`週一`；複合：`週一 + 週三` |
+| time_slot | String | 時段描述 (e.g., `上午`、`晚間`) |
+| start_time | Time | 開始時間 (e.g., `10:00`) |
+| end_time | Time | 結束時間 (e.g., `11:00`) |
+| period_start | Date | 本期開課日期 |
+| period_type | Enum | **計費週期類型**：`weekly` (固定週數制，A/C類) / `monthly` (動態月份制，B類) |
+| period_weeks | Integer | 期數週數（A/C類為 12，B類填 0 由系統動態計算） |
+| sessions_per_week | Integer | 每週堂數（A/C類：1，B類：2） |
+| total_sessions | Integer | 總堂數。A/C類固定 12；B類由 `ClassEngine.generate()` 動態計算後回寫，各月份不同（例如 2026/05 週一+週三共出現 9 次，`total_sessions` 即為 9） |
+| status | Enum | `open` (開放報名) / `pending` (尚未開課) / `closed` (已結束) |
 | notes | String | 備註 |
 
 ---
@@ -455,33 +459,30 @@ function respond(status, data) {
 
 #### F-A01：開班功能
 
-**介面**：`/admin/create-class.html`
+**介面**：`/admin/create-class.html`（或直接操作試算表 Classes 工作表）
 
-**開班規格與表單欄位**：
-*   **課程週期與班級規格**（不限制學員報名幾種課程）：
-    *   **A 方案**：1 週 1 堂，1 堂 1 小時，一期 12 週（共 12 堂）。
-    *   **B 方案**：1 週 2 堂，1 堂 1 小時，一期 1 個月（共 24 堂，雙天交錯，如週二/週五）。
-*   **班級基本資料**：
-    *   班級名稱、課程類型、程度（下拉選單）
-    *   授課教練（下拉選教練，對應 `Staff` 帳號）
-    *   教室 ID（下拉選教室，對應 `Rooms`）、人數上限（留空則自動套用教室預設上限）
-    *   上課星期 (1~6)、開始時間、結束時間、開班日期。
-*   **學員名單管理**：
-    *   **套用上期學員名單**：下拉選擇「上期班級」 → 系統自動帶入已報名學員名單。
-    *   **手動新增學員**：多選學員（支援即時關鍵字搜尋 / Typeahead）。
+**課程班級類型規格（C3 Fitness 現行三類）**：
 
-**提交後 GAS 自動執行流程 (ClassEngine.generate)**：
-1.  **建立班級記錄**：於 `Classes` Sheet 建立新班級紀錄。
-2.  **批次展開每堂課**：依開課日至結課日，計算所有符合星期設定的上課日期，自動排除設定的國定假日，將每堂課寫入 `Sessions` Sheet。
-3.  **批次同步 Google Calendar**：
-    *   依據每堂課的時間，在 Google 雲端自動批次建立對應的日曆事件。
-    *   事件資訊包含：班級名稱、授課教練、上課教室。
-    *   學員名單（姓名與 ID）自動寫入 Calendar 事件的**描述欄**。
-4.  **回寫事件 ID**：將產生的 Google Calendar 事件 ID 批次回寫至 `Sessions` / `Classes` Sheet，確保未來異動能即時同步。
-5.  **批次建立選課紀錄**：批次建立對應學員的 `Enrollments` 紀錄。
-6.  **教練共享日曆建立**：於該授課教練的專屬共享日曆自動建立對應課程事件。
+| 類型 | 說明 | 每週堂數 | 計費週期 | `period_type` | 教室 | 上限 | 允許補課 |
+|------|------|---------|---------|--------------|------|------|---------|
+| **A 類** | 基礎重訓 | 1 次 | 12 週固定 (共 12 堂) | `weekly` | RM-02 小教室 | 8 人 | ✅ |
+| **B 類** | 混合重訓 | 2 次 | 1 個月動態 (依月份計算) | `monthly` | RM-01 大教室 | 15 人 | ✅ |
+| **C 類** | 特殊專班 | 1 次 | 12 週固定 (共 12 堂) | `weekly` | RM-01 大教室 | 15 人 | ❌ |
 
-**預覽**：送出前顯示課程預覽表，含所有上課日期與名單，確認無誤後再提交。
+> **B 類動態堂數說明**：B 類採用 `period_type = 'monthly'` 機制。系統在 `ClassEngine.generate()` 時，會自動計算 `period_start` 所在月份內，設定星期幾（如週一+週三）實際出現的天數作為 `total_sessions`，並將結果回寫至 Classes 工作表。大月 (31天) 與小月 (28~30天) 可能分別為 9 或 8 堂，完全按月曆動態計算，不再寫死。
+
+**班級命名規範**：`{課程類型} {上課星期}{時段}{班別}`
+- A 類範例：`基礎重訓 週一上午班`、`基礎重訓 週三晚女專班`
+- B 類範例：`混合重訓 週一三晚A班`、`混合重訓 週二四晚C班`
+- C 類範例：`特殊專班 週四上午班`
+
+**`ClassEngine.generate()` 執行流程**：
+1.  **計算總堂數**：
+    - A/C類（`weekly`）：`total_sessions = period_weeks × sessions_per_week`
+    - B類（`monthly`）：動態遍歷 `period_start` 所在月份，累計 `day_of_week` 星期幾出現天數，並回寫 `Classes.total_sessions`
+2.  **批次展開每堂課**：從開課日起，找出所有符合 `day_of_week` 的日期，跳過 `HOLIDAYS` 設定的國定假日，寫入 `Sessions` Sheet。
+3.  **批次建立 Google Calendar 事件**：批次呼叫 Calendar API，建立對應的日曆事件（含班級名稱、教練、教室、學員名單於描述欄）。
+4.  **回寫 Calendar Event ID**：將 Google Calendar 事件 ID 批次回寫至 `Sessions.calendar_event_id`，確保後續異動可同步。
 
 #### F-A02：課程調整（停課/換日）
 
@@ -639,97 +640,62 @@ FullCalendar 整合優化包括：
 
 ## 6. 開班與課程週期引擎
 
-### ClassEngine 設計（GAS）
+### ClassEngine 設計（GAS TypeScript）
 
-```javascript
-// ClassEngine.gs
-const ClassEngine = {
-  
-  /**
-   * 依據 Classes 設定，批次產生 Sessions
-   * @param {string} classId
-   */
-  generate(classId) {
-    const cls = this.getClass(classId);
-    const sessions = [];
-    let currentDate = new Date(cls.period_start);
-    let seq = 1;
-    
-    // 移動到第一個符合 day_of_week 的日期
-    while (currentDate.getDay() !== cls.day_of_week) {
-      currentDate.setDate(currentDate.getDate() + 1);
+`ClassEngine.ts` 實作了完整的課程排程引擎，核心方法包含 `generate()`（首期開班）、`renew()`（續期開班）與 `syncCalendarEvent()`（日曆同步）。
+
+#### `generate(classId)` — 首期開班排程
+
+```typescript
+// 核心邏輯（TypeScript 版本，位於 src/gas/modules/ClassEngine.ts）
+public static generate(classId: string): { generated: number } {
+  const cls = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+  const daysOfWeek = parseDaysOfWeek(cls.day_of_week); // 支援 '週一 + 週三' 複合格式
+  const periodType = cls.period_type || 'weekly';
+
+  let totalSessions: number;
+  if (periodType === 'monthly') {
+    // B 類：動態計算 period_start 所在月份內 daysOfWeek 出現的實際天數
+    const year = startDate.getFullYear();
+    const month = startDate.getMonth();
+    totalSessions = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (daysOfWeek.includes(new Date(year, month, d).getDay())) totalSessions++;
     }
-    
-    const totalSessions = cls.period_weeks * cls.sessions_per_week;
-    
-    while (seq <= totalSessions) {
-      sessions.push({
-        session_id: `SES-${classId}-${String(seq).padStart(2,'0')}`,
-        class_id: classId,
-        session_date: Utilities.formatDate(currentDate, 'Asia/Taipei', 'yyyy-MM-dd'),
-        session_seq: seq,
-        start_time: cls.start_time,
-        end_time: cls.end_time,
-        status: 'scheduled',
-      });
-      
-      // 一週一堂：直接加7天；一週兩堂：交錯加3/4天
-      if (cls.sessions_per_week === 1) {
-        currentDate.setDate(currentDate.getDate() + 7);
-      } else {
-        // 週二/週五等雙週模式，需在 Config 設定第二天
-        currentDate = this.nextClassDate(currentDate, cls);
-      }
-      seq++;
-    }
-    
-    // 批次寫入 Sessions Sheet
-    this.bulkInsert('Sessions', sessions);
-    return { generated: sessions.length };
-  },
-  
-  /**
-   * 暫停/取消特定 sessions（颱風、教練請假等）
-   */
-  suspendSessions(sessionIds, reason, substituteCoachUid = null) {
-    const sheet = getSheet('Sessions');
-    sessionIds.forEach(id => {
-      const row = findRow(sheet, 'session_id', id);
-      if (substituteCoachUid) {
-        row.status = 'scheduled'; // 維持上課但換代課
-        row.substitute_coach_uid = substituteCoachUid;
-      } else {
-        row.status = 'cancelled';
-        row.cancel_reason = reason;
-      }
-    });
-    // 同步建立公告
-    AnnouncementService.createFromSuspension(sessionIds, reason);
+    // 計算完成後回寫 Classes.total_sessions，供 activateEnrollment 讀取
+    SheetHelper.updateRow('Classes', 'class_id', classId, { total_sessions: totalSessions });
+  } else {
+    // A/C 類：固定 = period_weeks × sessions_per_week
+    totalSessions = Number(cls.period_weeks) * Number(cls.sessions_per_week);
   }
-};
+  // 從 period_start 起逐日推進，跳過非上課星期及 HOLIDAYS 設定的國定假日
+  // 批次建立 Sessions 紀錄並呼叫 Calendar API 建立對應行程
+}
 ```
+
+**關鍵規則**：
+- 遇到 `HOLIDAYS`（Config 設定的國定假日）的日期，跳過不計堂數，繼續往後找下一個上課日。
+- `calendar.getEvents()` 採批量拉取而非逐筆 `getEventById()`，避免逐筆呼叫 API 造成 GAS 6 分鐘超時。
+
+#### `renew(classId, newStartDate, memberIds, termRemark)` — 續期開班
+
+- 相容 `period_type = 'monthly'`：以 `newStartDate` 所在月份重新動態計算堂數。
+- 將被勾選的舊學員自動建立下期 Enrollment，狀態為 `pending_payment`。
+- 對應月份堂數計算完成後同步回寫 `Classes.total_sessions`，確保 `activateEnrollment` 收費核點時讀到正確數字。
+
+#### `syncCalendarEvent(sessionId)` — 日曆實時同步
+
+當請假/補課申請狀態變更時觸發，重新計算該堂課的實際出席/請假/補課名單，並以單次 API 呼叫更新 Google 日曆事件的標題和描述，確保教練手機看到的行程永遠是最新狀態。
 
 ### 補課可用名額計算
 
-```javascript
-// MakeupService.gs
-getAvailable(memberId, leaveId) {
-  const leave = getLeave(leaveId);
-  const member = getMember(memberId);
-  const enrolledClasses = getEnrollments(memberId);
-  
-  // 找出同等級或以下的所有 active sessions
-  // 且日期在補課截止日之前
-  // 且當前出席人數 < max_capacity（補課不佔正式名額，但總人數不超上限）
-  
-  return futureSessions.filter(session => {
-    const cls = getClass(session.class_id);
-    const currentCount = getAttendanceCount(session.session_id);
-    return cls.level <= member.level 
-      && currentCount < cls.max_capacity
-      && session.session_date <= deadline;
-  });
-}
+```typescript
+// MakeupService.getAvailable()
+// 篩選條件：
+// 1. 同等程度（level 相符）
+// 2. 未來時段（session_date > today）
+// 3. 該堂實際人數 < max_capacity（含正式學員 + 補課人員合計）
+// 4. 限 allow_makeup = true 的班級
 ```
 
 ---
