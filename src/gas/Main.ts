@@ -124,6 +124,13 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       return respond(400, { error: '缺少 action 參數' });
     }
 
+    // 每次前端 API 呼叫時，動態修復並自動完成所有已過期的 scheduled 課堂
+    try {
+      ClassEngine.autoCompletePastSessions();
+    } catch (err) {
+      Logger.log(`[系統防呆自動結課錯誤] ${err}`);
+    }
+
     // 4. 用戶身份驗證 (取得 UID 與 Role)
     const user = AuthService.verify(token);
 

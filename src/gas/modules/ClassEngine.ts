@@ -627,4 +627,46 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
       }
     });
   }
+
+  /**
+   * 自動完成所有已過期的未來課堂 (F-C02 防呆擴充)
+   * 規則：當課程日期與結束時間已過去，且狀態仍為 scheduled，自動更新為 completed 結案
+   */
+  public static autoCompletePastSessions(): void {
+    const now = new Date();
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    
+    // 找出所有已過去但狀態仍為 scheduled 的課堂
+    const pastSessions = allSessions.filter(s => {
+      if (s.status !== 'scheduled') {
+        return false;
+      }
+      try {
+        const sessionEnd = this.parseDateTime(s.session_date, s.end_time);
+        return sessionEnd < now;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    if (pastSessions.length === 0) {
+      return;
+    }
+
+    Logger.log(`[系統防呆自動結課] 偵測到 ${pastSessions.length} 堂過期課堂，開始批次更新為 completed 狀態。`);
+    
+    pastSessions.forEach(s => {
+      SheetHelper.updateRow('Sessions', 'session_id', s.session_id, {
+        status: 'completed'
+      });
+      // 順便即時同步該堂課之 Google 日曆事件描述 (包含出席人數描述)
+      try {
+        this.syncCalendarEvent(s.session_id);
+      } catch (err) {
+        Logger.log(`[系統自動結課日曆同步失敗] ${s.session_id}: ${err}`);
+      }
+    });
+
+    Logger.log(`[系統防呆自動結課] 已成功自動結算 ${pastSessions.length} 堂過期課堂！`);
+  }
 }

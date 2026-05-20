@@ -4,9 +4,20 @@
  */
 
 class MakeupService {
+  private static getLevelNumber(levelStr: string): number {
+    if (!levelStr) return 0;
+    const match = String(levelStr).match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  }
+
   /**
    * 查詢可用的補課課堂清單 (F-M04)
-   * 規則：必須與原請假課堂同難度等級、時間在未來、且該課堂人數尚未額滿。
+   * 規則：
+   * 1. 課堂狀態為 scheduled 且在未來。
+   * 2. 班級狀態為 active 或 open，且 allow_makeup 為 true。
+   * 3. 級別篩選：學員本人的等級 >= 課程難度等級 (getLevelNumber(member.level) >= getLevelNumber(class.level))。
+   * 4. 性別篩選：若學員 gender 為 '男'，則排除班級 gender_limit 為 'female'。
+   * 5. 該課堂人數尚未額滿。
    */
   public static getAvailable(
     data: { leaveId: string },
@@ -18,16 +29,16 @@ class MakeupService {
 
     const { leaveId } = data;
     if (!leaveId) {
-      throw new Error('請提供請假紀錄 ID 以匹配同等級之可用課程。');
+      throw new Error('請提供請假紀錄 ID 以匹配可用課程。');
     }
 
-    // 1. 取得學員資料
+    // 1. 取得學員資料 (包含等級與性別)
     const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
     if (!member || member.status !== 'active') {
       throw new Error('您的學員帳號不存在或已停用。');
     }
 
-    // 2. 取得該次請假紀錄
+    // 2. 取得該次請假紀錄並進行防呆驗證
     const leave = SheetHelper.getRow<any>('Leave_Requests', 'leave_id', leaveId);
     if (!leave || leave.member_id !== member.member_id) {
       throw new Error('找不到該次請假的申請紀錄。');
@@ -41,39 +52,65 @@ class MakeupService {
       throw new Error('此請假紀錄已安排過補課，無法重複補課。');
     }
 
-    // 3. 取得原始課堂與原始班級難度等級
-    const origSession = SheetHelper.getRow<any>('Sessions', 'session_id', leave.session_id);
-    if (!origSession) {
-      throw new Error('找不到原始請假的課堂紀錄。');
-    }
+    // 3. 解析學員等級分數
+    const memberLevelNum = this.getLevelNumber(member.level);
 
-    const origClass = SheetHelper.getRow<any>('Classes', 'class_id', origSession.class_id);
-    if (!origClass) {
-      throw new Error('找不到原始班級設定。');
-    }
-
-    const level = origClass.level; // 例如 '初級'、'中級'、'高級' 或 'L1'
-
-    // 4. 篩選出同等級的所有活躍班級
+    // 4. 篩選出所有符合條件的班級 (狀態為 active 或 open、允許補課、且符合學員等級與性別限制)
     const allClasses = SheetHelper.getRows<any>('Classes');
-    const sameLevelClassIds = allClasses
-      .filter(c => c.level === level && c.status === 'active')
-      .map(c => c.class_id);
+    const validClassIds = new Set<string>();
+    const classMap = new Map<string, any>();
 
-    if (sameLevelClassIds.length === 0) {
+    allClasses.forEach(c => {
+      // 班級必須為 active 或 open，且開放補課
+      if (c.status !== 'active' && c.status !== 'open') return;
+      if (c.allow_makeup !== true && String(c.allow_makeup).toLowerCase() !== 'true') return;
+
+      // 級別限制：學員級別 >= 班級級別
+      const classLevelNum = this.getLevelNumber(c.level);
+      if (memberLevelNum < classLevelNum) return;
+
+      // 性別限制：男生不能選女性專班
+      if (member.gender === '男' && c.gender_limit === 'female') return;
+
+      validClassIds.add(c.class_id);
+      classMap.set(c.class_id, c);
+    });
+
+    if (validClassIds.size === 0) {
       return [];
     }
 
-    // 5. 撈出所有同等級班級在未來的 scheduled 課堂
+    // 5. 撈出所有符合班級且在未來的 scheduled 課堂
     const now = new Date();
     const allSessions = SheetHelper.getRows<any>('Sessions');
     const candidateSessions = allSessions.filter(s => {
-      if (!sameLevelClassIds.includes(s.class_id) || s.status !== 'scheduled') {
+      if (!validClassIds.has(s.class_id) || s.status !== 'scheduled') {
         return false;
       }
-      // 判斷是否在未來
-      const sessionStart = new Date(`${s.session_date}T${s.start_time}:00`);
-      return sessionStart > now;
+      // 判斷是否在未來 (session_date 與 start_time 組合)
+      try {
+        const parts = String(s.session_date).split('T')[0].split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const sessionStart = new Date(year, month, day);
+        
+        let hours = 0;
+        let minutes = 0;
+        if (s.start_time) {
+          const tParts = String(s.start_time).trim().replace('上午', '').replace('下午', '').split(':');
+          if (tParts.length >= 2) {
+            hours = parseInt(tParts[0], 10);
+            minutes = parseInt(tParts[1], 10);
+            if (String(s.start_time).includes('下午') && hours < 12) hours += 12;
+            else if (String(s.start_time).includes('上午') && hours === 12) hours = 0;
+          }
+        }
+        sessionStart.setHours(hours, minutes, 0, 0);
+        return sessionStart > now;
+      } catch (e) {
+        return false;
+      }
     });
 
     const result: Record<string, any>[] = [];
@@ -85,8 +122,6 @@ class MakeupService {
       m => m.status === 'approved' || m.status === 'completed'
     );
     const allRooms = SheetHelper.getRows<any>('Rooms');
-
-    const classMap = new Map(allClasses.map(c => [c.class_id, c]));
     const roomMap = new Map(allRooms.map(r => [r.room_id, r]));
 
     candidateSessions.forEach(s => {
@@ -113,7 +148,7 @@ class MakeupService {
           sessionId: s.session_id,
           classId: s.class_id,
           className: cls.class_name,
-          date: s.session_date,
+          date: s.session_date instanceof Date ? Utilities.formatDate(s.session_date, 'Asia/Taipei', 'yyyy-MM-dd') : String(s.session_date).split('T')[0],
           startTime: s.start_time,
           endTime: s.end_time,
           level: cls.level,
