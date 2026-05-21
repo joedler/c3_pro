@@ -422,7 +422,12 @@ function forceAuth() {
  * 診斷日曆權限與存取狀態，幫助排查日曆 ID 與權限不匹配問題
  */
 function debugCalendarAccess(): void {
-  const email = Session.getActiveUser().getEmail();
+  let email = '未知 (未授權或無此權限)';
+  try {
+    email = Session.getActiveUser().getEmail() || '未知 (無 Email 存取權限)';
+  } catch (e) {
+    // 忽略未取得 email 授權的錯誤
+  }
   Logger.log(`=== 🔍 開始診斷日曆存取權限 ===`);
   Logger.log(`1. 目前執行 GAS 的 Google 帳號: ${email}`);
   
