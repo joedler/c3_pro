@@ -433,12 +433,12 @@ function debugCalendarAccess(): void {
   }
   Logger.log(`=== 🔍 開始診斷日曆存取權限 ===`);
   Logger.log(`1. 目前執行 GAS 的 Google 帳號: ${email}`);
-  
+
   // 強制加載最新快取
   Config.loadCache();
   const calendarId = Config.get('GOOGLE_CALENDAR_ID');
   Logger.log(`2. 試算表「系統設定」中抓到的 GOOGLE_CALENDAR_ID: "${calendarId}"`);
-  
+
   if (!calendarId) {
     Logger.log(`❌ 警告：未在「系統設定」中設定 GOOGLE_CALENDAR_ID，將自動使用預設個人日曆。`);
   } else if (calendarId === 'primary') {
@@ -458,7 +458,7 @@ function debugCalendarAccess(): void {
       Logger.log(`❌ 讀取時發生異常：${err instanceof Error ? err.message : err}`);
     }
   }
-  
+
   Logger.log(`3. 目前執行帳號 (${email}) 可讀取的所有日曆清單：`);
   const allCalendars = CalendarApp.getAllCalendars();
   allCalendars.forEach(cal => {
@@ -962,4 +962,27 @@ function seedClasses(): void {
   });
 
   Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料且批次展開日曆！ ===`);
+}
+
+/**
+ * 產生授權連結（TS 版本，寫在本地 src/gas/Setup.ts）
+ */
+function getOAuthUrl(): void {
+  const clientId = Config.get('GOOGLE_OAUTH_CLIENT_ID');
+  const webAppUrl = ScriptApp.getService().getUrl();
+
+  if (!clientId) {
+    Logger.log('❌ 請先在「系統設定」填寫 GOOGLE_OAUTH_CLIENT_ID！');
+    return;
+  }
+
+  const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
+    `client_id=${clientId}&` +
+    `redirect_uri=${encodeURIComponent(webAppUrl)}&` +
+    "response_type=code&" +
+    "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar&" +
+    "access_type=offline&" +
+    "prompt=consent";
+
+  Logger.log(`👉 請複製此網址至瀏覽器打開進行一鍵連結：\n${authUrl}`);
 }
