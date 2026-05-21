@@ -305,11 +305,7 @@ class GoogleCalendarAPI {
       const refreshToken = resData.refresh_token;
 
       // 將取得的 Refresh Token 寫入 Google Sheet '系統設定' 工作表
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const configSheet = ss.getSheetByName(SheetHelper.SHEET_NAME_MAP['Config']);
-      if (!configSheet) {
-        throw new Error('找不到「系統設定」工作表，無法保存連線密鑰！');
-      }
+      const configSheet = SheetHelper.getSheet('Config');
 
       const rows = SheetHelper.getRows<any>('Config');
       const tokenRowIndex = rows.findIndex(r => r.key === 'GOOGLE_OAUTH_REFRESH_TOKEN');
