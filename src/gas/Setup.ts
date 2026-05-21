@@ -419,6 +419,47 @@ function forceAuth() {
 }
 
 /**
+ * 診斷日曆權限與存取狀態，幫助排查日曆 ID 與權限不匹配問題
+ */
+function debugCalendarAccess(): void {
+  const email = Session.getActiveUser().getEmail();
+  Logger.log(`=== 🔍 開始診斷日曆存取權限 ===`);
+  Logger.log(`1. 目前執行 GAS 的 Google 帳號: ${email}`);
+  
+  // 強制加載最新快取
+  Config.loadCache();
+  const calendarId = Config.get('GOOGLE_CALENDAR_ID');
+  Logger.log(`2. 試算表「系統設定」中抓到的 GOOGLE_CALENDAR_ID: "${calendarId}"`);
+  
+  if (!calendarId) {
+    Logger.log(`❌ 警告：未在「系統設定」中設定 GOOGLE_CALENDAR_ID，將自動使用預設個人日曆。`);
+  } else if (calendarId === 'primary') {
+    Logger.log(`ℹ️ 提示：設定為 "primary"，將使用您個人預設日曆。`);
+  } else {
+    try {
+      const cal = CalendarApp.getCalendarById(calendarId);
+      if (cal) {
+        Logger.log(`✅ 成功！已成功載入指定日曆：「${cal.getName()}」`);
+      } else {
+        Logger.log(`❌ 失敗！無法取得指定日曆。原因可能是：`);
+        Logger.log(`   - 該日曆 ID "${calendarId}" 不存在或打錯字。`);
+        Logger.log(`   - 目前執行帳號 (${email}) 沒有該日曆的「共用/存取」權限。`);
+        Logger.log(`   👉 解決對策：請至該日曆的「設定與共用」中，將執行帳號 (${email}) 加入共用名單，並給予「變更活動」權限。`);
+      }
+    } catch (err) {
+      Logger.log(`❌ 讀取時發生異常：${err instanceof Error ? err.message : err}`);
+    }
+  }
+  
+  Logger.log(`3. 目前執行帳號 (${email}) 可讀取的所有日曆清單：`);
+  const allCalendars = CalendarApp.getAllCalendars();
+  allCalendars.forEach(cal => {
+    Logger.log(`   - 名稱: "${cal.getName()}" | ID: "${cal.getId()}"`);
+  });
+  Logger.log(`=== 🔍 診斷結束 ===`);
+}
+
+/**
  * 一鍵自動建立並寫入 C3 Fitness 17 班課程種子資料 (Spec v2.0)
  */
 function seedClasses(): void {
