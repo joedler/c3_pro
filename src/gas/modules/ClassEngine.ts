@@ -5,22 +5,6 @@
 
 class ClassEngine {
   /**
-   * 取得對應用戶設定的 Google 日曆
-   */
-  private static getCalendar(): GoogleAppsScript.Calendar.Calendar {
-    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
-    if (calendarId && calendarId !== 'primary') {
-      try {
-        const cal = CalendarApp.getCalendarById(calendarId);
-        if (cal) return cal;
-      } catch (e) {
-        Logger.log(`[日曆載入失敗，採用預設日曆] ${e instanceof Error ? e.message : e}`);
-      }
-    }
-    return CalendarApp.getDefaultCalendar();
-  }
-
-  /**
    * 將日期字串 (yyyy-MM-dd) 或 Date 物件與時間值 (Date 物件或 "HH:mm" 字串) 組合為正確的 Date 物件，防止時區位移與 Invalid Date 錯誤
    */
   private static parseDateTime(dateVal: any, timeVal: any): Date {
@@ -205,7 +189,7 @@ class ClassEngine {
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
     // 4. 批次建立日曆事件並回寫 ID
-    const calendar = this.getCalendar();
+    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     sessions.forEach(session => {
       try {
         const startDateTime = this.parseDateTime(session.session_date, session.start_time);
@@ -214,12 +198,12 @@ class ClassEngine {
         const title = `${cls.class_name} (預計 0 人)`;
         const description = `【課程資訊】\n班級：${cls.class_name}\n教練：${coachName}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (0人):\n(尚未有學員報名)\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
 
-        const event = calendar.createEvent(title, startDateTime, endDateTime, {
+        const eventId = GoogleCalendarAPI.createEvent(calendarId, title, startDateTime, endDateTime, {
           description: description,
           location: roomName
         });
 
-        session.calendar_event_id = event.getId();
+        session.calendar_event_id = eventId;
       } catch (e) {
         Logger.log(`[日曆事件建立失敗] Session: ${session.session_id}, Error: ${e instanceof Error ? e.message : e}`);
       }
@@ -398,7 +382,7 @@ class ClassEngine {
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
     // 5. 批次建立 Google 日曆事件並回寫 ID
-    const calendar = this.getCalendar();
+    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     
     const allMembers = SheetHelper.getRows<any>('Members');
     const renewMemberNames = renewMemberIds.map(uid => {
@@ -416,12 +400,12 @@ class ClassEngine {
         
         const description = `【課程資訊】\n班級：${cls.class_name} [${termRemark}]\n教練：${coachName}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (${renewMemberNames.length}人):\n${studentLines || '(無)'}\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
 
-        const event = calendar.createEvent(title, startDateTime, endDateTime, {
+        const eventId = GoogleCalendarAPI.createEvent(calendarId, title, startDateTime, endDateTime, {
           description: description,
           location: roomName
         });
 
-        session.calendar_event_id = event.getId();
+        session.calendar_event_id = eventId;
       } catch (e) {
         Logger.log(`[續期日曆建立失敗] Session: ${session.session_id}, Error: ${e instanceof Error ? e.message : e}`);
       }
@@ -522,16 +506,14 @@ class ClassEngine {
     const maxCapacity = cls.max_capacity || (roomRow ? roomRow.max_capacity : 15);
 
     // 6. 重新編排日曆內容
-    const calendar = this.getCalendar();
+    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     try {
-      const event = calendar.getEventById(session.calendar_event_id);
-      if (event) {
-        const substitutePrefix = isSubstitute ? `[代課:${coachName}] ` : '';
-        const statusPrefix = session.status === 'cancelled' ? '[已停課] ' : '';
-        
-        event.setTitle(`${statusPrefix}${substitutePrefix}${cls.class_name} (${totalAttending}/${maxCapacity}人)`);
+      const substitutePrefix = isSubstitute ? `[代課:${coachName}] ` : '';
+      const statusPrefix = session.status === 'cancelled' ? '[已停課] ' : '';
+      
+      const title = `${statusPrefix}${substitutePrefix}${cls.class_name} (${totalAttending}/${maxCapacity}人)`;
 
-        const description = `【課程資訊】
+      const description = `【課程資訊】
 班級：${cls.class_name}
 教練：${coachName}${isSubstitute ? ' (代課教練)' : ''}
 教室：${roomName}
@@ -546,8 +528,10 @@ ${leaveNames.map(name => `• ${name}`).join('\n') || '(無)'}
 🔄 補課學員 (${makeupNames.length}人):
 ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
-        event.setDescription(description);
-      }
+      GoogleCalendarAPI.updateEvent(calendarId, session.calendar_event_id, {
+        title: title,
+        description: description
+      });
     } catch (e) {
       Logger.log(`[同步日曆事件失敗] Session: ${sessionId}, Error: ${e instanceof Error ? e.message : e}`);
     }
@@ -563,7 +547,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     extendWeeks: number = 0,
     grantMakeupPoints: boolean = false
   ): void {
-    const calendar = this.getCalendar();
+    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     
     sessionIds.forEach(id => {
       const session = SheetHelper.getRow<any>('Sessions', 'session_id', id);
@@ -650,10 +634,10 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
             // 建立日曆活動
             let calendarEventId = '';
             try {
-              const calendar = this.getCalendar();
               const startTimeStr = `${dateStr}T${cls.start_time}:00`;
               const endTimeStr = `${dateStr}T${cls.end_time}:00`;
-              const event = calendar.createEvent(
+              calendarEventId = GoogleCalendarAPI.createEvent(
+                calendarId,
                 `${cls.class_name} (0/8人)`,
                 new Date(startTimeStr),
                 new Date(endTimeStr),
@@ -661,7 +645,6 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
                   description: `【課程資訊】\n班級：${cls.class_name}\n停課順延生成課堂`
                 }
               );
-              calendarEventId = event.getId();
             } catch (err) {
               Logger.log(`[順延建立日曆活動失敗] ${err}`);
             }

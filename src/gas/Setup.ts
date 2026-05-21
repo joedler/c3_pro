@@ -34,7 +34,10 @@ function setupDatabase(): void {
     ['MODULE_ATTENDANCE', 'true', '啟用模組：出勤管理'],
     ['MODULE_NOTIFY', 'true', '啟用模組：通知系統'],
     ['MODULE_FINANCE', 'true', '啟用模組：財務管理'],
-    ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)']
+    ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)'],
+    ['GOOGLE_OAUTH_CLIENT_ID', '', 'Google Calendar API：OAuth Client ID (SaaS 模式)'],
+    ['GOOGLE_OAUTH_CLIENT_SECRET', '', 'Google Calendar API：OAuth Client Secret (SaaS 模式)'],
+    ['GOOGLE_OAUTH_REFRESH_TOKEN', '', 'Google Calendar API：自動連結儲存的 Refresh Token (系統自動產生)']
   ];
 
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表
@@ -481,13 +484,6 @@ function seedClasses(): void {
   // 注意：無條件按日期範圍全掃刪除，即使試算表已被手動清空也能正確清理日曆
   try {
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
-    let calendar;
-    if (calendarId && calendarId !== 'primary') {
-      try {
-        calendar = CalendarApp.getCalendarById(calendarId);
-      } catch (e) { }
-    }
-    if (!calendar) calendar = CalendarApp.getDefaultCalendar();
 
     // 優先：透過 Sessions 表中記錄的 calendar_event_id 精準刪除
     const sessions = SheetHelper.getRows<any>('Sessions');
@@ -500,16 +496,16 @@ function seedClasses(): void {
     const rangeEnd = new Date(rangeStart);
     rangeEnd.setMonth(rangeEnd.getMonth() + 6); // 掃描往後 6 個月
 
-    const events = calendar.getEvents(rangeStart, rangeEnd);
+    const events = GoogleCalendarAPI.listEvents(calendarId, rangeStart, rangeEnd);
     let deletedCount = 0;
     events.forEach(event => {
       // 若 Sessions 有記錄：憑 ID 精準比對；若 Sessions 已清空：刪除範圍內所有事件
       const shouldDelete = sessionEventIds.size > 0
-        ? sessionEventIds.has(event.getId())
+        ? sessionEventIds.has(event.id)
         : true; // Sessions 空時，範圍內全部視為舊事件刪除
       if (shouldDelete) {
         try {
-          event.deleteEvent();
+          GoogleCalendarAPI.deleteEvent(calendarId, event.id);
           deletedCount++;
         } catch (e) {
           // 忽略已手動刪除的日曆事件錯誤
