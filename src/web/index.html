@@ -2170,9 +2170,19 @@
             
             this.addToast(`✅ 請假成功！已自動釋出補課額度。`, 'success');
             
-            // 在 LINE App 內，2 秒後自動關閉 LIFF 視窗
+            // 在 LINE App 內，發送訊息後 1.5 秒自動關閉 LIFF 視窗
             if (typeof liff !== 'undefined' && liff.isInClient()) {
-              setTimeout(() => { liff.closeWindow(); }, 2000);
+              liff.sendMessages([
+                {
+                  type: 'text',
+                  text: `【GymOS 請假申請】我已於系統完成請假登記，請假課堂日期：${result.sessionDate} ${result.startTime}。`
+                }
+              ]).then(() => {
+                setTimeout(() => { liff.closeWindow(); }, 1500);
+              }).catch(err => {
+                console.error('LIFF sendMessages failed:', err);
+                setTimeout(() => { liff.closeWindow(); }, 1500);
+              });
             }
           } catch (e) {
             console.error(e);
@@ -2212,6 +2222,21 @@
             this.availableSlots = [];
             this.activeSubView = '';
             this.loadInitialData();
+
+            // 在 LINE App 內，發送訊息後 1.5 秒自動關閉 LIFF 視窗
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+              liff.sendMessages([
+                {
+                  type: 'text',
+                  text: `【GymOS 補課預約】我已於系統預約補課成功，目標補課課堂：${result.className} (${result.sessionDate} ${result.startTime})。`
+                }
+              ]).then(() => {
+                setTimeout(() => { liff.closeWindow(); }, 1500);
+              }).catch(err => {
+                console.error('LIFF sendMessages failed:', err);
+                setTimeout(() => { liff.closeWindow(); }, 1500);
+              });
+            }
           } catch (e) {
             console.error(e);
           }

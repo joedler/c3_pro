@@ -121,6 +121,126 @@ class LineHandler {
    */
   private static handleTextMessage(replyToken: string, userId: string, text: string): void {
     const cleanText = text.trim();
+    const liffId = Config.get('LIFF_ID');
+
+    // 1. 攔截請假自動回覆
+    if (cleanText.indexOf('【GymOS 請假申請】') !== -1) {
+      const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
+      if (member) {
+        const leaves = SheetHelper.getRows<any>('Leave_Requests')
+          .filter(l => l.member_id === member.member_id)
+          .sort((a, b) => b.leave_id.localeCompare(a.leave_id)); // 依 LV ID 排序取最新
+        
+        if (leaves.length > 0) {
+          const lastLeave = leaves[0];
+          const session = SheetHelper.getRow<any>('Sessions', 'session_id', lastLeave.session_id);
+          const cls = session ? SheetHelper.getRow<any>('Classes', 'class_id', session.class_id) : null;
+          const className = cls ? cls.class_name : '健身課程';
+          const sessionDate = session ? this.safeFormatSessionDate(session.session_date) : '未知日期';
+          const sessionTime = session ? `${this.safeFormatTime(session.start_time)} ~ ${this.safeFormatTime(session.end_time)}` : '未知時間';
+          
+          const flexBubble = {
+            type: 'bubble',
+            header: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                { type: 'text', text: '🏖️ 請假登記成功 (自動核准)', color: '#ffffff', weight: 'bold', size: 'md' }
+              ],
+              backgroundColor: '#f59e0b'
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: `學員姓名: ${member.real_name}`, weight: 'bold', size: 'sm' },
+                { type: 'text', text: `請假課程: ${className}`, size: 'xs', color: '#4b5563' },
+                { type: 'text', text: `課程時間: ${sessionDate} ${sessionTime}`, size: 'xs', color: '#4b5563' },
+                { type: 'separator', margin: 'md' },
+                { type: 'text', text: `✅ 請假單號: ${lastLeave.leave_id}`, size: 'xxs', color: '#9ca3af', margin: 'md' },
+                { type: 'text', text: '💡 系統已自動釋出 1 堂補課額度，請隨時於個人中心點選「跨班補課」預約新時段。', wrap: true, size: 'xxs', color: '#9ca3af', margin: 'sm' }
+              ]
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                {
+                  type: 'button',
+                  action: { type: 'uri', label: '📊 進入我的課表', uri: `https://liff.line.me/${liffId}?mode=leave` },
+                  style: 'primary',
+                  color: '#f59e0b'
+                }
+              ]
+            }
+          };
+          
+          this.sendReply(replyToken, [{ type: 'flex', altText: 'GymOS 請假完成通知信', contents: flexBubble }]);
+          return;
+        }
+      }
+    }
+
+    // 2. 攔截補課自動回覆
+    if (cleanText.indexOf('【GymOS 補課預約】') !== -1) {
+      const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
+      if (member) {
+        const makeups = SheetHelper.getRows<any>('Makeup_Requests')
+          .filter(m => m.member_id === member.member_id)
+          .sort((a, b) => b.makeup_id.localeCompare(a.makeup_id)); // 依 MK ID 排序取最新
+        
+        if (makeups.length > 0) {
+          const lastMakeup = makeups[0];
+          const session = SheetHelper.getRow<any>('Sessions', 'session_id', lastMakeup.target_session_id);
+          const cls = session ? SheetHelper.getRow<any>('Classes', 'class_id', session.class_id) : null;
+          const className = cls ? cls.class_name : '健身課程';
+          const sessionDate = session ? this.safeFormatSessionDate(session.session_date) : '未知日期';
+          const sessionTime = session ? `${this.safeFormatTime(session.start_time)} ~ ${this.safeFormatTime(session.end_time)}` : '未知時間';
+          
+          const flexBubble = {
+            type: 'bubble',
+            header: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                { type: 'text', text: '🔄 補課預約成功 (自動核准)', color: '#ffffff', weight: 'bold', size: 'md' }
+              ],
+              backgroundColor: '#3b82f6'
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: `學員姓名: ${member.real_name}`, weight: 'bold', size: 'sm' },
+                { type: 'text', text: `補課班級: ${className}`, size: 'xs', color: '#4b5563' },
+                { type: 'text', text: `補課時間: ${sessionDate} ${sessionTime}`, size: 'xs', color: '#4b5563' },
+                { type: 'separator', margin: 'md' },
+                { type: 'text', text: `✅ 補課單號: ${lastMakeup.makeup_id}`, size: 'xxs', color: '#9ca3af', margin: 'md' },
+                { type: 'text', text: '💡 補課時段已成功寫入您的個人課表！請準時出席並直接向授課教練點名。', wrap: true, size: 'xxs', color: '#9ca3af', margin: 'sm' }
+              ]
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                {
+                  type: 'button',
+                  action: { type: 'uri', label: '📅 展開我的課表', uri: `https://liff.line.me/${liffId}?mode=leave` },
+                  style: 'primary',
+                  color: '#3b82f6'
+                }
+              ]
+            }
+          };
+          
+          this.sendReply(replyToken, [{ type: 'flex', altText: 'GymOS 補課預約成功通知', contents: flexBubble }]);
+          return;
+        }
+      }
+    }
+
     if (cleanText === '診斷' || cleanText === '我的ID' || cleanText === '身分') {
       const ss = SheetHelper['getSpreadsheet']();
       const ssName = ss.getName();
@@ -249,7 +369,6 @@ class LineHandler {
 
     const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
     const staff = SheetHelper.getRow<any>('Staff', 'line_uid', userId);
-    const liffId = Config.get('LIFF_ID');
 
     // (A) 若學員或職員皆未綁定
     if (!member && !staff) {
@@ -658,5 +777,25 @@ class LineHandler {
 
     const response = UrlFetchApp.fetch(url, options);
     Logger.log(`[LINE Push回傳] To: ${userId}, Code: ${response.getResponseCode()}, Body: ${response.getContentText()}`);
+  }
+
+  private static safeFormatSessionDate(dateVal: any): string {
+    if (!dateVal) return '';
+    if (dateVal instanceof Date) {
+      return Utilities.formatDate(dateVal, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    return String(dateVal).substring(0, 10);
+  }
+
+  private static safeFormatTime(timeVal: any): string {
+    if (!timeVal) return '';
+    if (timeVal instanceof Date) {
+      return Utilities.formatDate(timeVal, 'Asia/Taipei', 'HH:mm');
+    }
+    return String(timeVal).trim();
   }
 }
