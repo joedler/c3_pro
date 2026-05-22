@@ -102,6 +102,16 @@ class GoogleCalendarAPI {
     endTime: Date,
     options: { description?: string; location?: string } = {}
   ): string {
+    const location = options.location || '';
+    let colorId: string | null = null;
+    
+    // 依據教室位置自動選色：大教室使用孔雀藍色 (7)，小教室使用橙橘色 (6)
+    if (location.indexOf('大教室') !== -1) {
+      colorId = '7'; // Peacock (孔雀藍)
+    } else if (location.indexOf('小教室') !== -1) {
+      colorId = '6'; // Tangerine (橙橘色)
+    }
+
     if (!this.isSaaSMode()) {
       const calId = calendarId || 'primary';
       const cal = calId === 'primary' ? CalendarApp.getDefaultCalendar() : CalendarApp.getCalendarById(calId);
@@ -110,8 +120,11 @@ class GoogleCalendarAPI {
       }
       const event = cal.createEvent(title, startTime, endTime, {
         description: options.description || '',
-        location: options.location || ''
+        location: location
       });
+      if (colorId) {
+        event.setColor(colorId);
+      }
       return event.getId();
     }
 
@@ -119,10 +132,10 @@ class GoogleCalendarAPI {
     const targetCalId = encodeURIComponent(calendarId || 'primary');
     const url = `${this.CALENDAR_API_BASE}/calendars/${targetCalId}/events`;
 
-    const eventPayload = {
+    const eventPayload: Record<string, any> = {
       summary: title,
       description: options.description || '',
-      location: options.location || '',
+      location: location,
       start: {
         dateTime: startTime.toISOString(),
         timeZone: 'Asia/Taipei'
@@ -132,6 +145,10 @@ class GoogleCalendarAPI {
         timeZone: 'Asia/Taipei'
       }
     };
+
+    if (colorId) {
+      eventPayload.colorId = colorId;
+    }
 
     const fetchOptions: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
       method: 'post',
