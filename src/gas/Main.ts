@@ -483,6 +483,198 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
         return { message: '學員選課已啟用，繳費收據 Flex Message 已主動發送！' };
       },
+      'admin.batchConfirmPayments': () => {
+        AuthService.requireRole(user, ['admin']);
+        if (!data || !data.items || !Array.isArray(data.items) || data.items.length === 0) {
+          throw new Error('缺少確認繳費必要項目清單');
+        }
+
+        const enrollments = SheetHelper.getRows<any>('Enrollments');
+        const enrollSheet = SheetHelper.getSheet('Enrollments');
+        const colMap = SheetHelper.COLUMN_MAP['Enrollments'];
+        const headers = enrollSheet.getRange(1, 1, 1, enrollSheet.getLastColumn()).getValues()[0];
+        const statusCol = headers.indexOf(colMap.status) + 1;
+        const paidSessionsCol = headers.indexOf(colMap.total_paid_sessions) + 1;
+
+        if (statusCol === 0 || paidSessionsCol === 0) {
+          throw new Error('選課紀錄表結構不正確，找不到 status 或 total_paid_sessions 欄位');
+        }
+
+        const classCache: Record<string, any> = {};
+        const memberCache: Record<string, any> = {};
+        const uniqueClassIds = new Set<string>();
+        let successCount = 0;
+
+        data.items.forEach((item: { classId: string; memberId: string }) => {
+          const enrollIdx = enrollments.findIndex(
+            e => String(e.class_id).trim() === String(item.classId).trim() && 
+                 String(e.member_id).trim() === String(item.memberId).trim() && 
+                 e.status === 'pending_payment'
+          );
+
+          if (enrollIdx !== -1) {
+            const rowNum = enrollIdx + 2;
+            
+            // 1. 取得班級資訊以計算應繳堂數
+            let cls = classCache[item.classId];
+            if (!cls) {
+              cls = SheetHelper.getRow<any>('Classes', 'class_id', item.classId);
+              if (cls) classCache[item.classId] = cls;
+            }
+
+            if (cls) {
+              const totalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
+              
+              // 2. 更新選課紀錄狀態為 active 並填入已繳堂數
+              enrollSheet.getRange(rowNum, statusCol).setValue('active');
+              enrollSheet.getRange(rowNum, paidSessionsCol).setValue(totalSessions);
+
+              uniqueClassIds.add(item.classId);
+              successCount++;
+
+              // 3. 獲取學員資訊並發送 Flex
+              let member = memberCache[item.memberId];
+              if (!member) {
+                member = SheetHelper.getRow<any>('Members', 'member_id', item.memberId);
+                if (member) memberCache[item.memberId] = member;
+              }
+
+              if (member && member.line_uid) {
+                try {
+                  const flexContent = {
+                    type: 'bubble',
+                    size: 'mega',
+                    header: {
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: 'C3 Fitness 繳費證明 🧾',
+                          color: '#ffffff',
+                          weight: 'bold',
+                          size: 'md'
+                        }
+                      ],
+                      backgroundColor: '#10b981'
+                    },
+                    body: {
+                      type: 'box',
+                      layout: 'vertical',
+                      spacing: 'md',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: `親愛的 ${member.real_name} 您好：`,
+                          weight: 'bold',
+                          size: 'sm',
+                          color: '#1e293b'
+                        },
+                        {
+                          type: 'text',
+                          text: '系統已成功核收您下一期班級的學費，課程狀態已正式啟用，祝您上課愉快！',
+                          wrap: true,
+                          size: 'xs',
+                          color: '#475569'
+                        },
+                        {
+                          type: 'separator',
+                          margin: 'lg'
+                        },
+                        {
+                          type: 'box',
+                          layout: 'vertical',
+                          margin: 'lg',
+                          spacing: 'sm',
+                          contents: [
+                            {
+                              type: 'box',
+                              layout: 'horizontal',
+                              contents: [
+                                { type: 'text', text: '續期班級', size: 'xs', color: '#64748b', flex: 3 },
+                                { type: 'text', text: cls.class_name, size: 'xs', color: '#1e293b', flex: 7, weight: 'bold', wrap: true }
+                              ]
+                            },
+                            {
+                              type: 'box',
+                              layout: 'horizontal',
+                              contents: [
+                                { type: 'text', text: '課程難度', size: 'xs', color: '#64748b', flex: 3 },
+                                { type: 'text', text: `${cls.level}`, size: 'xs', color: '#1e293b', flex: 7 }
+                              ]
+                            },
+                            {
+                              type: 'box',
+                              layout: 'horizontal',
+                              contents: [
+                                { type: 'text', text: '本期堂數', size: 'xs', color: '#64748b', flex: 3 },
+                                { type: 'text', text: `${totalSessions} 堂 (共 ${cls.period_weeks} 週)`, size: 'xs', color: '#10b981', flex: 7, weight: 'bold' }
+                              ]
+                            },
+                            {
+                              type: 'box',
+                              layout: 'horizontal',
+                              contents: [
+                                { type: 'text', text: '開始日期', size: 'xs', color: '#64748b', flex: 3 },
+                                { type: 'text', text: Utilities.formatDate(new Date(cls.period_start), 'Asia/Taipei', 'yyyy-MM-dd'), size: 'xs', color: '#1e293b', flex: 7 }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    footer: {
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'button',
+                          action: {
+                            type: 'uri',
+                            label: '📊 查看我的課程',
+                            uri: `https://liff.line.me/${Config.get('LIFF_ID')}?mode=leave`
+                          },
+                          style: 'primary',
+                          color: '#10b981'
+                        }
+                      ]
+                    }
+                  };
+
+                  LineHandler.pushMessage(member.line_uid, [
+                    {
+                      type: 'flex',
+                      altText: 'C3 Fitness 學費繳納成功收據',
+                      contents: flexContent
+                    }
+                  ]);
+                } catch(e) {
+                  Logger.log(`[批次繳費通知推送失敗] Member: ${member.real_name}, Error: ${e instanceof Error ? e.message : e}`);
+                }
+              }
+            }
+          }
+        });
+
+        // 4. 強制寫入落盤，保障一致性
+        SpreadsheetApp.flush();
+
+        // 5. 針對有變動的班級，去重同步 Google 日曆 (效能關鍵！)
+        uniqueClassIds.forEach(classId => {
+          const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
+            s => String(s.class_id).trim() === String(classId).trim() && s.status === 'scheduled'
+          );
+          sessionsToSync.forEach(s => {
+            try {
+              ClassEngine.syncCalendarEvent(s.session_id);
+            } catch (err) {
+              Logger.log(`[批次日曆同步失敗] Session: ${s.session_id}, Error: ${err}`);
+            }
+          });
+        });
+
+        return { message: `已成功批次核收 ${successCount} 筆學費，繳費證明 Flex 已發送，且相關課堂日曆已完成去重同步！` };
+      },
       'admin.getPendingPayments': () => {
         AuthService.requireRole(user, ['admin']);
         const enrollments = SheetHelper.getRows<any>('Enrollments').filter(e => e.status === 'pending_payment');
