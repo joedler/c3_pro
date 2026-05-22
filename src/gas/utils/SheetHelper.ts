@@ -281,6 +281,7 @@ class SheetHelper {
     });
 
     sheet.appendRow(newRowValue);
+    SpreadsheetApp.flush();
   }
 
   public static updateRow(
@@ -312,6 +313,7 @@ class SheetHelper {
       }
     });
 
+    SpreadsheetApp.flush();
     return true;
   }
 
@@ -327,6 +329,7 @@ class SheetHelper {
     if (!found) return false;
 
     sheet.deleteRow(found._rowNum);
+    SpreadsheetApp.flush();
     return true;
   }
 

@@ -350,6 +350,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           enrollSheet.getRange(rowNum, paidSessionsCol).setValue(totalSessions);
         }
 
+        // 強制寫入以確保日曆同步能讀到最新的 active 狀態
+        SpreadsheetApp.flush();
+
         // 1.5 同步該班級的所有未來課堂到 Google 日曆 (確保剛確認繳費的學員姓名立刻同步出現)
         const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
           s => s.class_id === data.classId && s.status === 'scheduled'

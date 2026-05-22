@@ -455,7 +455,9 @@ class ClassEngine {
 
     // 2. 獲取報名該班級的所有正式學員
     const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
-      e => e.class_id === session.class_id && e.status === 'active'
+      e => e.class_id && session.class_id &&
+           String(e.class_id).trim() === String(session.class_id).trim() && 
+           String(e.status).trim() === 'active'
     );
     const memberIds = enrollments.map(e => e.member_id);
     const allMembers = SheetHelper.getRows<any>('Members');
@@ -463,14 +465,16 @@ class ClassEngine {
     // 將 member_id 映射為 real_name
     const memberMap: Record<string, string> = {};
     allMembers.forEach(m => {
-      memberMap[m.member_id] = m.real_name || m.display_name || '未命名學員';
+      if (m.member_id) {
+        memberMap[String(m.member_id).trim()] = m.real_name || m.display_name || '未命名學員';
+      }
     });
 
     // 3. 獲取本堂課的請假已批准名單
     const approvedLeaves = SheetHelper.getRows<any>('Leave_Requests').filter(
       l => l.session_id === sessionId && l.status === 'approved'
     );
-    const leaveMemberIds = new Set(approvedLeaves.map(l => l.member_id));
+    const leaveMemberIds = new Set(approvedLeaves.map(l => String(l.member_id).trim()));
 
     // 4. 獲取本堂課的補課已批准名單
     const approvedMakeups = SheetHelper.getRows<any>('Makeup_Requests').filter(
@@ -484,9 +488,10 @@ class ClassEngine {
 
     // 正式學員分流：出席 / 請假
     memberIds.forEach(id => {
-      const name = memberMap[id];
+      const cleanId = String(id).trim();
+      const name = memberMap[cleanId];
       if (name) {
-        if (leaveMemberIds.has(id)) {
+        if (leaveMemberIds.has(cleanId)) {
           leaveNames.push(name);
         } else {
           regularAttendingNames.push(name);
