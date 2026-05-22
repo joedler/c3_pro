@@ -210,7 +210,11 @@ function setupRichMenus(): void {
           },
           {
             bounds: { x: 1250, y: 0, width: 1250, height: 843 },
-            action: { type: 'uri', label: '✍️ 點名出勤校正', uri: `https://liff.line.me/${liffId}?mode=coach` }
+            action: {
+              type: 'uri',
+              label: '📅 開啟授課行事曆',
+              uri: `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(Config.get('GOOGLE_CALENDAR_ID') || 'primary')}&ctz=Asia%2FTaipei`
+            }
           }
         ]
       }

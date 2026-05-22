@@ -350,6 +350,18 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           enrollSheet.getRange(rowNum, paidSessionsCol).setValue(totalSessions);
         }
 
+        // 1.5 同步該班級的所有未來課堂到 Google 日曆 (確保剛確認繳費的學員姓名立刻同步出現)
+        const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
+          s => s.class_id === data.classId && s.status === 'scheduled'
+        );
+        sessionsToSync.forEach(s => {
+          try {
+            ClassEngine.syncCalendarEvent(s.session_id);
+          } catch (err) {
+            Logger.log(`[日曆同步失敗] Session: ${s.session_id}, Error: ${err}`);
+          }
+        });
+
         // 2. 獲取學員 LINE 資訊以進行 LINE Flex Push
         const member = SheetHelper.getRow<any>('Members', 'member_id', data.memberId);
         if (member && member.line_uid) {

@@ -227,6 +227,18 @@ class MemberService {
     });
     Logger.log(`[學員綁定] 班級人數計數更新成功：${classId} (目前人數: ${enrolled + 1})`);
 
+    // 6.5 同步此班級的所有未來課堂到 Google 日曆 (確保剛綁定的學員姓名立刻同步出現)
+    const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
+      s => s.class_id === classId && s.status === 'scheduled'
+    );
+    sessionsToSync.forEach(s => {
+      try {
+        ClassEngine.syncCalendarEvent(s.session_id);
+      } catch (err) {
+        Logger.log(`[日曆同步失敗] Session: ${s.session_id}, Error: ${err}`);
+      }
+    });
+
     // 7. 動態對接 LINE 學員豐富選單
     LineRichMenu.link(user.uid, 'member');
 

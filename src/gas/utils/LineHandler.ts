@@ -123,6 +123,55 @@ class LineHandler {
     const cleanText = text.trim();
     const liffId = Config.get('LIFF_ID');
 
+    // 3. 攔截教練自定義「我是教練」綁定流程
+    if (cleanText.indexOf('我是教練') !== -1) {
+      const namePart = cleanText.replace('我是教練', '').trim();
+      const staffRows = SheetHelper.getRows<any>('Staff');
+      
+      if (!namePart) {
+        // 沒有輸入名字，進行智慧自動匹配
+        const pendingStaff = staffRows.filter(s => (!s.line_uid || s.line_uid === '') && s.status === 'active');
+        if (pendingStaff.length === 1) {
+          const target = pendingStaff[0];
+          SheetHelper.updateRow('Staff', 'staff_id', target.staff_id, {
+            line_uid: userId
+          });
+          const reply = `🎉 歡迎 ${target.real_name} 教練！\n系統已自動匹配您的教練檔案並完成安全綁定！\n您的真實 LINE UID: ${userId}\n\n👉 請接著在對話框輸入「更新」或「同步選單」，即可開通最新的教練專屬功能！`;
+          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          return;
+        } else if (pendingStaff.length > 1) {
+          const names = pendingStaff.map(s => s.real_name).join('、');
+          const reply = `ℹ️ 系統目前有以下教練尚未綁定：${names}\n\n請輸入「我是教練 [您的真實姓名]」（例如：我是教練 ${pendingStaff[0].real_name}）來完成精準綁定！`;
+          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          return;
+        } else {
+          const reply = `⚠️ 系統目前沒有尚未綁定的教練資料。\n請管理員先在試算表填妥您的教練資料並保持「LINE帳號ID」欄位空白。`;
+          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          return;
+        }
+      } else {
+        // 有輸入名字，進行精準匹配
+        const target = staffRows.find(s => s.real_name === namePart);
+        if (target) {
+          if (target.line_uid && target.line_uid !== userId) {
+            const reply = `⚠️ 教練「${namePart}」在系統中已被其他 LINE 帳號綁定。若有疑問請洽管理員。`;
+            this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+            return;
+          }
+          SheetHelper.updateRow('Staff', 'staff_id', target.staff_id, {
+            line_uid: userId
+          });
+          const reply = `🎉 歡迎 ${target.real_name} 教練！\n系統已完成您的 LINE 帳號自動對接！\n您的真實 LINE UID: ${userId}\n\n👉 請接著在對話框輸入「更新」或「同步選單」，即可開通最新的教練專屬功能！`;
+          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          return;
+        } else {
+          const reply = `❌ 找不到姓名為「${namePart}」的教練預設資料。\n請確認您的姓名輸入是否與管理員在試算表填寫的完全一致（字體、繁簡需相同）。`;
+          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          return;
+        }
+      }
+    }
+
     // 1. 攔截請假自動回覆
     if (cleanText.indexOf('【GymOS 請假申請】') !== -1) {
       const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
@@ -427,7 +476,8 @@ class LineHandler {
 
     // (B) 若為教練指令
     if (staff && text === '今日課表') {
-      const scheduleUrl = `https://liff.line.me/${liffId}?mode=coach`;
+      const calendarId = Config.get('GOOGLE_CALENDAR_ID') || 'primary';
+      const calendarUrl = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(calendarId)}&ctz=Asia%2FTaipei`;
       
       const coachFlex = {
         type: 'bubble',
@@ -437,7 +487,7 @@ class LineHandler {
           contents: [
             {
               type: 'text',
-              text: `教練 ${staff.real_name || '教練'} — 今日授課`,
+              text: `教練 ${staff.real_name || '教練'} — 授課日程表`,
               color: '#ffffff',
               weight: 'bold',
               size: 'md'
@@ -451,7 +501,7 @@ class LineHandler {
           contents: [
             {
               type: 'text',
-              text: '請點擊下方按鈕進入教練中心。您可以即時查看今日學員出席清單，當發現現場人數不符時，可一鍵進行出席異常校正回報！',
+              text: '請點擊下方按鈕以嵌入式網頁開啟您的課程 Google 日曆。您可以直接訂閱此日曆到您的手機行事曆中，隨時掌握最新的學員出席與變動名單！',
               wrap: true,
               size: 'sm',
               color: '#334155'
@@ -466,8 +516,8 @@ class LineHandler {
               type: 'button',
               action: {
                 type: 'uri',
-                label: '📋 進入教練出勤校正中心',
-                uri: scheduleUrl
+                label: '📅 開啟 Google 行事曆',
+                uri: calendarUrl
               },
               style: 'primary',
               color: '#0f172a'
@@ -479,7 +529,7 @@ class LineHandler {
       this.sendReply(replyToken, [
         {
           type: 'flex',
-          altText: '教練中心課表已備妥',
+          altText: '教練授課日程表已備妥',
           contents: coachFlex
         }
       ]);
