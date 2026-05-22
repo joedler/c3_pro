@@ -375,7 +375,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
                 contents: [
                   {
                     type: 'text',
-                    text: 'C3 Fitness 繳費核點收據 🧾',
+                    text: 'C3 Fitness 繳費證明 🧾',
                     color: '#ffffff',
                     weight: 'bold',
                     size: 'md'
@@ -456,7 +456,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
                     type: 'button',
                     action: {
                       type: 'uri',
-                      label: '📊 查看我的課表與點數',
+                      label: '📊 查看我的課程',
                       uri: `https://liff.line.me/${Config.get('LIFF_ID')}?mode=leave`
                     },
                     style: 'primary',

@@ -205,15 +205,11 @@ function setupRichMenus(): void {
         chatBarText: '📋 教練授課主控',
         areas: [
           {
-            bounds: { x: 0, y: 0, width: 1250, height: 843 },
-            action: { type: 'message', label: '🗓️ 今日課表', text: '今日課表' }
-          },
-          {
-            bounds: { x: 1250, y: 0, width: 1250, height: 843 },
+            bounds: { x: 0, y: 0, width: 2500, height: 843 },
             action: {
               type: 'uri',
-              label: '📅 開啟授課行事曆',
-              uri: `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(Config.get('GOOGLE_CALENDAR_ID') || 'primary')}&ctz=Asia%2FTaipei`
+              label: '📅 我的授課行事曆',
+              uri: `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(Config.get('GOOGLE_CALENDAR_ID') || 'primary')}`
             }
           }
         ]
@@ -241,6 +237,18 @@ function setupRichMenus(): void {
   // 2. 遍歷發送 API 進行建立、抓圖、上傳與回填
   richMenus.forEach(menu => {
     try {
+      // 🎯 自動刪除舊的 Rich Menu，防止累積過多 LINE 選單導致建立失敗或額度超限
+      const oldRichMenuId = Config.get(menu.configKey);
+      if (oldRichMenuId && !oldRichMenuId.startsWith('YOUR_') && oldRichMenuId !== '') {
+        const deleteUrl = `https://api.line.me/v2/bot/richmenu/${oldRichMenuId}`;
+        UrlFetchApp.fetch(deleteUrl, {
+          method: 'delete',
+          headers: { Authorization: `Bearer ${token}` },
+          muteHttpExceptions: true
+        });
+        Logger.log(`[LINE RichMenu] 已自動刪除並卸載舊選單 ${menu.configKey}: ${oldRichMenuId}`);
+      }
+
       // A. 呼叫建立 Rich Menu API
       const createUrl = 'https://api.line.me/v2/bot/richmenu';
       const createOptions: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
