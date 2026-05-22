@@ -207,19 +207,18 @@ class MemberService {
     }
 
     // 5. 寫入選課紀錄表 (Enrollments)
-    const totalPaidSessions = Number(targetClass.total_sessions || (Number(targetClass.period_weeks) * Number(targetClass.sessions_per_week))) || 0;
     const newEnrollmentId = `ENR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const newEnrollment = {
       enrollment_id: newEnrollmentId,
       member_id: finalMemberId,
       class_id: classId,
       enroll_date: new Date(),
-      status: 'active',
-      total_paid_sessions: totalPaidSessions,
-      notes: '綁定自動選課'
+      status: 'pending_payment', // 學員首次註冊為「待繳費」，需由管理員確認
+      total_paid_sessions: 0,     // 繳費確認前堂數為 0
+      notes: '學員綁定自動加選'
     };
     SheetHelper.addRow('Enrollments', newEnrollment);
-    Logger.log(`[學員綁定] 成功寫入選課紀錄：${newEnrollmentId}，繳費總堂數為：${totalPaidSessions}`);
+    Logger.log(`[學員綁定] 成功寫入待繳費選課紀錄：${newEnrollmentId}`);
 
     // 6. 更新班級表的「目前人數」計數器 (+1)
     SheetHelper.updateRow('Classes', 'class_id', classId, {

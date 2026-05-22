@@ -172,6 +172,94 @@ class LineHandler {
       }
     }
 
+    // 0.5 攔截學員首次註冊綁定自動回覆
+    if (cleanText.indexOf('【GymOS 帳號綁定】') !== -1) {
+      const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
+      if (member) {
+        const enrollments = SheetHelper.getRows<any>('Enrollments')
+          .filter(e => e.member_id === member.member_id)
+          .sort((a, b) => b.enrollment_id.localeCompare(a.enrollment_id));
+        
+        if (enrollments.length > 0) {
+          const lastEnroll = enrollments[0];
+          const cls = SheetHelper.getRow<any>('Classes', 'class_id', lastEnroll.class_id);
+          const className = cls ? cls.class_name : '未設定班級';
+          const totalSessions = cls ? (Number(cls.total_sessions) || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : 0;
+          
+          const flexBubble = {
+            type: 'bubble',
+            header: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                { type: 'text', text: '🎉 帳號綁定與選課成功', color: '#ffffff', weight: 'bold', size: 'md' }
+              ],
+              backgroundColor: '#3b82f6'
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: `親愛的 ${member.real_name} 您好：`, weight: 'bold', size: 'sm' },
+                { type: 'text', text: '您的帳號已成功完成 GymOS 系統對接與安全綁定！', size: 'xs', color: '#4b5563' },
+                { type: 'separator', margin: 'md' },
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  margin: 'md',
+                  spacing: 'xs',
+                  contents: [
+                    {
+                      type: 'box',
+                      layout: 'horizontal',
+                      contents: [
+                        { type: 'text', text: '預約班級', size: 'xs', color: '#64748b', flex: 3 },
+                        { type: 'text', text: className, size: 'xs', color: '#1e293b', flex: 7, weight: 'bold', wrap: true }
+                      ]
+                    },
+                    {
+                      type: 'box',
+                      layout: 'horizontal',
+                      contents: [
+                        { type: 'text', text: '本期堂數', size: 'xs', color: '#64748b', flex: 3 },
+                        { type: 'text', text: `${totalSessions} 堂`, size: 'xs', color: '#1e293b', flex: 7 }
+                      ]
+                    },
+                    {
+                      type: 'box',
+                      layout: 'horizontal',
+                      contents: [
+                        { type: 'text', text: '選課狀態', size: 'xs', color: '#64748b', flex: 3 },
+                        { type: 'text', text: '⏳ 待確認繳費', size: 'xs', color: '#f59e0b', flex: 7, weight: 'bold' }
+                      ]
+                    }
+                  ]
+                },
+                { type: 'separator', margin: 'md' },
+                { type: 'text', text: '📢 請儘速完成下一期學費繳納。管理員在後台確認已繳費後，您的課程將會立刻變更為「預排上課」，並開啟全部課堂權限！', wrap: true, size: 'xxs', color: '#6b7280', margin: 'md' }
+              ]
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                {
+                  type: 'button',
+                  action: { type: 'uri', label: '📊 進入我的課程', uri: `https://liff.line.me/${liffId}?mode=leave` },
+                  style: 'primary',
+                  color: '#3b82f6'
+                }
+              ]
+            }
+          };
+
+          this.sendReply(replyToken, [{ type: 'flex', altText: '帳號綁定與選課預約成功', contents: flexBubble }]);
+          return;
+        }
+      }
+    }
+
     // 1. 攔截請假自動回覆
     if (cleanText.indexOf('【GymOS 請假申請】') !== -1) {
       const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);

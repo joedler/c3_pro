@@ -2110,11 +2110,21 @@
             // 跳轉至成功畫面
             this.studentBindForm.step = 5;
             
-            // 若在 LINE App 內，幾秒後自動關閉 LIFF 視窗
+            // 若在 LINE App 內，發送訊息後自動關閉 LIFF 視窗
             if (typeof liff !== 'undefined' && liff.isInClient()) {
-              setTimeout(() => {
-                liff.closeWindow();
-              }, 3000);
+              liff.sendMessages([
+                {
+                  type: 'text',
+                  text: `【GymOS 帳號綁定】我已完成帳號安全綁定與選課預約，預約班級ID：${this.studentBindForm.classId}。`
+                }
+              ]).then(() => {
+                setTimeout(() => { liff.closeWindow(); }, 1500);
+              }).catch(err => {
+                console.error('LIFF sendMessages failed:', err);
+                setTimeout(() => { liff.closeWindow(); }, 1500);
+              });
+            } else {
+              // 非 LINE 環境，3 秒後跳轉或保留
             }
           } catch (e) {
             console.error(e);
