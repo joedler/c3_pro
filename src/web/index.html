@@ -1899,7 +1899,6 @@
               const res = await this.apiCall('member.getClassesForEnrollment');
               this.studentEnrollForm.classes = res.classes || [];
               this.studentEnrollForm.memberLevel = res.memberLevel || 'L1';
-            }
             } else if (this.currentMode === 'profile' || this.currentMode === 'leave' || this.currentMode === 'makeup') {
               // 單一 API 呼叫即取得學員資料 + 未來課堂 + 請假紀錄（極速載入！）
               const info = await this.apiCall('member.getInfo');
