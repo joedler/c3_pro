@@ -552,6 +552,200 @@ class MemberService {
   }
 
   /**
+   * 獲取該學員目前可以報名的所有班級列表 (考量性別過濾、是否已選過、越級警告判定等)
+   */
+  public static getClassesForEnrollment(user: UserSession): Record<string, any> {
+    if (!user || !user.uid) {
+      throw new Error('無法識別您的 LINE 身份。');
+    }
+
+    const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    if (!member || member.status !== 'active') {
+      throw new Error('您的學員帳號狀態異常或未啟用。');
+    }
+
+    const memberId = member.member_id;
+    const memberGender = member.gender || '男';
+    const memberLevelVal = this.parseLevelNumber(member.level);
+
+    // 取得目前學員已經選的班級 ID (包括 active 與 pending_payment 狀態)
+    const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
+      e => e.member_id === memberId && (e.status === 'active' || e.status === 'pending_payment')
+    );
+    const enrolledClassIds = enrollments.map(e => e.class_id);
+
+    const allClasses = SheetHelper.getRows<any>('Classes');
+    const availableClasses = allClasses
+      .filter(cls => {
+        // 只能加選開放報名 (open) 或尚未開課 (pending) 的課程
+        if (cls.status !== 'open' && cls.status !== 'pending') return false;
+
+        // 不能重複報名已選過的班級
+        if (enrolledClassIds.includes(cls.class_id)) return false;
+
+        // 男性學員過濾限女專班
+        if (memberGender === '男' && cls.gender_limit === 'female') return false;
+
+        return true;
+      })
+      .map(cls => {
+        const classLevelVal = this.parseLevelNumber(cls.level);
+        const capacity = Number(cls.max_capacity) || 0;
+        const enrolled = Number(cls.enrolled) || 0;
+
+        // 判斷是否越級 (班級難度數字 > 學員等級數字)
+        const isOverlimit = classLevelVal > memberLevelVal;
+
+        return {
+          classId: cls.class_id,
+          className: cls.class_name,
+          classType: cls.class_type,
+          level: cls.level || 'L1',
+          dayOfWeek: cls.day_of_week,
+          startTime: this.safeFormatTime(cls.start_time),
+          endTime: this.safeFormatTime(cls.end_time),
+          maxCapacity: capacity,
+          enrolled: enrolled,
+          status: cls.status,
+          totalSessions: Number(cls.total_sessions || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) || 12,
+          isOverlimit: isOverlimit
+        };
+      });
+
+    return {
+      memberLevel: member.level || 'L1',
+      classes: availableClasses
+    };
+  }
+
+  /**
+   * 執行新班級報名加課 (智慧時段衝突檢測與方案 B 越級提醒)
+   */
+  public static enrollNewClass(data: { classId: string; isOverlimit: boolean }, user: UserSession): Record<string, any> {
+    if (!user || !user.uid) {
+      throw new Error('無法識別您的 LINE 身份。');
+    }
+
+    const { classId, isOverlimit } = data;
+    if (!classId) {
+      throw new Error('未指定要加選的班級 ID。');
+    }
+
+    const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    if (!member || member.status !== 'active') {
+      throw new Error('您的學員帳號狀態異常。');
+    }
+
+    const memberId = member.member_id;
+
+    // 1. 取得並驗證目標班級
+    const targetClass = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+    if (!targetClass) {
+      throw new Error('所選的課程時段不存在。');
+    }
+    if (targetClass.status !== 'open' && targetClass.status !== 'pending') {
+      throw new Error('該課程時段目前未開放報名。');
+    }
+
+    // 2. 性別防呆
+    if (member.gender === '男' && targetClass.gender_limit === 'female') {
+      throw new Error('此班級為限女專班，男性學員無法報名。');
+    }
+
+    // 3. 人數防呆
+    const maxCapacity = Number(targetClass.max_capacity) || 0;
+    const enrolled = Number(targetClass.enrolled) || 0;
+    if (enrolled >= maxCapacity) {
+      throw new Error('很抱歉，此班級人數已滿，無法報名。');
+    }
+
+    // 4. 重複選課防呆
+    const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
+      e => e.member_id === memberId && (e.status === 'active' || e.status === 'pending_payment')
+    );
+    const enrolledClassIds = enrollments.map(e => e.class_id);
+    if (enrolledClassIds.includes(classId)) {
+      throw new Error('您已經報名過此課程，無須重複加選。');
+    }
+
+    // 5. 智慧時段衝突檢測
+    const allClasses = SheetHelper.getRows<any>('Classes');
+    const newDay = targetClass.day_of_week;
+    const newStart = this.parseTimeToMinutes(this.safeFormatTime(targetClass.start_time));
+    const newEnd = this.parseTimeToMinutes(this.safeFormatTime(targetClass.end_time));
+
+    const myClasses = allClasses.filter(c => enrolledClassIds.includes(c.class_id));
+    for (const myCls of myClasses) {
+      if (this.hasDayOverlap(newDay, myCls.day_of_week)) {
+        const myStart = this.parseTimeToMinutes(this.safeFormatTime(myCls.start_time));
+        const myEnd = this.parseTimeToMinutes(this.safeFormatTime(myCls.end_time));
+
+        // 重疊條件：(newStart < myEnd) && (newEnd > myStart)
+        if (newStart < myEnd && newEnd > myStart) {
+          throw new Error(`【時段衝突】此課程上課時間（${newDay} ${this.safeFormatTime(targetClass.start_time)}）與您已報名的「${myCls.class_name}」（${myCls.day_of_week} ${this.safeFormatTime(myCls.start_time)}）時間衝突，無法加選！`);
+        }
+      }
+    }
+
+    // 6. 寫入選課紀錄表 (Enrollments)，狀態設為待繳費 pending_payment
+    const totalPaidSessions = Number(targetClass.total_sessions || (Number(targetClass.period_weeks) * Number(targetClass.sessions_per_week))) || 0;
+    const newEnrollmentId = `ENR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newEnrollment = {
+      enrollment_id: newEnrollmentId,
+      member_id: memberId,
+      class_id: classId,
+      enroll_date: new Date(),
+      status: 'pending_payment',
+      total_paid_sessions: totalPaidSessions,
+      notes: isOverlimit ? '[越級加選-待審]' : '學員自主加選'
+    };
+
+    SheetHelper.addRow('Enrollments', newEnrollment);
+    Logger.log(`[學員加選] 成功寫入選課紀錄：${newEnrollmentId} (待繳費)，總堂數：${totalPaidSessions}`);
+
+    // 7. 更新班級報名人數
+    SheetHelper.updateRow('Classes', 'class_id', classId, {
+      enrolled: enrolled + 1
+    });
+    Logger.log(`[學員加選] 班級人數計數更新成功：${classId} (目前人數: ${enrolled + 1})`);
+
+    return {
+      success: true,
+      enrollmentId: newEnrollmentId,
+      className: targetClass.class_name,
+      totalSessions: totalPaidSessions,
+      isOverlimit: isOverlimit
+    };
+  }
+
+  /**
+   * 輔助函數：解析等級字串中的數字
+   */
+  private static parseLevelNumber(levelStr: any): number {
+    if (!levelStr) return 1;
+    const match = String(levelStr).match(/\d+/);
+    return match ? parseInt(match[0], 10) : 1;
+  }
+
+  /**
+   * 輔助函數：解析時間字串為分鐘數
+   */
+  private static parseTimeToMinutes(timeStr: string): number {
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return 0;
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  }
+
+  /**
+   * 輔助函數：比對星期是否有重疊
+   */
+  private static hasDayOverlap(dayStr1: string, dayStr2: string): boolean {
+    const days1 = String(dayStr1).split('+').map(d => d.trim());
+    const days2 = String(dayStr2).split('+').map(d => d.trim());
+    return days1.some(d => days2.includes(d));
+  }
+
+  /**
    * 輔助函數：日期轉成字串 yyyy/MM/dd
    */
   private static formatDate(dateInput: any): string {
@@ -580,3 +774,4 @@ class MemberService {
     return `${y}${m}${d}`;
   }
 }
+
