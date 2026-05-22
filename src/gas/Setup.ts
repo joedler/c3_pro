@@ -964,25 +964,4 @@ function seedClasses(): void {
   Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料且批次展開日曆！ ===`);
 }
 
-/**
- * 產生授權連結（TS 版本，寫在本地 src/gas/Setup.ts）
- */
-function getOAuthUrl(): void {
-  const clientId = Config.get('GOOGLE_OAUTH_CLIENT_ID');
-  const webAppUrl = ScriptApp.getService().getUrl();
 
-  if (!clientId) {
-    Logger.log('❌ 請先在「系統設定」填寫 GOOGLE_OAUTH_CLIENT_ID！');
-    return;
-  }
-
-  const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
-    `client_id=${clientId}&` +
-    `redirect_uri=${encodeURIComponent(webAppUrl)}&` +
-    "response_type=code&" +
-    "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar&" +
-    "access_type=offline&" +
-    "prompt=consent";
-
-  Logger.log(`👉 請複製此網址至瀏覽器打開進行一鍵連結：\n${authUrl}`);
-}

@@ -9,54 +9,68 @@ class GoogleCalendarAPI {
   private static readonly CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
   /**
-   * 判斷目前是否啟用了 SaaS 獨立代管日曆模式
+   * 判斷目前是否啟用了 SaaS 獨立代管日曆模式 (A方案：配置了服務帳號金鑰)
    */
   public static isSaaSMode(): boolean {
-    const clientId = Config.get('GOOGLE_OAUTH_CLIENT_ID');
-    const clientSecret = Config.get('GOOGLE_OAUTH_CLIENT_SECRET');
-    const refreshToken = Config.get('GOOGLE_OAUTH_REFRESH_TOKEN');
-    return !!(clientId && clientSecret && refreshToken && refreshToken !== 'YOUR_REFRESH_TOKEN' && refreshToken !== '');
+    const key = PropertiesService.getScriptProperties().getProperty('GCP_SERVICE_ACCOUNT_KEY');
+    return !!key && key.trim() !== '';
   }
 
   /**
-   * 取得或自動刷新 OAuth Access Token
+   * 取得或自動簽署 GCP 服務帳號 Access Token (A方案 JWT 自簽章與 Cache 快取)
    */
   public static getAccessToken(): string {
-    const props = PropertiesService.getScriptProperties();
-    const cachedToken = props.getProperty('GOOGLE_OAUTH_ACCESS_TOKEN');
-    const expiresAtStr = props.getProperty('GOOGLE_OAUTH_EXPIRES_AT');
-    const now = Date.now();
-
-    // 如果緩存的 Access Token 還有效 (預留 5 分鐘緩衝時間)，直接返回
-    if (cachedToken && expiresAtStr && (parseInt(expiresAtStr, 10) - 300000 > now)) {
+    const cache = CacheService.getScriptCache();
+    const cachedToken = cache.get('GCP_SERVICE_ACCOUNT_ACCESS_TOKEN');
+    if (cachedToken) {
       return cachedToken;
     }
 
-    // 緩存失效或不存在，執行 Refresh Token 換取流程
-    const clientId = Config.get('GOOGLE_OAUTH_CLIENT_ID');
-    const clientSecret = Config.get('GOOGLE_OAUTH_CLIENT_SECRET');
-    const refreshToken = Config.get('GOOGLE_OAUTH_REFRESH_TOKEN');
-
-    if (!clientId || !clientSecret) {
-      throw new Error('422:【系統設定未完成】未設定 GOOGLE_OAUTH_CLIENT_ID 或 GOOGLE_OAUTH_CLIENT_SECRET！請先至 Google Cloud Console 建立 OAuth 2.0 憑證。');
-    }
-
-    if (!refreshToken) {
-      throw new Error('409:【日曆未授權】Google 日曆尚未授權連結！請管理員點擊選單「🔗 連結客戶 Google 日曆」進行一鍵登入授權。');
+    const serviceAccountKey = PropertiesService.getScriptProperties().getProperty('GCP_SERVICE_ACCOUNT_KEY');
+    if (!serviceAccountKey) {
+      throw new Error('409:【日曆未對接】未在 GAS 專案設定中配置 GCP_SERVICE_ACCOUNT_KEY 指令碼屬性！請先新增此屬性以啟用日曆服務。');
     }
 
     try {
-      const payload = {
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token'
+      const sa = JSON.parse(serviceAccountKey);
+      const privateKey = sa.private_key;
+      const clientEmail = sa.client_email;
+
+      if (!privateKey || !clientEmail) {
+        throw new Error('GCP_SERVICE_ACCOUNT_KEY 格式不正確，缺少 private_key 或 client_email！');
+      }
+
+      // 建立 JWT Header 與 Claim Set
+      const header = {
+        alg: 'RS256',
+        typ: 'JWT'
       };
 
+      const now = Math.floor(Date.now() / 1000);
+      const claimSet = {
+        iss: clientEmail,
+        scope: 'https://www.googleapis.com/auth/calendar',
+        aud: 'https://oauth2.googleapis.com/token',
+        exp: now + 3600,
+        iat: now
+      };
+
+      // Base64EncodeWebSafe 處理
+      const toSign = Utilities.base64EncodeWebSafe(JSON.stringify(header)) + '.' +
+                     Utilities.base64EncodeWebSafe(JSON.stringify(claimSet));
+
+      // RSA-SHA256 簽名
+      const signatureBytes = Utilities.computeRsaSha256Signature(toSign, privateKey);
+      const signedJwt = toSign + '.' + Utilities.base64EncodeWebSafe(Utilities.newBlob(signatureBytes).getBytes());
+
+      // 換取 Access Token
       const options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
         method: 'post',
         contentType: 'application/x-www-form-urlencoded',
-        payload: payload,
+        payload: {
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion: signedJwt
+        },
         muteHttpExceptions: true
       };
 
@@ -64,20 +78,17 @@ class GoogleCalendarAPI {
       const resData = JSON.parse(response.getContentText());
 
       if (response.getResponseCode() !== 200 || !resData.access_token) {
-        throw new Error(resData.error_description || resData.error || '無法更新 Google 日曆存取金鑰，請重新進行授權連結。');
+        throw new Error(resData.error_description || resData.error || 'JWT 授權換取 Access Token 失敗！');
       }
 
       const accessToken = resData.access_token;
-      const expiresIn = resData.expires_in || 3600;
-      const expiresAt = now + (expiresIn * 1000);
-
-      // 寫入 Script 屬性快取
-      props.setProperty('GOOGLE_OAUTH_ACCESS_TOKEN', accessToken);
-      props.setProperty('GOOGLE_OAUTH_EXPIRES_AT', String(expiresAt));
+      
+      // 快取存取權杖 55 分鐘 (3300秒) 以提升後台排課效率
+      cache.put('GCP_SERVICE_ACCOUNT_ACCESS_TOKEN', accessToken, 3300);
 
       return accessToken;
     } catch (error) {
-      throw new Error('Google 日曆金鑰更新失敗: ' + (error instanceof Error ? error.message : error));
+      throw new Error('GCP 服務帳號認證失敗: ' + (error instanceof Error ? error.message : error));
     }
   }
 
@@ -270,84 +281,4 @@ class GoogleCalendarAPI {
     return resData.items || [];
   }
 
-  /**
-   * 處理 Google OAuth 2.0 授權完成後的回呼邏輯 (doGet 接口)
-   */
-  public static handleOAuthCallback(code: string): GoogleAppsScript.HTML.HtmlOutput {
-    const clientId = Config.get('GOOGLE_OAUTH_CLIENT_ID');
-    const clientSecret = Config.get('GOOGLE_OAUTH_CLIENT_SECRET');
-    const webAppUrl = ScriptApp.getService().getUrl();
-
-    try {
-      const payload = {
-        code: code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: webAppUrl,
-        grant_type: 'authorization_code'
-      };
-
-      const options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
-        method: 'post',
-        contentType: 'application/x-www-form-urlencoded',
-        payload: payload,
-        muteHttpExceptions: true
-      };
-
-      const response = UrlFetchApp.fetch(this.TOKEN_URL, options);
-      const resText = response.getContentText();
-      const resData = JSON.parse(resText);
-
-      if (response.getResponseCode() !== 200 || !resData.refresh_token) {
-        throw new Error(resData.error_description || resData.error || '未取得離線存取所必需的 Refresh Token！請確保登入授權時點選了「允許離線讀寫」。');
-      }
-
-      const refreshToken = resData.refresh_token;
-
-      // 將取得的 Refresh Token 寫入 Google Sheet '系統設定' 工作表
-      const configSheet = SheetHelper.getSheet('Config');
-
-      const rows = SheetHelper.getRows<any>('Config');
-      const tokenRowIndex = rows.findIndex(r => r.key === 'GOOGLE_OAUTH_REFRESH_TOKEN');
-
-      if (tokenRowIndex !== -1) {
-        const rowNum = tokenRowIndex + 2; // +1 header, +1 1-based index
-        const colMap = SheetHelper.COLUMN_MAP['Config'];
-        const headers = configSheet.getRange(1, 1, 1, configSheet.getLastColumn()).getValues()[0];
-        const valCol = headers.indexOf(colMap.value) + 1;
-        if (valCol > 0) {
-          configSheet.getRange(rowNum, valCol).setValue(refreshToken);
-        }
-      } else {
-        // 安全保險：直接以 ORM 寫入新列
-        SheetHelper.addRow('Config', {
-          key: 'GOOGLE_OAUTH_REFRESH_TOKEN',
-          value: refreshToken,
-          description: 'Google Calendar API：自動連結儲存的 Refresh Token (系統自動產生)'
-        });
-      }
-
-      // 立即清除過期的 Access Token 屬性快取
-      const props = PropertiesService.getScriptProperties();
-      props.deleteProperty('GOOGLE_OAUTH_ACCESS_TOKEN');
-      props.deleteProperty('GOOGLE_OAUTH_EXPIRES_AT');
-
-      return HtmlService.createHtmlOutput(
-        `<div style="font-family: sans-serif; text-align: center; padding: 50px;">` +
-        `<h1 style="color: #4CAF50; font-size: 28px;">🎉 Google 日曆連結成功！</h1>` +
-        `<p style="font-size: 16px; color: #555; margin-top: 15px;">GymOS 系統已順利獲得授權。現在此專案的課程將直接與該 Google 日曆雙向安全連線！</p>` +
-        `<p style="font-size: 14px; color: #888; margin-top: 30px;">👉 現在您可以安全地關閉此分頁視窗。</p>` +
-        `</div>`
-      ).setTitle('Google 日曆連結成功 - GymOS');
-
-    } catch (err) {
-      return HtmlService.createHtmlOutput(
-        `<div style="font-family: sans-serif; text-align: center; padding: 50px;">` +
-        `<h1 style="color: #F44336; font-size: 28px;">❌ Google 日曆連結失敗</h1>` +
-        `<p style="font-size: 16px; color: #555; margin-top: 15px;">錯誤原因：${err instanceof Error ? err.message : err}</p>` +
-        `<p style="font-size: 14px; color: #888; margin-top: 30px;">請確保您的「系統設定」試算表中的 Client ID 與 Client Secret 正確無誤，然後重新點擊選單進行嘗試。</p>` +
-        `</div>`
-      ).setTitle('Google 日曆連結失敗 - GymOS');
-    }
-  }
 }

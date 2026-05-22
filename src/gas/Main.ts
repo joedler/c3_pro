@@ -30,11 +30,6 @@ function uiResetDatabaseAndSeed() {
 
 function doGet(e: GoogleAppsScript.Events.DoGet): any {
   try {
-    // 優先檢測是否有 Google OAuth2 授權 Code 傳入 (SaaS 模式)
-    if (e.parameter && e.parameter.code) {
-      return GoogleCalendarAPI.handleOAuthCallback(e.parameter.code);
-    }
-
     const action = e.parameter.action;
     
     // 定義公開 API 路由 (不需要驗證 Token)
