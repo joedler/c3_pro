@@ -499,20 +499,15 @@ function seedClasses(): void {
     const events = GoogleCalendarAPI.listEvents(calendarId, rangeStart, rangeEnd);
     let deletedCount = 0;
     events.forEach(event => {
-      // 若 Sessions 有記錄：憑 ID 精準比對；若 Sessions 已清空：刪除範圍內所有事件
-      const shouldDelete = sessionEventIds.size > 0
-        ? sessionEventIds.has(event.id)
-        : true; // Sessions 空時，範圍內全部視為舊事件刪除
-      if (shouldDelete) {
-        try {
-          GoogleCalendarAPI.deleteEvent(calendarId, event.id);
-          deletedCount++;
-        } catch (e) {
-          // 忽略已手動刪除的日曆事件錯誤
-        }
+      // 在一鍵種子重置時，無條件清除該日期範圍內的所有日曆事件，確保徹底解決舊重複髒資料問題
+      try {
+        GoogleCalendarAPI.deleteEvent(calendarId, event.id);
+        deletedCount++;
+      } catch (e) {
+        // 忽略已手動刪除的日曆事件錯誤
       }
     });
-    Logger.log(`[自動重置] 已刪除 ${deletedCount} 個舊的 Google 日曆事件。`);
+    Logger.log(`[自動重置] 已無條件清理並刪除 ${deletedCount} 個舊的 Google 日曆事件。`);
   } catch (err) {
     Logger.log(`[清理舊日曆失敗] ${err instanceof Error ? err.message : err}`);
   }
