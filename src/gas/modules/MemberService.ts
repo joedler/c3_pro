@@ -314,16 +314,16 @@ class MemberService {
     // 組裝班級名稱清單與日期範圍
     const classNames = myClasses.map(c => c.class_name).join('、');
     
-    // 取最早開始的班級時間作為當期區間參考
+    // 支援多班級不同課程區間的精準顯示設計
     let periodInfo = '尚未開始';
     if (myClasses.length > 0) {
-      const firstClass = myClasses[0];
-      const start = this.formatDate(firstClass.period_start);
-      // 計算結束日期：開始日期 + 週數 * 7 天
-      const weeks = Number(firstClass.period_weeks) || 12;
-      const startDate = new Date(firstClass.period_start);
-      const endDate = new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
-      periodInfo = `${start} ~ ${this.formatDate(endDate)}`;
+      periodInfo = myClasses.map(c => {
+        const start = this.formatDate(c.period_start);
+        const weeks = Number(c.period_weeks) || 12;
+        const startDate = new Date(c.period_start);
+        const endDate = new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+        return `${c.class_name} (${start} ~ ${this.formatDate(endDate)})`;
+      }).join(' ｜ ');
     }
 
     // === 一併內嵌 upcomingSessions（未來4週可請假課堂），避免額外 API 往返 ===
@@ -365,6 +365,8 @@ class MemberService {
       .map(s => {
         const cls = classMap.get(s.class_id);
         const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
+        const myEnrollment = enrollments.find(e => e.class_id === s.class_id);
+        const isPendingPayment = myEnrollment ? (myEnrollment.status === 'pending_payment') : false;
         return {
           sessionId: s.session_id,
           classId: s.class_id,
@@ -372,7 +374,8 @@ class MemberService {
           date: this.safeFormatSessionDate(s.session_date),
           startTime: this.safeFormatTime(s.start_time),
           endTime: this.safeFormatTime(s.end_time),
-          isMakeup: isMakeupTarget
+          isMakeup: isMakeupTarget,
+          isPendingPayment: isPendingPayment
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
