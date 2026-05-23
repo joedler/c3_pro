@@ -58,6 +58,7 @@ class PublicService {
   public static getActiveAnnouncements(): Record<string, any>[] {
     const allAnnouncements = SheetHelper.getRows<any>('Announcements');
     const now = new Date();
+    const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
 
     const active = allAnnouncements.filter(ann => {
       const pubTime = ann.publish_time ? new Date(ann.publish_time) : null;
@@ -65,7 +66,14 @@ class PublicService {
 
       if (!pubTime) return false;
       
-      const isPublished = now >= pubTime;
+      let pubTimeStr = '';
+      if (ann.publish_time instanceof Date) {
+        pubTimeStr = Utilities.formatDate(ann.publish_time, 'Asia/Taipei', 'yyyy-MM-dd');
+      } else {
+        pubTimeStr = String(ann.publish_time || '').substring(0, 10);
+      }
+
+      const isPublished = now >= pubTime || nowStr >= pubTimeStr;
       const isNotExpired = !expTime || now <= expTime;
 
       return isPublished && isNotExpired;

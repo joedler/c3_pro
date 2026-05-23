@@ -124,11 +124,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       return respond(400, { error: '缺少 action 參數' });
     }
 
-    // 每次前端 API 呼叫時，動態修復並自動完成所有已過期的 scheduled 課堂
+    // 每次前端 API 呼叫時，動態修復並自動完成所有已過期的 scheduled 課堂與辦理自動續期
     try {
       ClassEngine.autoCompletePastSessions();
+      ClassEngine.autoRenewClasses();
     } catch (err) {
-      Logger.log(`[系統防呆自動結課錯誤] ${err}`);
+      Logger.log(`[系統背景任務處理錯誤] ${err}`);
     }
 
     // 4. 用戶身份驗證 (取得 UID 與 Role)
@@ -190,19 +191,6 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
 
       // --- 管理員模組 ---
-      'admin.resetDatabase': () => {
-        AuthService.requireRole(user, ['admin']);
-        
-        // 安全門控檢驗：驗證是否啟用重置開關
-        const allowReset = Config.get('ALLOW_DATABASE_RESET', 'false');
-        if (allowReset !== 'true') {
-          throw new Error('【權限遭拒】系統目前處於安全鎖定狀態，拒絕重置資料庫！\n請先至後台「系統設定」分頁將 ALLOW_DATABASE_RESET 設定為 true 後再執行！');
-        }
-
-        setupDatabase();
-        seedClasses();
-        return { message: '資料庫初始化與 17 班課程種子成功展開並同步至 Google Calendar！' };
-      },
       'admin.getSchedule': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.getSchedule(data, user);
@@ -238,10 +226,18 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const classes = SheetHelper.getRows<any>('Classes');
         const staff = SheetHelper.getRows<any>('Staff');
         const rooms = SheetHelper.getRows<any>('Rooms');
+        const enrollments = SheetHelper.getRows<any>('Enrollments');
         
         return classes.map(c => {
           const coach = staff.find(s => s.line_uid === c.coach_line_uid);
           const room = rooms.find(r => r.room_id === c.room_id);
+          
+          // 動態計算報名人數
+          const enrolledCount = enrollments.filter(e => 
+            e.class_id && c.class_id &&
+            String(e.class_id).trim() === String(c.class_id).trim() && 
+            (e.status === 'active' || e.status === 'pending_payment')
+          ).length;
           
           let formattedStartDate = '';
           try {
@@ -261,7 +257,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             coachName: coach ? coach.real_name : '未定教練',
             roomName: room ? room.room_name : '未定教室',
             maxCapacity: Number(c.max_capacity) || 0,
-            enrolled: Number(c.enrolled) || 0,
+            enrolled: enrolledCount,
             dayOfWeek: c.day_of_week,
             startTime: c.start_time,
             endTime: c.end_time,
@@ -283,6 +279,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'admin.createClass': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.createClass(data, user);
+      },
+      'admin.terminateClass': () => {
+        AuthService.requireRole(user, ['admin']);
+        const { classId } = data;
+        SheetHelper.updateRow('Classes', 'class_id', classId, { status: 'terminated' });
+        return { success: true };
       },
       'admin.generateSessions': () => {
         AuthService.requireRole(user, ['admin']);
@@ -750,9 +752,18 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         return { message: '圖文選單重新建立與圖片同步成功' };
       },
       'admin.getBrandConfig': () => {
+        let logoUrl = Config.get('BRAND_LOGO_URL', '');
+        if (logoUrl) {
+          // Google Drive分享網址防呆轉換為直連圖片網址
+          const gdRegex = /https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/(view|edit|preview)?/;
+          const match = logoUrl.match(gdRegex);
+          if (match && match[1]) {
+            logoUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
+          }
+        }
         return {
           brandTitle: Config.get('BRAND_TITLE', 'GymOS'),
-          brandLogoUrl: Config.get('BRAND_LOGO_URL', '')
+          brandLogoUrl: logoUrl
         };
       },
       'admin.publishAnnouncement': () => {
@@ -761,6 +772,22 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       },
       'admin.getAnnouncements': () => {
         return PublicService.getActiveAnnouncements();
+      },
+      'admin.saveSystemConfig': () => {
+        AuthService.requireRole(user, ['admin']);
+        const { key, value } = data;
+        const exists = SheetHelper.getRow<any>('Config', 'key', key);
+        if (exists) {
+          SheetHelper.updateRow('Config', 'key', key, { value: String(value) });
+        } else {
+          SheetHelper.addRow('Config', { key: key, value: String(value), description: '前端設定連動' });
+        }
+        Config.loadCache();
+        return { success: true };
+      },
+      'admin.getSystemConfig': () => {
+        AuthService.requireRole(user, ['admin']);
+        return { value: Config.get(data.key) };
       },
       'admin.getDashboardStats': () => {
         AuthService.requireRole(user, ['admin']);

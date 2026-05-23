@@ -239,9 +239,16 @@ class AdminService {
     const classes = SheetHelper.getRows<any>('Classes');
     const members = SheetHelper.getRows<any>('Members');
     
+    const formatDateStr = (val: any): string => {
+      if (val instanceof Date) {
+        return Utilities.formatDate(val, 'Asia/Taipei', 'yyyy-MM-dd');
+      }
+      return String(val || '').substring(0, 10);
+    };
+
     const todaySessions = allSessions
       .filter(s => {
-        const sDateStr = String(s.date || s.session_date).substring(0, 10);
+        const sDateStr = formatDateStr(s.date || s.session_date);
         return sDateStr === todayStr && s.status !== 'cancelled';
       })
       .map(s => {
@@ -261,7 +268,7 @@ class AdminService {
     const leaves = SheetHelper.getRows<any>('Leave_Requests').filter(l => {
       const s = allSessions.find(sess => sess.session_id === l.session_id);
       if (!s) return false;
-      const sDateStr = String(s.date || s.session_date).substring(0, 10);
+      const sDateStr = formatDateStr(s.date || s.session_date);
       return sDateStr === todayStr;
     });
 
@@ -281,7 +288,7 @@ class AdminService {
     const makeups = SheetHelper.getRows<any>('Makeup_Requests').filter(m => {
       const s = allSessions.find(sess => sess.session_id === m.target_session_id);
       if (!s) return false;
-      const sDateStr = String(s.date || s.session_date).substring(0, 10);
+      const sDateStr = formatDateStr(s.date || s.session_date);
       return sDateStr === todayStr;
     });
 

@@ -25,22 +25,18 @@
           },
           colors: {
             brand: {
-              50: '#f5f3ff',
-              100: '#ede9fe',
-              500: '#8b5cf6',
-              600: '#7c3aed',
-              700: '#6d28d9',
-              900: '#4c1d95',
+              50: '#fefce8',
+              100: '#fef9c3',
+              500: '#eab308',
+              600: '#ca8a04',
+              700: '#a16207',
+              900: '#713f12',
             }
           }
         }
       }
     }
   </script>
-  
-  <!-- FullCalendar.js CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
   
   <!-- LINE LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -51,52 +47,13 @@
   <style>
     [x-cloak] { display: none !important; }
     
-    /* 亮色/暗色主題動態響應 */
-    html.light {
-      background-color: #f8fafc;
-      color: #0f172a;
-    }
-    html.light body {
-      background-color: #f8fafc;
-      color: #0f172a;
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
-    }
-    html.light .text-slate-200 { color: #334155 !important; }
-    html.light .text-slate-400 { color: #64748b !important; }
-    html.light .text-white { color: #0f172a !important; }
-    html.light .bg-slate-950, html.light .bg-slate-900 { background-color: #ffffff !important; }
-    html.light .bg-slate-900\/40, html.light .bg-slate-900\/20, html.light .bg-slate-900\/10 {
-      background-color: rgba(241, 245, 249, 0.95) !important;
-    }
-    html.light .border-slate-800, html.light .border-slate-800\/80 { border-color: #e2e8f0 !important; }
-    html.light .bg-slate-950\/40, html.light .bg-slate-950\/60 { background-color: #f1f5f9 !important; }
-    html.light .fc-theme-standard td, html.light .fc-theme-standard th { border-color: #e2e8f0 !important; }
-    html.light .fc-list-day-cushion { background-color: #f1f5f9 !important; color: #0f172a !important; }
-    html.light .fc-col-header-cell { background-color: #f1f5f9 !important; }
-    html.light .fc-col-header-cell-cushion { color: #0f172a !important; }
-    html.light .text-slate-500 { color: #94a3b8 !important; }
-    html.light .bg-slate-950\/80 { background-color: rgba(241, 245, 249, 0.8) !important; }
-    html.light .shadow-2xl { shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08) !important; }
-
     body {
-      background-color: #0b0f19;
+      background-color: #05070c;
       background-image: 
-        radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.07) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.07) 0px, transparent 50%);
+        radial-gradient(at 0% 0%, rgba(234, 179, 8, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(202, 138, 4, 0.05) 0px, transparent 50%);
     }
-    .fc-theme-standard td, .fc-theme-standard th {
-      border-color: #1e293b !important;
-    }
-    .fc .fc-button-primary {
-      background-color: #7c3aed !important;
-      border-color: #6d28d9 !important;
-    }
-    .fc .fc-button-primary:hover {
-      background-color: #8b5cf6 !important;
-    }
-    
+
     /* 隱藏橫向滾動條 */
     .scrollbar-none::-webkit-scrollbar {
       display: none;
@@ -106,111 +63,8 @@
       scrollbar-width: none;
     }
 
-    /* 美化 FullCalendar List 視圖的日期與星期標頭 (深灰底白字，極佳對比) */
-    .fc .fc-list-day-cushion,
-    .fc-list-day-cushion {
-      background-color: #1e293b !important;
-      color: #f8fafc !important;
-      font-weight: 700 !important;
-      padding: 10px 16px !important;
-    }
-    .fc .fc-list-day,
-    .fc-list-day {
-      background-color: #1e293b !important;
-    }
-
-    /* 美化 FullCalendar Day/Week (TimeGrid) 視圖的欄位標頭 (深灰底白字，絕非白色淺字) */
-    .fc-theme-standard th,
-    .fc .fc-col-header-cell,
-    .fc-col-header-cell {
-      background-color: #1e293b !important;
-      border-color: #1e293b !important;
-    }
-    .fc .fc-col-header-cell-cushion,
-    .fc-col-header-cell-cushion {
-      color: #f8fafc !important;
-      font-weight: 700 !important;
-      padding: 10px 0 !important;
-      display: inline-block !important;
-      text-decoration: none !important;
-    }
-
-    /* 美化 FullCalendar 左側時間軸標籤 */
-    .fc .fc-timegrid-slot-label,
-    .fc-timegrid-slot-label,
-    .fc .fc-timegrid-slot-label-cushion,
-    .fc-timegrid-slot-label-cushion {
-      color: #cbd5e1 !important; /* 淺灰色，高對比易讀 */
-      font-weight: 600 !important;
-      font-size: 11px !important;
-    }
-
-    /* 手機版日曆與表格外觀極致美化與防擠壓 */
+    /* 手機版表格外觀極致美化與防擠壓 */
     @media (max-width: 768px) {
-      .fc .fc-header-toolbar,
-      .fc .fc-toolbar,
-      div.fc-header-toolbar {
-        flex-direction: column !important;
-        gap: 8px !important;
-        align-items: center !important;
-        margin-bottom: 12px !important;
-      }
-      .fc .fc-toolbar-title,
-      .fc-toolbar-title {
-        font-size: 1.15rem !important;
-        text-align: center !important;
-        font-weight: 800 !important;
-        background: linear-gradient(to right, #ffffff, #94a3b8) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        margin: 4px 0 !important;
-      }
-      .fc .fc-toolbar-chunk,
-      .fc-toolbar-chunk {
-        display: flex !important;
-        justify-content: center !important;
-        flex-wrap: wrap !important;
-        gap: 4px !important;
-      }
-      .fc .fc-button,
-      .fc-button {
-        padding: 6px 12px !important;
-        font-size: 11px !important;
-      }
-
-      /* List 模式下時間與標題改為垂直雙行佈局，解決單行擠壓字體豎列 Bug */
-      .fc .fc-list-event {
-        display: flex !important;
-        flex-direction: column !important;
-        padding: 12px 16px !important;
-        border-bottom: 1px solid #1e293b !important;
-        align-items: flex-start !important;
-      }
-      .fc .fc-list-event-time,
-      .fc .fc-list-event-title {
-        display: block !important;
-        width: 100% !important;
-        padding: 2px 0 !important;
-        background: transparent !important;
-        border: none !important;
-        text-align: left !important;
-      }
-      .fc .fc-list-event-time {
-        font-size: 11px !important;
-        color: #a78bfa !important; /* 高亮淡紫色 */
-        font-weight: 600 !important;
-        margin-bottom: 4px !important;
-      }
-      .fc .fc-list-event-title {
-        font-size: 13px !important;
-        color: #ffffff !important;
-        font-weight: 700 !important;
-        white-space: normal !important;
-      }
-      .fc .fc-list-event-dot {
-        display: none !important; /* 隱藏圓點以利排版 */
-      }
-
       /* 將 Table 轉換為 Card-based Grid 佈局，實現手機版極致響應式，避免橫向滾動 */
       .overflow-x-auto table, 
       .overflow-x-auto thead, 
@@ -226,8 +80,8 @@
       }
       .overflow-x-auto tr {
         margin-bottom: 16px !important;
-        background-color: rgba(30, 41, 59, 0.4) !important;
-        border: 1px solid rgba(51, 65, 85, 0.5) !important;
+        background-color: rgba(30, 41, 59, 0.2) !important;
+        border: 1px solid rgba(51, 65, 85, 0.3) !important;
         border-radius: 16px !important;
         padding: 14px 16px !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
@@ -238,7 +92,7 @@
         text-align: left !important;
       }
       .overflow-x-auto td:last-child {
-        border-top: 1px solid rgba(51, 65, 85, 0.3) !important;
+        border-top: 1px solid rgba(51, 65, 85, 0.2) !important;
         padding-top: 12px !important;
         margin-top: 8px !important;
         display: flex !important;
@@ -281,15 +135,9 @@
           </template>
         </div>
         <span class="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-wide" x-text="brandTitle">GymOS</span>
-        <span class="px-2 py-0.5 text-[9px] font-semibold bg-brand-500/10 border border-brand-500/20 text-brand-500 rounded-full" x-text="'v3.0 ' + currentMode.toUpperCase()"></span>
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Theme Toggle Button -->
-        <button @click="document.documentElement.classList.toggle('light')" class="p-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition-all" title="切換亮色/暗色主題">
-          🌗
-        </button>
-
         <!-- Configuration settings -->
         <button @click="showConfig = true" class="p-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition-all" title="設定 API 網址與角色">
           ⚙️
@@ -306,7 +154,11 @@
   <div x-show="showConfig" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-5">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">⚙️ 系統 API 與設定</h3>
+        <div class="flex items-center gap-2">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">⚙️ 系統 API 與設定</h3>
+          <!-- 5-click easter egg version tag -->
+          <span @click="devClickCount++; if (devClickCount >= 5) { showDevOptions = true; alert('🔓 開發者模式已解鎖！') }" class="cursor-pointer px-2 py-0.5 text-[9px] font-semibold bg-brand-500/10 border border-brand-500/20 text-brand-500 rounded-full select-none" x-text="'v3.0 ' + currentMode.toUpperCase()"></span>
+        </div>
         <button @click="showConfig = false" class="text-slate-400 hover:text-white text-lg">&times;</button>
       </div>
       
@@ -315,56 +167,63 @@
           <label class="block text-xs font-bold text-slate-400 mb-1.5">Apps Script 網頁應用程式網址</label>
           <input type="text" x-model="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
         </div>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-400 mb-1.5">測試用模擬 LINE Token / UID</label>
-            <input type="text" x-model="devToken" placeholder="例如: TEST_UID_MEMBER_001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">快速選取測試學員</label>
-              <select @change="devToken = $event.target.value; localStorage.setItem('gymos_dev_token', devToken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
-                <option value="">-- 請選擇學員 --</option>
-                <option value="TEST_UID_U9876543210123456789012345678901" :selected="devToken === 'TEST_UID_U9876543210123456789012345678901'">林小明 (MB-01 L1)</option>
-                <option value="TEST_UID_U9876543210123456789012345678902" :selected="devToken === 'TEST_UID_U9876543210123456789012345678902'">陳美華 (MB-02 L2)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">快速選取測試教職</label>
-              <select @change="devToken = $event.target.value; localStorage.setItem('gymos_dev_token', devToken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
-                <option value="">-- 請選擇教職員 --</option>
-                <option value="TEST_UID_U4abb6fb071cf072db0cc950d59780e11" :selected="devToken === 'TEST_UID_U4abb6fb071cf072db0cc950d59780e11'">訪客管理員 (Admin)</option>
-                <option value="TEST_UID_U028285d818d2fb6acc952c416b833e33" :selected="devToken === 'TEST_UID_U028285d818d2fb6acc952c416b833e33'">張教練 (Coach)</option>
-              </select>
-            </div>
-          </div>
+
+        <!-- LINE Message push quota saving toggle -->
+        <div class="border-t border-slate-800 pt-4">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" x-model="lineAutoPushRenew" class="rounded border-slate-800 bg-slate-950 text-brand-500 focus:ring-brand-500 w-4 h-4">
+            <span class="text-xs font-bold text-slate-300">開啟 LINE 繳費通知自動主動推送</span>
+          </label>
+          <p class="text-[10px] text-slate-500 mt-1">關閉時，學員需打開 LINE 個人首頁查閱帳單，能節省每月 LINE 免費推播額度。</p>
         </div>
 
-        <!-- Hidden Developer Sandbox Switcher -->
-        <div class="border-t border-slate-800 pt-4">
-          <label class="block text-xs font-bold text-slate-400 mb-2">⚙️ 測試沙盒切換面板</label>
-          <div class="grid grid-cols-5 gap-1.5 text-center text-[9px]">
-            <button @click="switchMode('admin'); showConfig = false" :class="currentMode === 'admin' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">管理端</button>
-            <button @click="switchMode('bind'); showConfig = false" :class="currentMode === 'bind' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員綁定</button>
-            <button @click="switchMode('leave'); showConfig = false" :class="currentMode === 'leave' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">請假申請</button>
-            <button @click="switchMode('makeup'); showConfig = false" :class="currentMode === 'makeup' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">補課預約</button>
-            <button @click="switchMode('enroll'); showConfig = false" :class="currentMode === 'enroll' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員加選</button>
-          </div>
-        </div>
+        <!-- Developer Mode ONLY options -->
+        <template x-if="showDevOptions">
+          <div class="space-y-4 pt-4 border-t border-slate-800" x-transition>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1.5">測試用模擬 LINE Token / UID</label>
+              <input type="text" x-model="devToken" placeholder="例如: TEST_UID_MEMBER_001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">快速選取測試學員</label>
+                <select @change="devToken = $event.target.value; localStorage.setItem('gymos_dev_token', devToken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                  <option value="">-- 請選擇學員 --</option>
+                  <option value="TEST_UID_U9876543210123456789012345678901">林小明 (MB-01 L1)</option>
+                  <option value="TEST_UID_U9876543210123456789012345678902">陳美華 (MB-02 L2)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">快速選取測試教職</label>
+                <select @change="devToken = $event.target.value; localStorage.setItem('gymos_dev_token', devToken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                  <option value="">-- 請選擇教職員 --</option>
+                  <option value="TEST_UID_U4abb6fb071cf072db0cc950d59780e11">訪客管理員 (Admin)</option>
+                  <option value="TEST_UID_U028285d818d2fb6acc952c416b833e33">張教練 (Coach)</option>
+                </select>
+              </div>
+            </div>
 
-        <!-- High Risk System Maintenance Options -->
-        <div class="border-t border-slate-800 pt-4">
-          <label class="block text-xs font-bold text-rose-400 mb-2">⚠️ 系統維護高危選項</label>
-          <div class="grid grid-cols-2 gap-3">
-            <button @click="resetDatabaseAndSeed(); showConfig = false" class="py-2.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95">
-              🗃️ 一鍵重置資料庫與課程種子
-            </button>
-            <button @click="syncRichMenus(); showConfig = false" class="py-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95">
-              🖼️ 一鍵同步 LINE 圖文選單
-            </button>
+            <div class="space-y-3 pt-3">
+              <label class="block text-xs font-bold text-slate-400">⚙️ 測試沙盒切換面板</label>
+              <div class="grid grid-cols-5 gap-1.5 text-center text-[9px]">
+                <button @click="switchMode('admin'); showConfig = false" :class="currentMode === 'admin' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">管理端</button>
+                <button @click="switchMode('bind'); showConfig = false" :class="currentMode === 'bind' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員綁定</button>
+                <button @click="switchMode('leave'); showConfig = false" :class="currentMode === 'leave' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">請假申請</button>
+                <button @click="switchMode('makeup'); showConfig = false" :class="currentMode === 'makeup' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">補課預約</button>
+                <button @click="switchMode('enroll'); showConfig = false" :class="currentMode === 'enroll' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員加選</button>
+              </div>
+            </div>
+
+            <div class="space-y-2 pt-3">
+              <label class="block text-xs font-bold text-indigo-400">🖼️ 系統進階同步</label>
+              <button @click="syncRichMenus(); showConfig = false" class="w-full py-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95">
+                🖼️ 一鍵同步 LINE 圖文選單
+              </button>
+            </div>
           </div>
-        </div>
+        </template>
       </div>
+      
       <div class="flex gap-3 mt-6">
         <button @click="saveConfiguration()" class="w-[60%] bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all">儲存並重新載入</button>
         <button @click="showConfig = false" class="w-[40%] bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 text-xs font-bold transition-all">關閉</button>
@@ -387,13 +246,12 @@
         
         <!-- Frameless Fluid Operations Panel Switcher -->
         <div class="space-y-6">
-          <div class="bg-slate-900/40 border border-slate-800 px-6 py-4 flex flex-wrap gap-3 justify-end items-center rounded-2xl backdrop-blur-md">
+          <div class="border-none bg-transparent px-0 py-0 md:border md:border-slate-800 md:bg-slate-900/40 md:px-6 md:py-4 flex flex-wrap gap-3 justify-end items-center rounded-2xl backdrop-blur-md">
             <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
               <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 w-full md:w-auto space-x-1 items-center">
                 <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">📊 首頁摘要</button>
-                <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">🏫 班級排程</button>
+                <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">🏫 班級經營</button>
                 <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">💰 繳費確認</button>
-                <button @click="activeTab = 'schedule'; setTimeout(() => renderCalendar(), 100)" :class="activeTab === 'schedule' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">📅 課表看板</button>
                 
                 <!-- 🔄 手動重新整理按鈕移到最右側 -->
                 <button @click="loadInitialData()" 
@@ -515,7 +373,7 @@
                         <div class="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2">
                           <div class="flex justify-between items-start">
                             <span class="text-xs font-bold text-white" x-text="s.className"></span>
-                            <span class="px-2 py-0.5 text-[9px] bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold" x-text="s.startTime + ' ~ ' + s.endTime"></span>
+                            <span class="px-2 py-0.5 text-[9px] bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold" x-text="formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></span>
                           </div>
                           <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-800/40">
                             <span x-text="'教練: ' + s.coachName"></span>
@@ -567,31 +425,78 @@
                     </div>
                   </div>
 
+              <!-- 已開辦課程 (Relocated to Dashboard Bottom) -->
+              <div class="space-y-3 mt-6">
+                <h3 class="text-white font-bold text-sm flex items-center gap-2">🏫 已開辦課程</h3>
+                <div class="bg-slate-950/40 border border-slate-800 rounded-2xl overflow-hidden">
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                      <thead>
+                        <tr class="border-b border-slate-800 bg-slate-900/40 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          <th class="px-6 py-4">班級名稱</th>
+                          <th class="px-6 py-4">難度/教練/教室</th>
+                          <th class="px-6 py-4 text-center">目前人數 / 上限</th>
+                          <th class="px-6 py-4">本期開始日</th>
+                          <th class="px-6 py-4">狀態</th>
+                          <th class="px-6 py-4 text-right">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-800/60 text-xs text-slate-300">
+                        <template x-for="c in adminClasses" :key="c.classId">
+                          <tr class="hover:bg-slate-900/20 transition-all">
+                            <td class="px-6 py-4">
+                              <span class="font-bold text-white block" x-text="c.className"></span>
+                              <span class="text-[10px] text-slate-500" x-text="c.classId"></span>
+                            </td>
+                            <td class="px-6 py-4 space-y-1">
+                              <div class="flex items-center gap-1">
+                                <span class="px-1.5 py-0.5 text-[10px] bg-brand-500/10 text-brand-400 rounded border border-brand-500/10 font-bold" x-text="c.level"></span>
+                                <span class="text-slate-400" x-text="c.coachName"></span>
+                              </div>
+                              <div class="text-[10px] text-slate-500" x-text="'教室：' + c.roomName"></div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                              <span class="font-bold text-emerald-400" x-text="c.enrolled"></span>
+                              <span class="text-slate-600">/</span>
+                              <span class="text-slate-400" x-text="c.maxCapacity"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                              <span class="font-semibold text-slate-300" x-text="c.periodStart"></span>
+                              <span class="text-[10px] text-slate-500 block" x-text="'共 ' + c.periodWeeks + ' 週 | ' + c.dayOfWeek"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                              <span :class="c.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.status === 'terminated' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-500 border-slate-700')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="c.status === 'active' ? '進行中' : (c.status === 'terminated' ? '已終止' : '已停課')"></span>
+                            </td>
+                            <td class="px-6 py-4 text-right space-x-2">
+                              <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
+                                🔄 手動續期
+                              </button>
+                              <button @click="if (confirm('確定要終止此班級開班嗎？終止後將不會再自動續期。')) { terminateClassSingle(c.classId) }" class="px-2.5 py-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
+                                🚫 終止開班
+                              </button>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
             </div>
+          </div>
 
             <!-- Classes & Renewal Tab (Upgraded v3.0) -->
             <div x-show="activeTab === 'classes'" class="space-y-6" x-transition>
-              <div class="flex justify-between items-center bg-slate-900/60 p-4 border border-slate-800 rounded-2xl">
-                <div>
-                  <h3 class="text-white font-bold text-sm">🏫 班級藍圖與開班管理</h3>
-                  <p class="text-[11px] text-slate-400">在此查看所有的課程藍圖設定，並執行單班獨立開班或一鍵續期轉移舊學員。</p>
-                </div>
-                <button @click="showClassModal = true" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-500 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-brand-950/20 active:scale-95">
-                  <span>➕ 新增課程藍圖</span>
-                </button>
-              </div>
-
-              <!-- Session Suspension panel -->
+              
+              <!-- Block 1: 調整課程 (臨時課堂調整中心) -->
               <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (停課/代課)</h3>
+                <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (調整課程)</h3>
                 <p class="text-[11px] text-slate-400">
                   一律在網頁中完成，不需查看後台試算表！系統會自動即時與 Google 日曆及 LINE 完成同步。
                 </p>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustScope: 'session', selectedSessionId: '', suspendDate: '', adjustReason: '', adjustSubCoach: '', extendWeeks: 0, grantMakeupPoints: true }">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustScope: 'session', selectedSessionId: '', suspendDate: '', adjustReason: '', adjustSubCoach: '', extendWeeks: 0, grantMakeupPoints: false }">
                   <!-- Scope selection -->
                   <div class="sm:col-span-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 flex items-center gap-6 text-xs text-slate-300">
                     <span class="font-bold text-slate-400">調整範圍：</span>
@@ -626,7 +531,7 @@
                   </div>
 
                   <!-- Reason -->
-                  <div>
+                  <div class="sm:col-span-1">
                     <label class="block text-[10px] font-bold text-slate-400 mb-1">2. 調整/停課原因</label>
                     <input type="text" x-model="adjustReason" placeholder="例如: 颱風假停課 / 教練請假" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
                   </div>
@@ -635,24 +540,14 @@
                   <!-- Case A: Single session suspension (no substitute coach) -->
                   <template x-if="adjustScope === 'session' && !adjustSubCoach">
                     <div class="sm:col-span-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
-                      <span class="text-[10px] font-bold text-brand-400 flex items-center gap-1.5">📢 檢測到您將進行「停課」操作，請選擇該堂課的補償策略：</span>
-                      
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label class="block text-[9px] font-bold text-slate-400 mb-1">12週課程 (A/C類)：順延結束日期選項</label>
-                          <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                            <option value="0">不順延 (結束日期不變)</option>
-                            <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
-                            <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label class="block text-[9px] font-bold text-slate-400 mb-1">1個月課程 (B類)：點數補償選項</label>
-                          <select x-model="grantMakeupPoints" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                            <option value="true">自動返還 1 點補課點數給所有學員</option>
-                            <option value="false">不返還點數</option>
-                          </select>
-                        </div>
+                      <span class="text-[10px] font-bold text-brand-400 flex items-center gap-1.5">📢 檢測到您將進行「停課」操作，請選擇該堂課的順延策略：</span>
+                      <div>
+                        <label class="block text-[9px] font-bold text-slate-400 mb-1">課程順延結束日期選項 (A/C類)</label>
+                        <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                          <option value="0">不順延 (結束日期不變)</option>
+                          <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
+                          <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
+                        </select>
                       </div>
                     </div>
                   </template>
@@ -660,23 +555,14 @@
                   <!-- Case B: Whole day suspension -->
                   <template x-if="adjustScope === 'day'">
                     <div class="sm:col-span-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
-                      <span class="text-[10px] font-bold text-rose-400 flex items-center gap-1.5">🌪️ 檢測到您將進行「整天停課」操作，請選擇該日所有課堂的補償策略：</span>
-                      
-                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label class="block text-[9px] font-bold text-slate-400 mb-1">12週課程 (A/C類)：順延結束日期選項</label>
-                          <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
-                            <option value="0">不順延 (結束日期不變)</option>
-                            <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
-                            <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label class="block text-[9px] font-bold text-slate-400 mb-1">1個月課程 (B類)：點數補償選項</label>
-                          <div class="text-[11px] text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 p-2 rounded-lg leading-relaxed">
-                            ✅ 系統將為所有受影響的 1 個月 B 類學員，**自動返還 1 點補課點數**！
-                          </div>
-                        </div>
+                      <span class="text-[10px] font-bold text-rose-400 flex items-center gap-1.5">🌪️ 檢測到您將進行「整天停課」操作，請選擇該日所有課堂的順延策略：</span>
+                      <div>
+                        <label class="block text-[9px] font-bold text-slate-400 mb-1">課程順延結束日期選項 (A/C類)</label>
+                        <select x-model="extendWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                          <option value="0">不順延 (結束日期不變)</option>
+                          <option value="1">自動順延 1 週 (在尾端加開一堂並順延結束日期)</option>
+                          <option value="2">自動順延 2 週 (在尾端加開兩堂並順延結束日期)</option>
+                        </select>
                       </div>
                     </div>
                   </template>
@@ -703,7 +589,7 @@
                           reason: adjustReason, 
                           substituteCoachUid: adjustSubCoach || null,
                           extendWeeks: Number(extendWeeks),
-                          grantMakeupPoints: grantMakeupPoints === true || String(grantMakeupPoints) === 'true'
+                          grantMakeupPoints: false
                         })
                         .then((res) => { 
                           addToast(res.message || '🟢 單堂課程調整成功，日曆與試算表已連動同步！', 'success'); 
@@ -712,15 +598,15 @@
                         });
                       } else {
                         if (!suspendDate) { addToast('請選擇停課日期！', 'error'); return; }
-                        if (confirm('🚨 警告：確定要將 ' + suspendDate + ' 當天所有班級課程全部停課一日嗎？')) {
+                        if (confirm('🌪️ 警告：確定要將 ' + suspendDate + ' 當日所有課程全部停課一日嗎？此動作將發布推播與連動日曆！')) {
                           apiCall('admin.suspendSession', { 
                             suspendDate: suspendDate, 
-                            reason: adjustReason,
+                            reason: adjustReason, 
                             extendWeeks: Number(extendWeeks),
-                            grantMakeupPoints: true
+                            grantMakeupPoints: false
                           })
                           .then((res) => { 
-                            addToast(res.message || '🔴 當日所有課程已成功停課一日！', 'success'); 
+                            addToast(res.message || '🌪️ 當日所有課程已成功停課一日！', 'success'); 
                             suspendDate = ''; adjustReason = ''; extendWeeks = 0;
                             loadInitialData();
                           });
@@ -728,66 +614,100 @@
                       }
                     " 
                             :class="adjustScope === 'day' ? 'bg-rose-700 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-500'"
-                            class="px-5 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5">
+                            class="px-5 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5 w-full sm:w-auto justify-center">
                       <span x-text="adjustScope === 'day' ? '🌪️ 執行當日全部停課一日' : '⚠️ 送出單堂課程調整'"></span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="bg-slate-950/40 border border-slate-800 rounded-2xl overflow-hidden">
-                <div class="overflow-x-auto">
-                  <table class="w-full text-left border-collapse">
-                    <thead>
-                      <tr class="border-b border-slate-800 bg-slate-900/40 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th class="px-6 py-4">班級名稱</th>
-                        <th class="px-6 py-4">難度/教練/教室</th>
-                        <th class="px-6 py-4 text-center">目前人數 / 上限</th>
-                        <th class="px-6 py-4">本期開始日</th>
-                        <th class="px-6 py-4">狀態</th>
-                        <th class="px-6 py-4 text-right">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-800/60 text-xs text-slate-300">
-                      <template x-for="c in adminClasses" :key="c.classId">
-                        <tr class="hover:bg-slate-900/20 transition-all">
-                          <td class="px-6 py-4">
-                            <span class="font-bold text-white block" x-text="c.className"></span>
-                            <span class="text-[10px] text-slate-500" x-text="c.classId"></span>
-                          </td>
-                          <td class="px-6 py-4 space-y-1">
-                            <div class="flex items-center gap-1">
-                              <span class="px-1.5 py-0.5 text-[10px] bg-brand-500/10 text-brand-400 rounded border border-brand-500/10 font-bold" x-text="c.level"></span>
-                              <span class="text-slate-400" x-text="c.coachName"></span>
-                            </div>
-                            <div class="text-[10px] text-slate-500" x-text="'教室：' + c.roomName"></div>
-                          </td>
-                          <td class="px-6 py-4 text-center">
-                            <span class="font-bold text-emerald-400" x-text="c.enrolled"></span>
-                            <span class="text-slate-600">/</span>
-                            <span class="text-slate-400" x-text="c.maxCapacity"></span>
-                          </td>
-                          <td class="px-6 py-4">
-                            <span class="font-semibold text-slate-300" x-text="c.periodStart"></span>
-                            <span class="text-[10px] text-slate-500 block" x-text="'共 ' + c.periodWeeks + ' 週 | ' + c.dayOfWeek"></span>
-                          </td>
-                          <td class="px-6 py-4">
-                            <span :class="c.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-slate-700'" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="c.status === 'active' ? '進行中' : '已停課'"></span>
-                          </td>
-                          <td class="px-6 py-4 text-right space-x-2">
-                            <button @click="generateSessionsSingle(c.classId)" class="px-2.5 py-1.5 bg-brand-600/10 hover:bg-brand-600/20 text-brand-400 border border-brand-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
-                              ⚡ 展開排程
-                            </button>
-                            <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
-                              🔄 續期開班
-                            </button>
-                          </td>
-                        </tr>
+              <!-- Block 2: 新增課程 -->
+              <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h3 class="text-white font-bold text-sm flex items-center gap-2">➕ 新增課程</h3>
+                <p class="text-[11px] text-slate-400">在此建立全新的班級，規劃對應教練與教室，系統將自動建構未來所有的上課時段與 Google 日曆事件。</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-400 mb-1">班級名稱</label>
+                    <input type="text" x-model="classForm.className" placeholder="例如: 壺鈴基礎團體課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">班級類型</label>
+                    <select x-model="classForm.classType" @change="if (classForm.classType === 'group_2x') { classForm.periodWeeks = 4 }" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                      <option value="group_1x">團體課 (一週一堂)</option>
+                      <option value="group_2x">團體課 (一週兩堂)</option>
+                      <option value="personal">一對一私人課</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">難度等級 (學員匹配核心)</label>
+                    <select x-model="classForm.level" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                      <option value="Lv.2">Lv.2 基礎級</option>
+                      <option value="Lv.4">Lv.4 進階級</option>
+                      <option value="Lv.6">Lv.6 挑戰級</option>
+                      <option value="Lv.8">Lv.8 精英級</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">教室 (已連線試算表)</label>
+                    <select x-model="classForm.roomId" @change="const rName = adminRooms.find(r => r.roomId === $event.target.value)?.roomName || ''; if (rName.includes('小教室')) { classForm.maxCapacity = 9 } else if (rName.includes('大教室')) { classForm.maxCapacity = 15 }" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                      <option value="">-- 請選擇教室 --</option>
+                      <template x-for="r in adminRooms" :key="r.roomId">
+                        <option :value="r.roomId" x-text="r.roomName"></option>
                       </template>
-                    </tbody>
-                  </table>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">人數上限</label>
+                    <input type="number" x-model.number="classForm.maxCapacity" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">星期幾上課</label>
+                    <select x-model.number="classForm.dayOfWeek" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                      <option value="">-- 請選擇上課日 --</option>
+                      <option value="1">星期一</option>
+                      <option value="2">星期二</option>
+                      <option value="3">星期三</option>
+                      <option value="4">星期四</option>
+                      <option value="5">星期五</option>
+                      <option value="6">星期六</option>
+                      <option value="0">星期日</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">授課教練 (已連線試算表)</label>
+                    <select x-model="classForm.coachLineUid" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                      <option value="">-- 請選擇授課教練 --</option>
+                      <template x-for="c in adminCoaches" :key="c.lineUid">
+                        <option :value="c.lineUid" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">開始時間</label>
+                    <input type="time" x-model="classForm.startTime" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">結束時間</label>
+                    <input type="time" x-model="classForm.endTime" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">開班首日</label>
+                    <input type="date" x-model="classForm.periodStart" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">課程總週數</label>
+                    <input type="number" x-model.number="classForm.periodWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  </div>
+                </div>
+                
+                <div class="flex justify-end gap-3 mt-6">
+                  <button @click="submitCreateClass()" class="px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 w-full sm:w-auto text-center">
+                    送出並排程建構
+                  </button>
                 </div>
               </div>
+
             </div>
 
             <!-- Tuition Ledger Tab (Upgraded x3.0) -->
@@ -995,89 +915,6 @@
           </div>
         </div>
 
-        <!-- Class Modal Form -->
-        <div x-show="showClassModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
-          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <h3 class="text-lg font-bold text-white mb-4">➕ 新增班級排程並自動建構 Sessions</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="col-span-2">
-                <label class="block text-xs font-bold text-slate-400 mb-1">班級名稱</label>
-                <input type="text" x-model="classForm.className" placeholder="例如: 壺鈴基礎團體課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">班級類型</label>
-                <select x-model="classForm.classType" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-                  <option value="group_1x">團體課 (一週一堂)</option>
-                  <option value="group_2x">團體課 (一週兩堂)</option>
-                  <option value="personal">一對一私人課</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">難度等級 (學員匹配核心)</label>
-                <select x-model="classForm.level" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-                  <option value="L1">L1 基礎級</option>
-                  <option value="L2">L2 進階級</option>
-                  <option value="L3">L3 挑戰級</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">教室 (已連線試算表)</label>
-                <select x-model="classForm.roomId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-                  <option value="">-- 請選擇教室 --</option>
-                  <template x-for="r in adminRooms" :key="r.roomId">
-                    <option :value="r.roomId" x-text="r.roomName"></option>
-                  </template>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">人數上限</label>
-                <input type="number" x-model.number="classForm.maxCapacity" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">星期幾上課</label>
-                <select x-model.number="classForm.dayOfWeek" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-                  <option value="">-- 請選擇上課日 --</option>
-                  <option value="1">星期一</option>
-                  <option value="2">星期二</option>
-                  <option value="3">星期三</option>
-                  <option value="4">星期四</option>
-                  <option value="5">星期五</option>
-                  <option value="6">星期六</option>
-                  <option value="0">星期日</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">授課教練 (已連線試算表)</label>
-                <select x-model="classForm.coachLineUid" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-                  <option value="">-- 請選擇授課教練 --</option>
-                  <template x-for="c in adminCoaches" :key="c.lineUid">
-                    <option :value="c.lineUid" x-text="c.name"></option>
-                  </template>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">開始時間</label>
-                <input type="time" x-model="classForm.startTime" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">結束時間</label>
-                <input type="time" x-model="classForm.endTime" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">開班首日</label>
-                <input type="date" x-model="classForm.periodStart" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1">課程總週數</label>
-                <input type="number" x-model.number="classForm.periodWeeks" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
-              </div>
-            </div>
-            <div class="flex gap-3 mt-6">
-              <button @click="submitCreateClass(); showClassModal = false" class="flex-grow bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all">送出並排程建構</button>
-              <button @click="showClassModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-6 py-3 text-xs font-bold transition-all">取消</button>
-            </div>
-          </div>
-        </div>
 
 
 
@@ -1377,6 +1214,24 @@
     <!-- ================= STUDENT PROFILE DASHBOARD (F-M02) ================= -->
     <template x-if="currentMode === 'profile'">
       <div class="max-w-md mx-auto space-y-6">
+        <!-- Announcement Marquee for Students -->
+        <template x-if="announcements.length > 0">
+          <div class="relative w-full overflow-hidden bg-gradient-to-r from-brand-600/10 to-purple-600/10 border border-slate-800/80 rounded-2xl p-3.5 backdrop-blur-md">
+            <div class="flex items-center gap-3 overflow-hidden">
+              <span class="flex-shrink-0 px-2 py-0.5 text-[9px] font-bold bg-brand-500/20 text-brand-400 rounded-md border border-brand-500/30">📢 公告</span>
+              <div class="scrollbar-none overflow-x-auto whitespace-nowrap text-xs font-semibold text-slate-200 flex items-center gap-6 select-none flex-grow">
+                <template x-for="ann in announcements" :key="ann.announcementId">
+                  <div class="inline-flex items-center gap-2">
+                    <span :class="ann.type === 'alert' ? 'text-rose-400 animate-ping' : 'text-brand-400'">•</span>
+                    <span x-text="ann.title" class="font-bold text-white"></span>
+                    <span x-text="ann.content" class="text-slate-400 text-[11px]"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+
         <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
           <span class="text-3xl">👤</span>
           <h2 class="text-xl font-bold text-white"><span x-text="studentProfile.realName || '學員'"></span> 的課程資訊</h2>
@@ -1477,7 +1332,7 @@
                     <span x-text="s.className"></span>
                     <span x-show="s.isPendingPayment" class="px-1.5 py-0.5 text-[8px] bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold rounded">待審核開通</span>
                   </p>
-                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + s.startTime + ' ~ ' + s.endTime"></p>
+                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></p>
                 </div>
                 <template x-if="s.isPendingPayment">
                   <span class="text-[9px] px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full font-bold">待繳費</span>
@@ -1508,7 +1363,7 @@
                     <input type="radio" :value="s.sessionId" x-model="leaveForm.sessionId" class="text-amber-600 focus:ring-amber-500">
                     <div class="text-left">
                       <p class="text-xs font-bold text-white" x-text="s.className"></p>
-                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + s.startTime"></p>
+                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + formatTime(s.startTime)"></p>
                     </div>
                   </div>
                   <span class="text-[10px] font-bold text-amber-400">可請假</span>
@@ -1574,7 +1429,7 @@
                     <input type="radio" :value="slot.sessionId" x-model="makeupForm.targetSessionId" class="text-brand-600 focus:ring-brand-500">
                     <div class="text-left">
                       <p class="text-xs font-bold text-white" x-text="slot.className"></p>
-                      <p class="text-[10px] text-slate-400 mt-0.5" x-text="slot.date + ' ' + slot.startTime + ' ~ ' + slot.endTime"></p>
+                      <p class="text-[10px] text-slate-400 mt-0.5" x-text="slot.date + ' ' + formatTime(slot.startTime) + ' ~ ' + formatTime(slot.endTime)"></p>
                     </div>
                   </div>
                   <span class="text-[10px] font-semibold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20" x-text="'剩餘 ' + slot.vacancy + ' 位'"></span>
@@ -1671,7 +1526,7 @@
                       <span x-show="cls.isOverlimit" class="px-1.5 py-0.5 text-[8px] bg-yellow-500/10 border border-yellow-500/25 text-yellow-400 font-bold rounded">⚠️ 越級提醒</span>
                     </h4>
                     <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                      📅 每週<span x-text="cls.dayOfWeek"></span> <span x-text="cls.startTime + '~' + cls.endTime"></span> &nbsp;
+                      📅 每週<span x-text="cls.dayOfWeek"></span> <span x-text="formatTime(cls.startTime) + '~' + formatTime(cls.endTime)"></span> &nbsp;
                       <span x-text="'(共 ' + cls.totalSessions + ' 堂)'"></span>
                     </p>
                   </div>
@@ -1743,6 +1598,9 @@
         gasUrl: 'https://script.google.com/macros/s/AKfycbw5qd3RILHE1zkWfFLJfcDL-Mitfx2UcHj9cyzETaISKgwONltAcm1SL36Z_EK3lFAp/exec',
         devToken: localStorage.getItem('gymos_dev_token') || 'TEST_UID_MEMBER_001',
         showConfig: false,
+        devClickCount: 0,
+        showDevOptions: false,
+        lineAutoPushRenew: localStorage.getItem('gymos_line_auto_push_renew') !== 'false',
         loading: false,
         liffReady: false,
         appReady: false,
@@ -1970,9 +1828,17 @@
         },
 
         // Save backend settings
-        saveConfiguration() {
+        async saveConfiguration() {
           localStorage.setItem('gymos_gas_url', this.gasUrl);
           localStorage.setItem('gymos_dev_token', this.devToken);
+          localStorage.setItem('gymos_line_auto_push_renew', String(this.lineAutoPushRenew));
+          if (this.currentMode === 'admin') {
+            try {
+              await this.apiCall('admin.saveSystemConfig', { key: 'LINE_AUTO_PUSH_RENEW', value: String(this.lineAutoPushRenew) });
+            } catch(e) {
+              console.error('Failed to sync LINE_AUTO_PUSH_RENEW to backend:', e);
+            }
+          }
           this.showConfig = false;
           this.addToast('API 連線與認證設定已儲存！系統正在重整...', 'success');
           setTimeout(() => window.location.reload(), 1000);
@@ -2157,6 +2023,14 @@
               } catch(e) {
                 console.warn('⚡ 無法載入表單中繼資料：', e);
               }
+
+              try {
+                const configRes = await this.apiCall('admin.getSystemConfig', { key: 'LINE_AUTO_PUSH_RENEW' });
+                this.lineAutoPushRenew = configRes.value !== 'false';
+                localStorage.setItem('gymos_line_auto_push_renew', String(this.lineAutoPushRenew));
+              } catch(e) {
+                console.warn('⚡ 無法載入 LINE 續期推播設定：', e);
+              }
             } else if (this.currentMode === 'bind') {
               // Student binding
             } else if (this.currentMode === 'enroll') {
@@ -2165,6 +2039,13 @@
               this.studentEnrollForm.classes = res.classes || [];
               this.studentEnrollForm.memberLevel = res.memberLevel || 'L1';
             } else if (this.currentMode === 'profile' || this.currentMode === 'leave' || this.currentMode === 'makeup') {
+              // Load announcements for student marquee
+              try {
+                this.announcements = await this.apiCall('admin.getAnnouncements');
+              } catch(e) {
+                console.warn('⚡ 無法載入最新公告：', e);
+              }
+
               // 單一 API 呼叫即取得學員資料 + 未來課堂 + 請假紀錄（極速載入！）
               const info = await this.apiCall('member.getInfo');
               if (info.bound) {
@@ -2216,6 +2097,17 @@
             this.addToast('⚡ 系統正在單獨展開課堂排程並同步至 Google 日曆...', 'info');
             const res = await this.apiCall('admin.generateSessions', { classId });
             this.addToast(res.message || '課堂展開與日曆同步完成！', 'success');
+            await this.loadInitialData();
+          } catch (e) {
+            console.error(e);
+          }
+        },
+
+        async terminateClassSingle(classId) {
+          try {
+            this.addToast('🚫 系統正在終止此班級開班與後續自動續期...', 'info');
+            const res = await this.apiCall('admin.terminateClass', { classId });
+            this.addToast(res.message || '🚫 班級已成功終止開班！', 'success');
             await this.loadInitialData();
           } catch (e) {
             console.error(e);

@@ -726,4 +726,95 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
     Logger.log(`[系統防呆自動結課] 已成功自動結算 ${pastSessions.length} 堂過期課堂！`);
   }
+
+  /**
+   * 自動為即將結訓的班級辦理新一期續期 (在最後一堂課結束前 7 天自動觸發)
+   */
+  public static autoRenewClasses(): void {
+    const classes = SheetHelper.getRows<any>('Classes');
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    const enrollments = SheetHelper.getRows<any>('Enrollments');
+    const now = new Date();
+    
+    // 找出 7 天後的日期門檻
+    const sevenDaysLater = new Date();
+    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+    const limitDateStr = Utilities.formatDate(sevenDaysLater, 'Asia/Taipei', 'yyyy-MM-dd');
+    
+    // status === 'active' 且備註不含終止字眼的班級自動續期
+    const activeClasses = classes.filter(c => 
+      c.status === 'active' && 
+      !String(c.notes || '').includes('終止') && 
+      !String(c.notes || '').includes('terminated')
+    );
+    
+    activeClasses.forEach(c => {
+      const classSessions = allSessions.filter(s => s.class_id === c.class_id);
+      if (classSessions.length === 0) return;
+      
+      // 找到目前最後一堂課的日期與 seq
+      let maxSeq = 0;
+      let lastSession: any = null;
+      classSessions.forEach(s => {
+        const seq = Number(s.session_seq) || 0;
+        if (seq > maxSeq) {
+          maxSeq = seq;
+          lastSession = s;
+        }
+      });
+      
+      if (!lastSession) return;
+      
+      const lastSessionDateStr = lastSession.session_date;
+      
+      // 如果最後一堂課的日期在未來 7 天之內（或者已經過去了），就自動續期
+      if (lastSessionDateStr <= limitDateStr) {
+        // 1. 計算新一期開始日期：最後一堂課的下週上課日
+        const lastDate = new Date(lastSessionDateStr);
+        const newStartDate = new Date(lastDate);
+        newStartDate.setDate(newStartDate.getDate() + 7); // 下一週
+        const newStartDateStr = Utilities.formatDate(newStartDate, 'Asia/Taipei', 'yyyy-MM-dd');
+        
+        // 2. 檢查是否已經為該新StartDate生成過Session（防重複）
+        const alreadyRenewed = classSessions.some(s => s.session_date === newStartDateStr);
+        if (alreadyRenewed) return;
+
+        Logger.log(`[自動續期] 偵測到班級 ${c.class_name} (${c.class_id}) 即將結訓，啟動自動續期流程。`);
+
+        // 3. 獲取當前活躍學員
+        const activeEnrs = enrollments.filter(e => e.class_id === c.class_id && e.status === 'active');
+        const activeMemberIds = activeEnrs.map(e => e.member_id);
+        
+        const termRemark = `${newStartDate.getFullYear()}年${newStartDate.getMonth() + 1}月期`;
+        
+        try {
+          // 執行續期
+          const result = this.renew(c.class_id, newStartDateStr, activeMemberIds, termRemark);
+          Logger.log(`[自動續期成功] 班級: ${c.class_name}, 展開 ${result.generated} 堂課。`);
+          
+          // 4. LINE 推播通知（如果開啟了系統設定）
+          const isPushEnabled = Config.get('LINE_AUTO_PUSH_RENEW', 'true') === 'true';
+          if (isPushEnabled && activeMemberIds.length > 0) {
+            const members = SheetHelper.getRows<any>('Members');
+            activeMemberIds.forEach(uid => {
+              const m = members.find(member => member.member_id === uid);
+              if (m && m.line_uid) {
+                try {
+                  const message = `🔔 課程自動續期繳費通知 🔔\n\n親愛的 ${m.real_name} 您好：\n您所報名的【${c.class_name}】即將開啟新的一期課程！\n\n系統已自動為您保留新一期名額，狀態為「待繳費」。\n請於開課前完成繳費以確保您的上課權限！\n\n📅 新期首日：${newStartDateStr}\n💡 您可以打開 LINE 選單的「個人首頁」查看詳細帳單。`;
+                  LineHandler.pushMessage(m.line_uid, [{
+                    type: 'text',
+                    text: message
+                  }]);
+                } catch (lineErr) {
+                  Logger.log(`[自動續期 LINE 通知失敗] 學員: ${m.real_name}, 錯誤: ${lineErr}`);
+                }
+              }
+            });
+          }
+        } catch (renewErr) {
+          Logger.log(`[自動續期失敗] 班級: ${c.class_name}, 錯誤: ${renewErr}`);
+        }
+      }
+    });
+  }
 }
