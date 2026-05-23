@@ -626,8 +626,7 @@ class LineHandler {
 
     // (C) 若為學員指令
     if (member && (text === '我的課程' || text === '請假補課')) {
-      const leaveUrl = `https://liff.line.me/${liffId}?mode=leave`;
-      const makeupUrl = `https://liff.line.me/${liffId}?mode=makeup`;
+      const mainLiffUrl = `https://liff.line.me/${liffId}`;
 
       // 取得學員課務大數據
       const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
@@ -660,13 +659,13 @@ class LineHandler {
           contents: [
             {
               type: 'text',
-              text: 'GymOS 課務大數據儀表板',
-              color: '#ffffff',
+              text: 'C3 Fitness 課務大數據儀表板',
+              color: '#0A0A0A',
               weight: 'bold',
               size: 'md'
             }
           ],
-          backgroundColor: '#8b5cf6'
+          backgroundColor: '#F5B400'
         },
         body: {
           type: 'box',
@@ -677,13 +676,14 @@ class LineHandler {
               type: 'text',
               text: `學員姓名: ${member.real_name}`,
               weight: 'bold',
-              size: 'sm'
+              size: 'sm',
+              color: '#FFFFFF'
             },
             {
               type: 'text',
               text: `所屬班級: ${classNames}`,
               size: 'xs',
-              color: '#4b5563',
+              color: '#BDBDBD',
               wrap: true
             },
             {
@@ -703,7 +703,7 @@ class LineHandler {
                       type: 'text',
                       text: '已上堂數',
                       size: 'xxs',
-                      color: '#9ca3af',
+                      color: '#BDBDBD',
                       align: 'center'
                     },
                     {
@@ -724,7 +724,7 @@ class LineHandler {
                       type: 'text',
                       text: '累計請假',
                       size: 'xxs',
-                      color: '#9ca3af',
+                      color: '#BDBDBD',
                       align: 'center'
                     },
                     {
@@ -745,7 +745,7 @@ class LineHandler {
                       type: 'text',
                       text: '已補課',
                       size: 'xxs',
-                      color: '#9ca3af',
+                      color: '#BDBDBD',
                       align: 'center'
                     },
                     {
@@ -760,34 +760,26 @@ class LineHandler {
                 }
               ]
             }
-          ]
+          ],
+          backgroundColor: '#0A0A0A'
         },
         footer: {
           type: 'box',
-          layout: 'horizontal',
+          layout: 'vertical',
           spacing: 'sm',
           contents: [
             {
               type: 'button',
               action: {
                 type: 'uri',
-                label: '🚫 線上請假',
-                uri: leaveUrl
-              },
-              style: 'secondary',
-              color: '#f3f4f6'
-            },
-            {
-              type: 'button',
-              action: {
-                type: 'uri',
-                label: '🔄 跨班補課',
-                uri: makeupUrl
+                label: '✨ 開啟會員中心 (請假/補課/課表)',
+                uri: mainLiffUrl
               },
               style: 'primary',
-              color: '#8b5cf6'
+              color: '#F5B400'
             }
-          ]
+          ],
+          backgroundColor: '#0A0A0A'
         }
       };
 
@@ -810,19 +802,21 @@ class LineHandler {
         contents: [
           {
             type: 'text',
-            text: '💡 GymOS 快速服務選單',
+            text: '💡 C3 Fitness 會員服務中心',
             weight: 'bold',
-            size: 'md'
+            size: 'md',
+            color: '#F5B400'
           },
           {
             type: 'text',
-            text: '點擊下方按鈕即可快速查詢您的課務資訊，或進行請假、補課預約與簽到！',
+            text: '您好！要查詢您目前的課堂堂數、預約跨班補課、或是辦理線上請假，請點擊下方按鈕直接進入您的專屬會員中心：',
             wrap: true,
             size: 'xs',
-            color: '#4b5563',
+            color: '#BDBDBD',
             margin: 'md'
           }
-        ]
+        ],
+        backgroundColor: '#0A0A0A'
       },
       footer: {
         type: 'box',
@@ -832,30 +826,31 @@ class LineHandler {
           {
             type: 'button',
             action: {
-              type: 'message',
-              label: '📊 查詢我的課程資訊',
-              text: '我的課程'
+              type: 'uri',
+              label: '✨ 進入我的會員中心',
+              uri: `https://liff.line.me/${liffId}`
             },
-            style: 'secondary'
+            style: 'primary',
+            color: '#F5B400'
           },
           {
             type: 'button',
             action: {
-              type: 'uri',
-              label: '🚫 立即線上請假',
-              uri: `https://liff.line.me/${liffId}?mode=leave`
+              type: 'message',
+              label: '🔄 同步/更新選單權限',
+              text: '同步選單'
             },
-            style: 'primary',
-            color: '#ef4444'
+            style: 'secondary'
           }
-        ]
+        ],
+        backgroundColor: '#0A0A0A'
       }
     };
 
     this.sendReply(replyToken, [
       {
         type: 'flex',
-        altText: 'GymOS 服務選單',
+        altText: 'C3 Fitness 服務選單',
         contents: helpBubble
       }
     ]);

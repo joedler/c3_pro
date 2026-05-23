@@ -25,12 +25,19 @@
           },
           colors: {
             brand: {
-              50: '#fefce8',
-              100: '#fef9c3',
-              500: '#eab308',
+              50: '#FFD54A',
+              100: '#FFD54A',
+              500: '#F5B400',
               600: '#ca8a04',
               700: '#a16207',
               900: '#713f12',
+            },
+            c3: {
+              black: '#0A0A0A',
+              dark: '#141414',
+              gold: '#F5B400',
+              goldLight: '#FFD54A',
+              gray: '#BDBDBD',
             }
           }
         }
@@ -48,10 +55,10 @@
     [x-cloak] { display: none !important; }
     
     body {
-      background-color: #05070c;
+      background-color: #0A0A0A;
       background-image: 
-        radial-gradient(at 0% 0%, rgba(234, 179, 8, 0.05) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(202, 138, 4, 0.05) 0px, transparent 50%);
+        radial-gradient(at 0% 0%, rgba(245, 180, 0, 0.04) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(255, 213, 74, 0.03) 0px, transparent 50%);
     }
 
     /* 隱藏橫向滾動條 */
@@ -428,69 +435,6 @@
                   </div>
                 </div>
                 </div>
-
-                <!-- Expanded Panels Container (Spans full width) -->
-                <div class="hidden" x-show="false">
-                  
-                  <!-- Today's Sessions Expanded List -->
-                  <div x-show="expandedCard === 'todaySessions'" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3" x-transition>
-                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏋️ 今日課程課堂明細統計</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <template x-for="s in adminDashboardStats.todaySessions" :key="s.sessionId">
-                        <div class="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2">
-                          <div class="flex justify-between items-start">
-                            <span class="text-xs font-bold text-white" x-text="s.className"></span>
-                            <span class="px-2 py-0.5 text-[9px] bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold" x-text="formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></span>
-                          </div>
-                          <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-800/40">
-                            <span x-text="'教練: ' + s.coachName"></span>
-                            <span class="font-bold text-emerald-400" x-text="'出席人數: ' + s.actualCount + ' 人'"></span>
-                          </div>
-                        </div>
-                      </template>
-                      <template x-if="adminDashboardStats.todaySessions.length === 0">
-                        <p class="text-xs text-slate-500 py-4 col-span-3 text-center">今日尚無安排上課之課堂。</p>
-                      </template>
-                    </div>
-                  </div>
-
-                  <!-- Today's Leaves Expanded List -->
-                  <div x-show="expandedCard === 'todayLeaves'" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3" x-transition>
-                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 今日學員請假名冊摘要</h4>
-                    <div class="space-y-2">
-                      <template x-for="l in adminDashboardStats.todayLeaves" :key="l.leaveId">
-                        <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
-                          <div class="flex items-center gap-3">
-                            <span class="font-bold text-white" x-text="l.realName"></span>
-                            <span class="text-slate-400" x-text="'請假班級: ' + l.className"></span>
-                          </div>
-                          <span class="text-[11px] text-slate-500" x-text="'原因: ' + l.reason"></span>
-                        </div>
-                      </template>
-                      <template x-if="adminDashboardStats.todayLeaves.length === 0">
-                        <p class="text-xs text-slate-500 py-4 text-center">今日尚無學員請假。</p>
-                      </template>
-                    </div>
-                  </div>
-
-                  <!-- Today's Makeups Expanded List -->
-                  <div x-show="expandedCard === 'todayMakeups'" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3" x-transition>
-                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 今日跨班補課學員名冊</h4>
-                    <div class="space-y-2">
-                      <template x-for="m in adminDashboardStats.todayMakeups" :key="m.makeupId">
-                        <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
-                          <div class="flex items-center gap-3">
-                            <span class="font-bold text-white" x-text="m.realName"></span>
-                            <span class="text-emerald-400 font-medium" x-text="'目標補課班級: ' + m.className"></span>
-                          </div>
-                          <span class="px-2 py-0.5 text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">補課鎖定</span>
-                        </div>
-                      </template>
-                      <template x-if="adminDashboardStats.todayMakeups.length === 0">
-                        <p class="text-xs text-slate-500 py-4 text-center">今日尚無跨班補課學員。</p>
-                      </template>
-                    </div>
-                  </div>
 
               <!-- 已開辦課程 (Relocated to Dashboard Bottom) -->
               <div class="space-y-3 mt-6">
@@ -1946,10 +1890,10 @@
             try {
               this.activeLiffId = liffId;
               
-              // 使用 Promise.race 加上 5 秒 Timeout 防護，避免 LIFF ID 不符時死當
+              // 使用 Promise.race 加上 15 秒 Timeout 防護，避免 LIFF ID 不符時死當
               await Promise.race([
                 liff.init({ liffId: liffId }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('LIFF SDK 啟動逾時 (可能是 LIFF ID 錯誤或網路不佳)')), 5000))
+                new Promise((_, reject) => setTimeout(() => reject(new Error('LIFF SDK 啟動逾時 (可能是 LIFF ID 錯誤或網路不佳)')), 15000))
               ]);
               
               this.liffReady = true;
