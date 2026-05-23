@@ -245,7 +245,7 @@
   </div>
 
   <!-- MAIN APP CONTAINER (Fluid frameless visual maximization) -->
-  <main class="flex-grow max-w-[98%] w-full mx-auto px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
     <!-- ================= ADMIN CONSOLE PANEL ================= -->
     <template x-if="currentMode === 'admin'">
@@ -301,140 +301,145 @@
               </div>
 
               <!-- 4-Column Operations Summary Cards -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" x-data="{ expandedCard: 'todaySessions' }">
-                <!-- Card 1: 今日上課統計 -->
-                <div @click="expandedCard = (expandedCard === 'todaySessions' ? '' : 'todaySessions')" 
-                     :class="expandedCard === 'todaySessions' ? 'border-brand-500/50 bg-brand-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                     class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <span class="text-xs font-bold text-slate-400">🏋️ 今日課程數</span>
-                      <h4 class="text-3xl font-black text-white mt-1.5" x-text="adminDashboardStats.todaySessions.length + ' 堂'">0 堂</h4>
+              <div x-data="{ expandedCard: 'todaySessions' }">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <!-- Card 1: 今日上課統計 -->
+                  <div @click="expandedCard = (expandedCard === 'todaySessions' ? '' : 'todaySessions')" 
+                       :class="expandedCard === 'todaySessions' ? 'border-brand-500/50 bg-brand-500/5' : 'border-slate-800 bg-slate-900/10'" 
+                       class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <span class="text-xs font-bold text-slate-400">🏋️ 今日課程數</span>
+                        <h4 class="text-3xl font-black text-white mt-1.5" x-text="adminDashboardStats.todaySessions.length + ' 堂'">0 堂</h4>
+                      </div>
+                      <div class="w-12 h-12 rounded-xl bg-brand-500/10 flex items-center justify-center text-xl text-brand-400 group-hover:scale-110 transition-all">🏋️</div>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-brand-500/10 flex items-center justify-center text-xl text-brand-400 group-hover:scale-110 transition-all">🏋️</div>
+                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>點擊查看今日課程明細</span>
+                      <span x-text="expandedCard === 'todaySessions' ? '▲' : '▼'">▼</span>
+                    </div>
                   </div>
-                  <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>點擊查看今日課程明細</span>
-                    <span x-text="expandedCard === 'todaySessions' ? '▲' : '▼'">▼</span>
+
+                  <!-- Card 2: 今日請假人數 -->
+                  <div @click="expandedCard = (expandedCard === 'todayLeaves' ? '' : 'todayLeaves')" 
+                       :class="expandedCard === 'todayLeaves' ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/10'" 
+                       class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <span class="text-xs font-bold text-slate-400">🏖️ 今日請假數</span>
+                        <h4 class="text-3xl font-black text-indigo-400 mt-1.5" x-text="adminDashboardStats.todayLeaves.length + ' 人'">0 人</h4>
+                      </div>
+                      <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl text-indigo-400 group-hover:scale-110 transition-all">🏖️</div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>點擊展開請假學員名單</span>
+                      <span x-text="expandedCard === 'todayLeaves' ? '▲' : '▼'">▼</span>
+                    </div>
+                  </div>
+
+                  <!-- Card 3: 今日補課人數 -->
+                  <div @click="expandedCard = (expandedCard === 'todayMakeups' ? '' : 'todayMakeups')" 
+                       :class="expandedCard === 'todayMakeups' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/10'" 
+                       class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <span class="text-xs font-bold text-slate-400">🔄 今日補課數</span>
+                        <h4 class="text-3xl font-black text-emerald-400 mt-1.5" x-text="adminDashboardStats.todayMakeups.length + ' 人'">0 人</h4>
+                      </div>
+                      <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl text-emerald-400 group-hover:scale-110 transition-all">🔄</div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>點擊展開補課學員名單</span>
+                      <span x-text="expandedCard === 'todayMakeups' ? '▲' : '▼'">▼</span>
+                    </div>
+                  </div>
+
+                  <!-- Card 4: 待繳學費人數 (Moved to last column) -->
+                  <div @click="activeTab = 'ledger'" 
+                       class="p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <span class="text-xs font-bold text-slate-400">💰 待繳費學員</span>
+                        <h4 class="text-3xl font-black text-amber-400 mt-1.5" x-text="pendingPayments.length + ' 人'">0 人</h4>
+                      </div>
+                      <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl text-amber-400 group-hover:scale-110 transition-all">💰</div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>點擊前往學費確認中心</span>
+                      <span>➜</span>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Panel 1: 今日課程名冊 (正下方展開) -->
-                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard === 'todaySessions'" x-transition>
-                  <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
-                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏋️ 今日課程課堂明細統計</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <template x-for="s in adminDashboardStats.todaySessions" :key="s.sessionId">
-                        <div class="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2">
-                          <div class="flex justify-between items-start">
-                            <span class="text-xs font-bold text-white" x-text="s.className"></span>
-                            <span class="px-2 py-0.5 text-[9px] bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold" x-text="formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></span>
+                <!-- Expanded Lists Panel (Expands cleanly below the grid of 4 cards) -->
+                <div class="mt-4 space-y-4">
+                  <!-- Panel 1: 今日課程名冊 -->
+                  <div x-show="expandedCard === 'todaySessions'" x-transition>
+                    <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                      <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏋️ 今日課程課堂明細統計</h4>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <template x-for="s in adminDashboardStats.todaySessions" :key="s.sessionId">
+                          <div class="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2">
+                            <div class="flex justify-between items-start">
+                              <span class="text-xs font-bold text-white" x-text="s.className"></span>
+                              <span class="px-2 py-0.5 text-[9px] bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold" x-text="formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></span>
+                            </div>
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-800/40">
+                              <span x-text="'教練: ' + s.coachName"></span>
+                              <span class="font-bold text-emerald-400" x-text="'出席人數: ' + s.actualCount + ' 人'"></span>
+                            </div>
                           </div>
-                          <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-800/40">
-                            <span x-text="'教練: ' + s.coachName"></span>
-                            <span class="font-bold text-emerald-400" x-text="'出席人數: ' + s.actualCount + ' 人'"></span>
+                        </template>
+                        <template x-if="adminDashboardStats.todaySessions.length === 0">
+                          <p class="text-xs text-slate-500 py-4 col-span-3 text-center">今日尚無安排上課之課堂。</p>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Panel 2: 今日請假名單 -->
+                  <div x-show="expandedCard === 'todayLeaves'" x-transition>
+                    <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                      <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 今日學員請假名冊摘要</h4>
+                      <div class="space-y-2">
+                        <template x-for="l in adminDashboardStats.todayLeaves" :key="l.leaveId">
+                          <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
+                            <div class="flex items-center gap-3">
+                              <span class="font-bold text-white" x-text="l.realName"></span>
+                              <span class="text-slate-400" x-text="'請假班級: ' + l.className"></span>
+                            </div>
+                            <span class="text-[11px] text-slate-500" x-text="'原因: ' + l.reason"></span>
                           </div>
-                        </div>
-                      </template>
-                      <template x-if="adminDashboardStats.todaySessions.length === 0">
-                        <p class="text-xs text-slate-500 py-4 col-span-3 text-center">今日尚無安排上課之課堂。</p>
-                      </template>
+                        </template>
+                        <template x-if="adminDashboardStats.todayLeaves.length === 0">
+                          <p class="text-xs text-slate-500 py-4 text-center">今日尚無學員請假。</p>
+                        </template>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Card 2: 待繳學費人數 -->
-                <div @click="activeTab = 'ledger'" 
-                     class="p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <span class="text-xs font-bold text-slate-400">💰 待繳費學員</span>
-                      <h4 class="text-3xl font-black text-amber-400 mt-1.5" x-text="pendingPayments.length + ' 人'">0 人</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl text-amber-400 group-hover:scale-110 transition-all">💰</div>
-                  </div>
-                  <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>點擊前往學費確認中心</span>
-                    <span>➜</span>
-                  </div>
-                </div>
-
-                <!-- Card 3: 今日請假人數 -->
-                <div @click="expandedCard = (expandedCard === 'todayLeaves' ? '' : 'todayLeaves')" 
-                     :class="expandedCard === 'todayLeaves' ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                     class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <span class="text-xs font-bold text-slate-400">🏖️ 今日請假數</span>
-                      <h4 class="text-3xl font-black text-indigo-400 mt-1.5" x-text="adminDashboardStats.todayLeaves.length + ' 人'">0 人</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl text-indigo-400 group-hover:scale-110 transition-all">🏖️</div>
-                  </div>
-                  <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>點擊展開請假學員名單</span>
-                    <span x-text="expandedCard === 'todayLeaves' ? '▲' : '▼'">▼</span>
-                  </div>
-                </div>
-
-                <!-- Panel 3: 今日請假名單 (正下方展開) -->
-                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard === 'todayLeaves'" x-transition>
-                  <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
-                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 今日學員請假名冊摘要</h4>
-                    <div class="space-y-2">
-                      <template x-for="l in adminDashboardStats.todayLeaves" :key="l.leaveId">
-                        <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
-                          <div class="flex items-center gap-3">
-                            <span class="font-bold text-white" x-text="l.realName"></span>
-                            <span class="text-slate-400" x-text="'請假班級: ' + l.className"></span>
+                  <!-- Panel 3: 今日補課名單 -->
+                  <div x-show="expandedCard === 'todayMakeups'" x-transition>
+                    <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                      <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 今日跨班補課學員名冊</h4>
+                      <div class="space-y-2">
+                        <template x-for="m in adminDashboardStats.todayMakeups" :key="m.makeupId">
+                          <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
+                            <div class="flex items-center gap-3">
+                              <span class="font-bold text-white" x-text="m.realName"></span>
+                              <span class="text-emerald-400 font-medium" x-text="'目標補課班級: ' + m.className"></span>
+                            </div>
+                            <span class="px-2 py-0.5 text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">補課鎖定</span>
                           </div>
-                          <span class="text-[11px] text-slate-500" x-text="'原因: ' + l.reason"></span>
-                        </div>
-                      </template>
-                      <template x-if="adminDashboardStats.todayLeaves.length === 0">
-                        <p class="text-xs text-slate-500 py-4 text-center">今日尚無學員請假。</p>
-                      </template>
+                        </template>
+                        <template x-if="adminDashboardStats.todayMakeups.length === 0">
+                          <p class="text-xs text-slate-500 py-4 text-center">今日尚無跨班補課學員。</p>
+                        </template>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Card 4: 今日補課人數 -->
-                <div @click="expandedCard = (expandedCard === 'todayMakeups' ? '' : 'todayMakeups')" 
-                     :class="expandedCard === 'todayMakeups' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                     class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <span class="text-xs font-bold text-slate-400">🔄 今日補課數</span>
-                      <h4 class="text-3xl font-black text-emerald-400 mt-1.5" x-text="adminDashboardStats.todayMakeups.length + ' 人'">0 人</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl text-emerald-400 group-hover:scale-110 transition-all">🔄</div>
-                  </div>
-                  <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>點擊展開補課學員名單</span>
-                    <span x-text="expandedCard === 'todayMakeups' ? '▲' : '▼'">▼</span>
-                  </div>
-                </div>
-
-                <!-- Panel 4: 今日補課名單 (正下方展開) -->
-                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard === 'todayMakeups'" x-transition>
-                  <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
-                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 今日跨班補課學員名冊</h4>
-                    <div class="space-y-2">
-                      <template x-for="m in adminDashboardStats.todayMakeups" :key="m.makeupId">
-                        <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
-                          <div class="flex items-center gap-3">
-                            <span class="font-bold text-white" x-text="m.realName"></span>
-                            <span class="text-emerald-400 font-medium" x-text="'目標補課班級: ' + m.className"></span>
-                          </div>
-                          <span class="px-2 py-0.5 text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">補課鎖定</span>
-                        </div>
-                      </template>
-                      <template x-if="adminDashboardStats.todayMakeups.length === 0">
-                        <p class="text-xs text-slate-500 py-4 text-center">今日尚無跨班補課學員。</p>
-                      </template>
-                    </div>
-                  </div>
-                </div>
-                </div>
+              </div>
 
               <!-- 已開辦課程 (Relocated to Dashboard Bottom) -->
               <div class="space-y-3 mt-6">
@@ -476,7 +481,7 @@
                               <span class="text-[10px] text-slate-500 block" x-text="'共 ' + c.periodWeeks + ' 週 | ' + c.dayOfWeek"></span>
                             </td>
                             <td class="px-6 py-4">
-                              <span :class="(!c.status || c.status === 'active' || c.status === '進行中' || c.status === '已開班') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.status === 'terminated' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-500 border-slate-700')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="(!c.status || c.status === 'active' || c.status === '進行中' || c.status === '已開班') ? '進行中' : (c.status === 'terminated' ? '已終止' : '已停課')"></span>
+                              <span :class="(!c.status || c.status === 'active' || c.status === 'open' || c.status === 'pending' || c.status === '進行中' || c.status === '已開班') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.status === 'terminated' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-500 border-slate-700')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="(!c.status || c.status === 'active' || c.status === 'open' || c.status === 'pending' || c.status === '進行中' || c.status === '已開班') ? '進行中' : (c.status === 'terminated' ? '已終止' : '已停課')"></span>
                             </td>
                             <td class="px-6 py-4 text-right space-x-2">
                               <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
@@ -500,22 +505,21 @@
               <!-- Block 1: 調整課程 (臨時課堂調整中心) -->
               <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4">
                 <h3 class="text-white font-bold text-sm flex items-center gap-2">🛠️ 課程臨時調整中心 (調整課程)</h3>
-                <p class="text-[11px] text-slate-400">
-                  一律在網頁中完成，不需查看後台試算表！系統會自動即時與 Google 日曆及 LINE 完成同步。
-                </p>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-data="{ adjustScope: 'session', selectedSessionId: '', suspendDate: '', adjustReason: '', adjustSubCoach: '', extendWeeks: 0, grantMakeupPoints: false }">
-                  <!-- Scope selection -->
-                  <div class="sm:col-span-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 flex items-center gap-6 text-xs text-slate-300">
-                    <span class="font-bold text-slate-400">調整範圍：</span>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                      <input type="radio" value="session" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
-                      <span>單堂課程調整</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                      <input type="radio" value="day" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
-                      <span class="text-rose-400 font-bold">當日所有班級 (停課一日) 🌪️ 颱風/國定假日適用</span>
-                    </label>
+                  <!-- Scope selection (Responsive layout to avoid squeezing on mobile) -->
+                  <div class="sm:col-span-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-xs text-slate-300">
+                    <span class="font-bold text-slate-400 flex-shrink-0">調整範圍：</span>
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-6">
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" value="session" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
+                        <span>單堂課程調整</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" value="day" x-model="adjustScope" class="text-brand-600 focus:ring-brand-500">
+                        <span class="text-rose-400 font-bold">當日所有班級 (停課一日) 🌪️ 颱風/國定假日適用</span>
+                      </label>
+                    </div>
                   </div>
 
                   <!-- Target selector -->
@@ -635,6 +639,34 @@
                 <p class="text-[11px] text-slate-400">在此建立全新的班級，規劃對應教練與教室，系統將自動建構未來所有的上課時段與 Google 日曆事件。</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- 💡 快速帶入現有課程範本下拉選單 (選填) -->
+                  <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-400 mb-1">💡 快速帶入現有課程範本 (選填)</label>
+                    <select @change="
+                      if ($event.target.value) {
+                        const selected = adminClasses.find(c => c.classId === $event.target.value);
+                        if (selected) {
+                          classForm.className = selected.className;
+                          classForm.classType = selected.classType || 'group_1x';
+                          classForm.level = selected.level || 'Lv.2';
+                          classForm.roomId = selected.roomId || '';
+                          classForm.maxCapacity = selected.maxCapacity || 15;
+                          classForm.dayOfWeek = selected.dayOfWeek !== undefined ? String(selected.dayOfWeek) : '';
+                          classForm.startTime = selected.startTime || '19:00';
+                          classForm.endTime = selected.endTime || '20:00';
+                          classForm.periodWeeks = selected.periodWeeks || 12;
+                          classForm.coachLineUid = selected.coachLineUid || '';
+                          addToast('已帶入課程「' + selected.className + '」之設定範本！', 'info');
+                        }
+                      }
+                    " class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                      <option value="">-- 請選擇現有課程以快速填寫 --</option>
+                      <template x-for="c in adminClasses" :key="c.classId">
+                        <option :value="c.classId" x-text="c.className + ' (' + c.dayOfWeek + ' ' + c.startTime + ')'"></option>
+                      </template>
+                    </select>
+                  </div>
+                  
                   <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-400 mb-1">班級名稱</label>
                     <input type="text" x-model="classForm.className" placeholder="例如: 壺鈴基礎團體課" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
@@ -1885,50 +1917,56 @@
 
           const liffId = '2010118365-aUSNBtpx';
 
-          // 🚀 頂級商業化：正式初始化 LINE LIFF SDK，解鎖手機 LINE 容器的安全性沙盒，並獲取學員真實身分！
-          if (typeof liff !== 'undefined') {
-            try {
-              this.activeLiffId = liffId;
-              
-              // 使用 Promise.race 加上 15 秒 Timeout 防護，避免 LIFF ID 不符時死當
-              await Promise.race([
-                liff.init({ liffId: liffId }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('LIFF SDK 啟動逾時 (可能是 LIFF ID 錯誤或網路不佳)')), 15000))
-              ]);
-              
-              this.liffReady = true;
-              
-              if (liff.isLoggedIn()) {
-                // 取得 LINE 官方核發的 Access Token，用作後端 API 的安全身份驗證！
-                const accessToken = liff.getAccessToken();
-                if (accessToken) {
-                  this.devToken = accessToken;
-                  localStorage.setItem('gymos_dev_token', accessToken);
-                }
-                
-                // 取得學員 LINE Profile 資訊
-                const profile = await liff.getProfile();
-                this.sessionUser = {
-                  uid: profile.userId,
-                  role: 'member',
-                  name: profile.displayName
-                };
-              } else {
-                // 如果未在 LINE 登入，且是在手機端或 LINE 瀏覽器中，自動觸發 LINE 安全登入，確保抓到真實 ID！
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                if (liff.isInClient() || isMobile) {
-                  liff.login();
-                  return; // 正在進行 LINE 登入轉跳，停止加載後續 API
-                }
-              }
-            } catch (err) {
-              console.warn('⚡ LIFF SDK 初始化失敗（可能在非 LINE 瀏覽器環境），切換至 mock 模擬環境：', err);
-              const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-              if (isMobile) {
-                this.addToast(`LIFF 啟動出錯: ${err.message || err} (使用 ID: ${liffId})`, 'warning');
-              }
-            }
-          }
+                  // 🚀 頂級商業化：正式初始化 LINE LIFF SDK，解鎖手機 LINE 容器的安全性沙盒，並獲取學員真實身分！
+                  if (typeof liff !== 'undefined') {
+                    try {
+                      this.activeLiffId = liffId;
+                      
+                      // 判斷是否在 LINE App 內 (包括 LINE 內建瀏覽器或 LIFF 容器)
+                      const isInLine = /Line/i.test(navigator.userAgent) || (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+                      
+                      if (isInLine) {
+                        // 在 LINE 內部，需要同步等待以獲取身份 Token，但最多只等 3.5 秒，逾時則轉為背景初始化且不阻礙用戶
+                        await Promise.race([
+                          liff.init({ liffId: liffId }),
+                          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3500))
+                        ]);
+                        
+                        this.liffReady = true;
+                        
+                        if (liff.isLoggedIn()) {
+                          const accessToken = liff.getAccessToken();
+                          if (accessToken) {
+                            this.devToken = accessToken;
+                            localStorage.setItem('gymos_dev_token', accessToken);
+                          }
+                          const profile = await liff.getProfile();
+                          this.sessionUser = {
+                            uid: profile.userId,
+                            role: 'member',
+                            name: profile.displayName
+                          };
+                        } else {
+                          liff.login();
+                          return; // 正在進行 LINE 登入轉跳，停止加載後續 API
+                        }
+                      } else {
+                        // 在普通外部瀏覽器 (例如 Chrome、Safari、Edge 等)，採非同步背景初始化，絕對不阻塞首頁加載！
+                        liff.init({ liffId: liffId }).then(() => {
+                          this.liffReady = true;
+                          if (liff.isLoggedIn()) {
+                            const accessToken = liff.getAccessToken();
+                            if (accessToken) {
+                              this.devToken = accessToken;
+                              localStorage.setItem('gymos_dev_token', accessToken);
+                            }
+                          }
+                        }).catch(e => console.warn('Non-blocking LIFF init failed:', e));
+                      }
+                    } catch (err) {
+                      console.warn('⚡ LIFF SDK 初始化失敗或逾時，採模擬身份繼續載入：', err);
+                    }
+                  }
 
           // 4. 當連線設定與身份驗證都就緒後，再執行資料加載！
           try {

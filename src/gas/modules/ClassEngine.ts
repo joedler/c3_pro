@@ -620,8 +620,9 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
           const sessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
           let latestDate = new Date(cls.period_start);
           sessions.forEach(s => {
-            if (s.date) {
-              const d = new Date(s.date);
+            const rawDate = s.session_date || s.date;
+            if (rawDate) {
+              const d = new Date(rawDate);
               if (!isNaN(d.getTime()) && d.getTime() > latestDate.getTime()) {
                 latestDate = d;
               }
@@ -667,7 +668,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
               end_time: cls.end_time,
               status: 'open',
               calendar_event_id: calendarEventId,
-              notes: `[停課順延生成] 代替已停課時段: ${session.date}`
+              notes: `[停課順延生成] 代替已停課時段: ${session.session_date || session.date}`
             });
             Logger.log(`[停課順延] 已成功為班級 ${classId} 生成新的課堂：${dateStr} (${newSessionId})`);
           }

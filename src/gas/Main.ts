@@ -198,13 +198,17 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'admin.getSessions': () => {
         AuthService.requireRole(user, ['admin']);
         const sessions = SheetHelper.getRows<any>('Sessions');
+        const classes = SheetHelper.getRows<any>('Classes');
+        
         return sessions
           .filter(s => s.status !== 'cancelled')
           .map(s => {
+            const cls = classes.find(c => String(c.class_id).trim() === String(s.class_id).trim());
             let formattedDate = '';
             try {
-              if (s.date) {
-                const d = new Date(s.date);
+              const rawDate = s.session_date || s.date;
+              if (rawDate) {
+                const d = new Date(rawDate);
                 if (!isNaN(d.getTime())) {
                   formattedDate = d.toISOString().split('T')[0];
                 }
@@ -213,8 +217,8 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             return {
               sessionId: s.session_id,
               classId: s.class_id,
-              className: s.class_name,
-              date: formattedDate || String(s.date).substring(0, 10),
+              className: cls ? cls.class_name : '未知課程',
+              date: formattedDate || (s.session_date ? String(s.session_date).substring(0, 10) : (s.date ? String(s.date).substring(0, 10) : '未定日期')),
               startTime: s.start_time,
               endTime: s.end_time
             };
@@ -254,6 +258,8 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             className: c.class_name,
             classType: c.class_type,
             level: c.level,
+            coachLineUid: c.coach_line_uid,
+            roomId: c.room_id,
             coachName: coach ? coach.real_name : '未定教練',
             roomName: room ? room.room_name : '未定教室',
             maxCapacity: Number(c.max_capacity) || 0,
