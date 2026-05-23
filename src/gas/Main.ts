@@ -203,6 +203,10 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         seedClasses();
         return { message: '資料庫初始化與 17 班課程種子成功展開並同步至 Google Calendar！' };
       },
+      'admin.getSchedule': () => {
+        AuthService.requireRole(user, ['admin']);
+        return AdminService.getSchedule(data, user);
+      },
       'admin.getSessions': () => {
         AuthService.requireRole(user, ['admin']);
         const sessions = SheetHelper.getRows<any>('Sessions');

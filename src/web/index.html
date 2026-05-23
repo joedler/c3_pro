@@ -2190,7 +2190,7 @@
                 this.addToast('您尚未綁定學員檔案，請先進行綁定。', 'info');
                 this.currentMode = 'bind';
               }
-
+            }
           } catch (e) {
             console.error('Initialization failed', e);
           }
@@ -2589,7 +2589,7 @@
             events: async (info, successCallback, failureCallback) => {
               try {
                 // Fetch schedule dates from backend
-                const schedule = await this.apiCall('coach.getSchedule', { date: info.startStr.split('T')[0] });
+                const schedule = await this.apiCall('admin.getSchedule', { date: info.startStr.split('T')[0] });
                 
                 const events = schedule.map(s => {
                   // Map database status to nice colors
