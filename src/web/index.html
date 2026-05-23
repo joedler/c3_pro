@@ -312,6 +312,30 @@
                   </div>
                 </div>
 
+                <!-- Panel 1: 今日課程名冊 (正下方展開) -->
+                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard === 'todaySessions'" x-transition>
+                  <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏋️ 今日課程課堂明細統計</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <template x-for="s in adminDashboardStats.todaySessions" :key="s.sessionId">
+                        <div class="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2">
+                          <div class="flex justify-between items-start">
+                            <span class="text-xs font-bold text-white" x-text="s.className"></span>
+                            <span class="px-2 py-0.5 text-[9px] bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full font-bold" x-text="formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></span>
+                          </div>
+                          <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-800/40">
+                            <span x-text="'教練: ' + s.coachName"></span>
+                            <span class="font-bold text-emerald-400" x-text="'出席人數: ' + s.actualCount + ' 人'"></span>
+                          </div>
+                        </div>
+                      </template>
+                      <template x-if="adminDashboardStats.todaySessions.length === 0">
+                        <p class="text-xs text-slate-500 py-4 col-span-3 text-center">今日尚無安排上課之課堂。</p>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Card 2: 待繳學費人數 -->
                 <div @click="activeTab = 'ledger'" 
                      class="p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group">
@@ -345,6 +369,27 @@
                   </div>
                 </div>
 
+                <!-- Panel 3: 今日請假名單 (正下方展開) -->
+                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard === 'todayLeaves'" x-transition>
+                  <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 今日學員請假名冊摘要</h4>
+                    <div class="space-y-2">
+                      <template x-for="l in adminDashboardStats.todayLeaves" :key="l.leaveId">
+                        <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
+                          <div class="flex items-center gap-3">
+                            <span class="font-bold text-white" x-text="l.realName"></span>
+                            <span class="text-slate-400" x-text="'請假班級: ' + l.className"></span>
+                          </div>
+                          <span class="text-[11px] text-slate-500" x-text="'原因: ' + l.reason"></span>
+                        </div>
+                      </template>
+                      <template x-if="adminDashboardStats.todayLeaves.length === 0">
+                        <p class="text-xs text-slate-500 py-4 text-center">今日尚無學員請假。</p>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Card 4: 今日補課人數 -->
                 <div @click="expandedCard = (expandedCard === 'todayMakeups' ? '' : 'todayMakeups')" 
                      :class="expandedCard === 'todayMakeups' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/10'" 
@@ -362,8 +407,30 @@
                   </div>
                 </div>
 
+                <!-- Panel 4: 今日補課名單 (正下方展開) -->
+                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard === 'todayMakeups'" x-transition>
+                  <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 今日跨班補課學員名冊</h4>
+                    <div class="space-y-2">
+                      <template x-for="m in adminDashboardStats.todayMakeups" :key="m.makeupId">
+                        <div class="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800 rounded-xl text-xs">
+                          <div class="flex items-center gap-3">
+                            <span class="font-bold text-white" x-text="m.realName"></span>
+                            <span class="text-emerald-400 font-medium" x-text="'目標補課班級: ' + m.className"></span>
+                          </div>
+                          <span class="px-2 py-0.5 text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-bold">補課鎖定</span>
+                        </div>
+                      </template>
+                      <template x-if="adminDashboardStats.todayMakeups.length === 0">
+                        <p class="text-xs text-slate-500 py-4 text-center">今日尚無跨班補課學員。</p>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+                </div>
+
                 <!-- Expanded Panels Container (Spans full width) -->
-                <div class="md:col-span-2 lg:col-span-4" x-show="expandedCard" x-transition>
+                <div class="hidden" x-show="false">
                   
                   <!-- Today's Sessions Expanded List -->
                   <div x-show="expandedCard === 'todaySessions'" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3" x-transition>
@@ -465,7 +532,7 @@
                               <span class="text-[10px] text-slate-500 block" x-text="'共 ' + c.periodWeeks + ' 週 | ' + c.dayOfWeek"></span>
                             </td>
                             <td class="px-6 py-4">
-                              <span :class="c.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.status === 'terminated' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-500 border-slate-700')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="c.status === 'active' ? '進行中' : (c.status === 'terminated' ? '已終止' : '已停課')"></span>
+                              <span :class="(!c.status || c.status === 'active' || c.status === '進行中' || c.status === '已開班') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.status === 'terminated' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-500 border-slate-700')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="(!c.status || c.status === 'active' || c.status === '進行中' || c.status === '已開班') ? '進行中' : (c.status === 'terminated' ? '已終止' : '已停課')"></span>
                             </td>
                             <td class="px-6 py-4 text-right space-x-2">
                               <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
@@ -482,11 +549,8 @@
                   </div>
                 </div>
               </div>
-
             </div>
-          </div>
 
-            <!-- Classes & Renewal Tab (Upgraded v3.0) -->
             <div x-show="activeTab === 'classes'" class="space-y-6" x-transition>
               
               <!-- Block 1: 調整課程 (臨時課堂調整中心) -->
@@ -800,6 +864,9 @@
                 </template>
               </div>
             </div>
+
+          </div>
+        </div>
 
             <!-- Rollover & Renewal Glassmorphic Modal -->
             <div x-show="showRenewModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
