@@ -99,7 +99,7 @@ class AdminService {
   }
 
   /**
-   * 發佈系統公告 (F-A02)
+   * 發佈系統公告 (F-A02) - 支援雙軌制公告與群發
    */
   public static createAnnouncement(
     data: {
@@ -108,10 +108,12 @@ class AdminService {
       target?: string; // e.g. "all", "coach", "class:CLS-2025-001"
       expireDays?: number;
       pinned?: boolean;
+      type?: string;   // e.g. "info", "alert"
+      sendLine?: boolean;
     },
     user: UserSession
   ): Record<string, any> {
-    const { title, content, target = 'all', expireDays = 30, pinned = false } = data;
+    const { title, content, target = 'all', expireDays = 30, pinned = false, type = 'info', sendLine = false } = data;
 
     if (!title || !content) {
       throw new Error('請輸入公告標題與內容。');
@@ -126,6 +128,8 @@ class AdminService {
       title: title,
       content: content,
       target: target,
+      type: type,
+      send_line: sendLine,
       publish_time: now,
       expire_time: expireTime,
       created_by: user.uid,
@@ -134,6 +138,77 @@ class AdminService {
 
     SheetHelper.addRow('Announcements', newAnnouncement);
     Logger.log(`[管理員公告] 成功發布公告：${title} (${announcementId})`);
+
+    // 🎯 雙軌制 LINE 群發：如果發布時勾選了 sendLine，且非模擬環境
+    if (sendLine) {
+      try {
+        const liffId = Config.get('LIFF_ID');
+        const flexBubble = {
+          type: 'bubble',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: '📢 健身房重要公告通知',
+                color: '#ffffff',
+                weight: 'bold',
+                size: 'md'
+              }
+            ],
+            backgroundColor: type === 'alert' ? '#ef4444' : '#8b5cf6'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'md',
+            contents: [
+              {
+                type: 'text',
+                text: title,
+                weight: 'bold',
+                size: 'sm',
+                color: '#1e293b'
+              },
+              {
+                type: 'text',
+                text: content,
+                wrap: true,
+                size: 'xs',
+                color: '#475569'
+              }
+            ]
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '📊 開啟課表查看詳情',
+                  uri: `https://liff.line.me/${liffId}`
+                },
+                style: 'primary',
+                color: type === 'alert' ? '#ef4444' : '#8b5cf6'
+              }
+            ]
+          }
+        };
+
+        LineHandler.broadcastMessage([
+          {
+            type: 'flex',
+            altText: `📢 健身房公告: ${title}`,
+            contents: flexBubble
+          }
+        ]);
+      } catch (err) {
+        Logger.log(`[公告群發 LINE 失敗] ${err}`);
+      }
+    }
 
     return {
       success: true,
@@ -151,5 +226,80 @@ class AdminService {
     if (hour < 12) return 'morning';
     if (hour < 17) return 'afternoon';
     return 'evening';
+  }
+
+  /**
+   * 取得今日營運摘要統計 (F-A03)
+   */
+  public static getDashboardStats(): Record<string, any> {
+    const todayStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+    
+    // 1. 今日課程
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    const classes = SheetHelper.getRows<any>('Classes');
+    const members = SheetHelper.getRows<any>('Members');
+    
+    const todaySessions = allSessions
+      .filter(s => {
+        const sDateStr = String(s.date || s.session_date).substring(0, 10);
+        return sDateStr === todayStr && s.status !== 'cancelled';
+      })
+      .map(s => {
+        const cls = classes.find(c => c.class_id === s.class_id);
+        const coach = cls ? SheetHelper.getRow<any>('Staff', 'line_uid', cls.coach_line_uid) : null;
+        return {
+          sessionId: s.session_id,
+          className: cls ? cls.class_name : '未知課程',
+          startTime: s.start_time,
+          endTime: s.end_time,
+          coachName: coach ? coach.real_name : '未知教練',
+          actualCount: Number(s.actual_count) || 0
+        };
+      });
+
+    // 2. 今日請假名單
+    const leaves = SheetHelper.getRows<any>('Leave_Requests').filter(l => {
+      const s = allSessions.find(sess => sess.session_id === l.session_id);
+      if (!s) return false;
+      const sDateStr = String(s.date || s.session_date).substring(0, 10);
+      return sDateStr === todayStr;
+    });
+
+    const todayLeaves = leaves.map(l => {
+      const member = members.find(m => m.member_id === l.member_id);
+      const s = allSessions.find(sess => sess.session_id === l.session_id);
+      const cls = s ? classes.find(c => c.class_id === s.class_id) : null;
+      return {
+        leaveId: l.leave_id,
+        realName: member ? member.real_name : '未知學員',
+        className: cls ? cls.class_name : '未知課程',
+        reason: l.reason || '無備註'
+      };
+    });
+
+    // 3. 今日補課名單
+    const makeups = SheetHelper.getRows<any>('Makeup_Requests').filter(m => {
+      const s = allSessions.find(sess => sess.session_id === m.target_session_id);
+      if (!s) return false;
+      const sDateStr = String(s.date || s.session_date).substring(0, 10);
+      return sDateStr === todayStr;
+    });
+
+    const todayMakeups = makeups.map(mk => {
+      const member = members.find(m => m.member_id === mk.member_id);
+      const s = allSessions.find(sess => sess.session_id === mk.target_session_id);
+      const cls = s ? classes.find(c => c.class_id === s.class_id) : null;
+      return {
+        makeupId: mk.makeup_id,
+        realName: member ? member.real_name : '未知學員',
+        className: cls ? cls.class_name : '未知課程'
+      };
+    });
+
+    return {
+      todaySessions,
+      todayLeaves,
+      todayMakeups
+    };
   }
 }

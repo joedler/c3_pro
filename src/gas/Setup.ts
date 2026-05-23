@@ -37,7 +37,9 @@ function setupDatabase(): void {
     ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)'],
     ['GOOGLE_OAUTH_CLIENT_ID', '', 'Google Calendar API：OAuth Client ID (SaaS 模式)'],
     ['GOOGLE_OAUTH_CLIENT_SECRET', '', 'Google Calendar API：OAuth Client Secret (SaaS 模式)'],
-    ['GOOGLE_OAUTH_REFRESH_TOKEN', '', 'Google Calendar API：自動連結儲存的 Refresh Token (系統自動產生)']
+    ['GOOGLE_OAUTH_REFRESH_TOKEN', '', 'Google Calendar API：自動連結儲存的 Refresh Token (系統自動產生)'],
+    ['BRAND_TITLE', 'GymOS', 'SaaS 動態更換網頁品牌標題'],
+    ['BRAND_LOGO_URL', '', 'SaaS 動態更換網頁品牌 Logo 網址 (留空則使用預設閃電 SVG 圖標)']
   ];
 
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表

@@ -123,6 +123,8 @@ class SheetHelper {
       title: '標題',
       content: '內容',
       target: '發送對象',
+      type: '公告類型',
+      send_line: '同步發送LINE',
       publish_time: '發布時間',
       expire_time: '失效時間',
       created_by: '建立者',

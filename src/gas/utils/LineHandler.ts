@@ -917,6 +917,35 @@ class LineHandler {
     Logger.log(`[LINE Push回傳] To: ${userId}, Code: ${response.getResponseCode()}, Body: ${response.getContentText()}`);
   }
 
+  /**
+   * 向所有加好友之用戶群發廣播訊息 (Broadcast Message API)
+   */
+  public static broadcastMessage(messages: any[]): void {
+    const token = Config.get('LINE_CHANNEL_ACCESS_TOKEN');
+    if (!token || token === 'YOUR_LINE_TOKEN') {
+      Logger.log('[LINE Broadcast] 尚未配置 LINE_CHANNEL_ACCESS_TOKEN，跳過廣播。');
+      return;
+    }
+    
+    const url = 'https://api.line.me/v2/bot/message/broadcast';
+    const payload = {
+      messages: messages
+    };
+
+    const options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    Logger.log(`[LINE Broadcast回傳] Code: ${response.getResponseCode()}, Body: ${response.getContentText()}`);
+  }
+
   private static safeFormatSessionDate(dateVal: any): string {
     if (!dateVal) return '';
     if (dateVal instanceof Date) {

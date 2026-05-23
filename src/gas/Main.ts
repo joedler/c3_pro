@@ -755,6 +755,23 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         AuthService.requireRole(user, ['admin']);
         setupRichMenus();
         return { message: '圖文選單重新建立與圖片同步成功' };
+      },
+      'admin.getBrandConfig': () => {
+        return {
+          brandTitle: Config.get('BRAND_TITLE', 'GymOS'),
+          brandLogoUrl: Config.get('BRAND_LOGO_URL', '')
+        };
+      },
+      'admin.publishAnnouncement': () => {
+        AuthService.requireRole(user, ['admin']);
+        return AdminService.createAnnouncement(data, user);
+      },
+      'admin.getAnnouncements': () => {
+        return PublicService.getActiveAnnouncements();
+      },
+      'admin.getDashboardStats': () => {
+        AuthService.requireRole(user, ['admin']);
+        return AdminService.getDashboardStats();
       }
     };
 
