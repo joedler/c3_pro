@@ -253,6 +253,26 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             }
           } catch(e) {}
           
+          const formatTimeHHMM = (val: any): string => {
+            if (!val) return '';
+            try {
+              const str = String(val).trim();
+              if (str.includes('T')) {
+                const d = new Date(str);
+                if (!isNaN(d.getTime())) {
+                  const hours = String(d.getHours()).padStart(2, '0');
+                  const minutes = String(d.getMinutes()).padStart(2, '0');
+                  return `${hours}:${minutes}`;
+                }
+              }
+              const match = str.match(/(\d{2}):(\d{2})/);
+              if (match) {
+                return `${match[1]}:${match[2]}`;
+              }
+            } catch(e) {}
+            return String(val).substring(0, 5);
+          };
+
           return {
             classId: c.class_id,
             className: c.class_name,
@@ -265,8 +285,8 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             maxCapacity: Number(c.max_capacity) || 0,
             enrolled: enrolledCount,
             dayOfWeek: c.day_of_week,
-            startTime: c.start_time,
-            endTime: c.end_time,
+            startTime: formatTimeHHMM(c.start_time),
+            endTime: formatTimeHHMM(c.end_time),
             periodStart: formattedStartDate || String(c.period_start).substring(0, 10),
             periodWeeks: Number(c.period_weeks) || 0,
             status: c.status

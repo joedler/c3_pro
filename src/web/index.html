@@ -257,6 +257,7 @@
             <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
               <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 w-full md:w-auto space-x-1 items-center">
                 <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">📊 首頁摘要</button>
+                <button @click="activeTab = 'active_classes'" :class="activeTab === 'active_classes' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">📋 已開辦課程</button>
                 <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">🏫 班級經營</button>
                 <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">💰 繳費確認</button>
                 
@@ -302,20 +303,20 @@
 
               <!-- 4-Column Operations Summary Cards -->
               <div x-data="{ expandedCard: 'todaySessions' }">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <!-- Card 1: 今日上課統計 -->
                   <div @click="expandedCard = (expandedCard === 'todaySessions' ? '' : 'todaySessions')" 
                        :class="expandedCard === 'todaySessions' ? 'border-brand-500/50 bg-brand-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                       class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
+                       class="p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-xs font-bold text-slate-400">🏋️ 今日課程數</span>
-                        <h4 class="text-3xl font-black text-white mt-1.5" x-text="adminDashboardStats.todaySessions.length + ' 堂'">0 堂</h4>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">🏋️ 今日課程</span>
+                        <h4 class="text-xl sm:text-3xl font-black text-white mt-1" x-text="adminDashboardStats.todaySessions.length + ' 堂'">0 堂</h4>
                       </div>
-                      <div class="w-12 h-12 rounded-xl bg-brand-500/10 flex items-center justify-center text-xl text-brand-400 group-hover:scale-110 transition-all">🏋️</div>
+                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-brand-500/10 flex items-center justify-center text-base sm:text-xl text-brand-400 group-hover:scale-110 transition-all">🏋️</div>
                     </div>
-                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                      <span>點擊查看今日課程明細</span>
+                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                      <span>今日明細</span>
                       <span x-text="expandedCard === 'todaySessions' ? '▲' : '▼'">▼</span>
                     </div>
                   </div>
@@ -323,16 +324,16 @@
                   <!-- Card 2: 今日請假人數 -->
                   <div @click="expandedCard = (expandedCard === 'todayLeaves' ? '' : 'todayLeaves')" 
                        :class="expandedCard === 'todayLeaves' ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                       class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
+                       class="p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-xs font-bold text-slate-400">🏖️ 今日請假數</span>
-                        <h4 class="text-3xl font-black text-indigo-400 mt-1.5" x-text="adminDashboardStats.todayLeaves.length + ' 人'">0 人</h4>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">🏖️ 今日請假</span>
+                        <h4 class="text-xl sm:text-3xl font-black text-indigo-400 mt-1" x-text="adminDashboardStats.todayLeaves.length + ' 人'">0 人</h4>
                       </div>
-                      <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl text-indigo-400 group-hover:scale-110 transition-all">🏖️</div>
+                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-base sm:text-xl text-indigo-400 group-hover:scale-110 transition-all">🏖️</div>
                     </div>
-                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                      <span>點擊展開請假學員名單</span>
+                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                      <span>請假名單</span>
                       <span x-text="expandedCard === 'todayLeaves' ? '▲' : '▼'">▼</span>
                     </div>
                   </div>
@@ -340,32 +341,32 @@
                   <!-- Card 3: 今日補課人數 -->
                   <div @click="expandedCard = (expandedCard === 'todayMakeups' ? '' : 'todayMakeups')" 
                        :class="expandedCard === 'todayMakeups' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                       class="p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group">
+                       class="p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-xs font-bold text-slate-400">🔄 今日補課數</span>
-                        <h4 class="text-3xl font-black text-emerald-400 mt-1.5" x-text="adminDashboardStats.todayMakeups.length + ' 人'">0 人</h4>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">🔄 今日補課</span>
+                        <h4 class="text-xl sm:text-3xl font-black text-emerald-400 mt-1" x-text="adminDashboardStats.todayMakeups.length + ' 人'">0 人</h4>
                       </div>
-                      <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl text-emerald-400 group-hover:scale-110 transition-all">🔄</div>
+                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-base sm:text-xl text-emerald-400 group-hover:scale-110 transition-all">🔄</div>
                     </div>
-                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                      <span>點擊展開補課學員名單</span>
+                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                      <span>補課名單</span>
                       <span x-text="expandedCard === 'todayMakeups' ? '▲' : '▼'">▼</span>
                     </div>
                   </div>
 
                   <!-- Card 4: 待繳學費人數 (Moved to last column) -->
                   <div @click="activeTab = 'ledger'" 
-                       class="p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group">
+                       class="p-3.5 sm:p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-xs font-bold text-slate-400">💰 待繳費學員</span>
-                        <h4 class="text-3xl font-black text-amber-400 mt-1.5" x-text="pendingPayments.length + ' 人'">0 人</h4>
+                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">💰 待繳學費</span>
+                        <h4 class="text-xl sm:text-3xl font-black text-amber-400 mt-1" x-text="pendingPayments.length + ' 人'">0 人</h4>
                       </div>
-                      <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl text-amber-400 group-hover:scale-110 transition-all">💰</div>
+                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-base sm:text-xl text-amber-400 group-hover:scale-110 transition-all">💰</div>
                     </div>
-                    <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
-                      <span>點擊前往學費確認中心</span>
+                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                      <span>前往確認</span>
                       <span>➜</span>
                     </div>
                   </div>
@@ -440,10 +441,13 @@
                   </div>
                 </div>
               </div>
+            </div>
 
-              <!-- 已開辦課程 (Relocated to Dashboard Bottom) -->
-              <div class="space-y-3 mt-6">
-                <h3 class="text-white font-bold text-sm flex items-center gap-2">🏫 已開辦課程</h3>
+            <!-- Active Classes Tab (📋 已開辦課程) -->
+            <div x-show="activeTab === 'active_classes'" class="space-y-6" x-transition>
+              <!-- 已開辦課程 -->
+              <div class="space-y-3">
+                <h3 class="text-white font-bold text-sm flex items-center gap-2">📋 已開辦課程</h3>
                 <div class="bg-slate-950/40 border border-slate-800 rounded-2xl overflow-hidden">
                   <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
@@ -662,7 +666,7 @@
                     " class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
                       <option value="">-- 請選擇現有課程以快速填寫 --</option>
                       <template x-for="c in adminClasses" :key="c.classId">
-                        <option :value="c.classId" x-text="c.className + ' (' + c.dayOfWeek + ' ' + c.startTime + ')'"></option>
+                        <option :value="c.classId" x-text="c.className + ' (' + c.dayOfWeek + ' ' + formatTime(c.startTime) + ')'"></option>
                       </template>
                     </select>
                   </div>
@@ -673,7 +677,13 @@
                   </div>
                   <div>
                     <label class="block text-xs font-bold text-slate-400 mb-1">班級類型</label>
-                    <select x-model="classForm.classType" @change="if (classForm.classType === 'group_2x') { classForm.periodWeeks = 4 }" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                    <select x-model="classForm.classType" @change="
+                      if (classForm.classType === 'group_2x') { 
+                        classForm.periodWeeks = 4;
+                      } else if (classForm.classType === 'group_1x') { 
+                        classForm.periodWeeks = 12;
+                      }
+                    " class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
                       <option value="group_1x">團體課 (一週一堂)</option>
                       <option value="group_2x">團體課 (一週兩堂)</option>
                       <option value="personal">一對一私人課</option>
@@ -914,55 +924,51 @@
               <div id="calendar" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-4"></div>
             </div>
           </div>
-        </div>
 
-        <!-- Announcement Modal -->
-        <div x-show="showAnnouncementModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
-          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📢 發布系統最新公告</h3>
-              <button @click="showAnnouncementModal = false" class="text-slate-400 hover:text-white">&times;</button>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1.5">公告標題</label>
-                <input type="text" x-model="announcementForm.title" placeholder="例如: 雙十連假營運時段公告" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+          <!-- Announcement Modal -->
+          <div x-show="showAnnouncementModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-4">
+              <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📢 發布系統最新公告</h3>
+                <button @click="showAnnouncementModal = false" class="text-slate-400 hover:text-white">&times;</button>
               </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1.5">公告性質等級</label>
-                <select x-model="announcementForm.type" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
-                  <option value="info">💬 普通公告 (藍標)</option>
-                  <option value="alert">🚨 重要紧急公告 (紅標/微動畫)</option>
-                </select>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-400 mb-1.5">公告標題</label>
+                  <input type="text" x-model="announcementForm.title" placeholder="例如: 雙十連假營運時段公告" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-400 mb-1.5">公告性質等級</label>
+                  <select x-model="announcementForm.type" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+                    <option value="info">💬 普通公告 (藍標)</option>
+                    <option value="alert">🚨 重要紧急公告 (紅標/微動畫)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-400 mb-1.5">公告細節內容</label>
+                  <textarea x-model="announcementForm.content" placeholder="請在此填寫公告要傳達的詳細內容..." rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 resize-none"></textarea>
+                </div>
+                
+                <!-- LINE Synchronous Push Alert & Checkbox -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                  <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" x-model="announcementForm.sendLine" class="rounded text-brand-600 focus:ring-brand-500 border-slate-800 bg-slate-900">
+                    <span class="text-xs font-bold text-white">🔄 同步推播至學員 LINE 聊天室</span>
+                  </label>
+                  <p class="text-[10px] text-amber-500 leading-relaxed font-semibold">
+                    ⚠️ 提示：網頁公告發布永久免費，但 LINE 同步推送會使用官方帳號的免費群發訊息額度，請謹慎使用以防超額收費！
+                  </p>
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 mb-1.5">公告細節內容</label>
-                <textarea x-model="announcementForm.content" placeholder="請在此填寫公告要傳達的詳細內容..." rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 resize-none"></textarea>
+              <div class="flex gap-3 pt-3 border-t border-slate-800">
+                <button @click="submitPublishAnnouncement()" class="flex-grow bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all shadow-lg active:scale-95">確認並公開發布</button>
+                <button @click="showAnnouncementModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-5 py-3 text-xs font-bold transition-all">取消</button>
               </div>
-              
-              <!-- LINE Synchronous Push Alert & Checkbox -->
-              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
-                <label class="flex items-center gap-2 cursor-pointer select-none">
-                  <input type="checkbox" x-model="announcementForm.sendLine" class="rounded text-brand-600 focus:ring-brand-500 border-slate-800 bg-slate-900">
-                  <span class="text-xs font-bold text-white">🔄 同步推播至學員 LINE 聊天室</span>
-                </label>
-                <p class="text-[10px] text-amber-500 leading-relaxed font-semibold">
-                  ⚠️ 提示：網頁公告發布永久免費，但 LINE 同步推送會使用官方帳號的免費群發訊息額度，請謹慎使用以防超額收費！
-                </p>
-              </div>
-            </div>
-            <div class="flex gap-3 pt-3 border-t border-slate-800">
-              <button @click="submitPublishAnnouncement()" class="flex-grow bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all shadow-lg active:scale-95">確認並公開發布</button>
-              <button @click="showAnnouncementModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-5 py-3 text-xs font-bold transition-all">取消</button>
             </div>
           </div>
+
         </div>
-
-
-
-
-      </div>
-    </template>
+      </template>
 
     <!-- ================= STUDENT BINDING PORTAL (Spec v2.0 4-Step Wizard) ================= -->
     <template x-if="currentMode === 'bind'">
