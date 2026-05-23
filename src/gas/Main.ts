@@ -187,18 +187,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       },
 
       // --- 教練模組 ---
-      'coach.getSchedule': () => {
-        AuthService.requireRole(user, ['coach']);
-        return CoachService.getSchedule(data, user);
-      },
-      'coach.checkin': () => {
-        AuthService.requireRole(user, ['coach']);
-        return CoachService.checkin(data, user);
-      },
-      'coach.adjustSession': () => {
-        AuthService.requireRole(user, ['coach']);
-        return CoachService.adjustSession(data, user);
-      },
+
 
       // --- 管理員模組 ---
       'admin.resetDatabase': () => {

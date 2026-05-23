@@ -1,0 +1,21 @@
+# GymOS 後台視覺流線化與雙軌制公告系統執行清單
+
+- [x] **1. 後端 (GAS) 資料庫與 API 擴充**
+  - [x] 1.1 `SheetHelper.ts` 中確認 `Announcements` 欄位映射與中文對照
+  - [x] 1.2 `Setup.ts` 中確保 `Announcements` 系統公告分頁建立與初始化
+  - [x] 1.3 `Main.ts` 實作 `admin.getBrandConfig` 獲取自訂 Title & Logo 網址
+  - [x] 1.4 `Main.ts` 實作 `admin.publishAnnouncement` 雙軌制發布 (試算表儲存 + LINE 群發)
+  - [x] 1.5 `Main.ts` 實作 `admin.getAnnouncements` 全域公告加載 API
+- [x] **2. 前端 (HTML/CSS) 視覺與 SaaS 品牌重構**
+  - [x] 2.1 CSS 變數定義，奠定一鍵切換亮色/暗色主題基礎
+  - [x] 2.2 全寬流線型 (Fluid) 去框化版面重構，手機端貼邊防表格折行
+  - [x] 2.3 頂部導航列重整：移非管理員 sandbox 測試標籤，高危按鈕收納至右上角
+  - [x] 2.4 左上角品牌資訊動態化：綁定 `BRAND_TITLE` & `BRAND_LOGO_URL` 載入
+- [x] **3. 核心分頁功能重整**
+  - [x] 3.1 【📊 首頁摘要】：實作課程/待繳人數/請假/補課名單就地展開卡片，整合公告展示列與發布 Modal
+  - [x] 3.2 【🏫 班級經營】：去噪極簡化
+  - [x] 3.3 【💰 繳費確認】：移除所有「核點」字眼，優化批量勾選已繳費操作
+  - [x] 3.4 【📅 課表看板】：內嵌 Google 日曆 iframe，套用 CSS 暗色反轉，整合外跳按鈕
+- [/] **4. 驗證與部署**
+  - [x] 4.1 本地 TypeScript 型別安全編譯驗證 (`npx tsc --noEmit`)
+  - [/] 4.2 clasp push 雲端部署與最後系統測試
