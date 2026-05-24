@@ -129,3 +129,17 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 ### 8.5 測試身分處理原則
 
 正式 UI 不提供「測試學員 / 測試教職」快速切換欄位。測試身分僅能在受控的開發或驗收流程中使用，不能成為正式營運畫面的一般功能。LINE Rich Menu 的管理員/學員切換必須依後端角色與 LINE 真實身分決定，而不是單純由前端測試選單切換。
+
+---
+
+## 9. 正式前端部署與 LIFF Endpoint 規範
+
+正式環境採用「GitHub Pages 前端 + GAS API 後端」雙端分離：
+
+- GitHub Pages 負責載入 Web/LIFF 前端：`https://joedler.github.io/c3_pro/`
+- GAS Web App 僅作為後端 API 與 LINE Webhook 執行引擎。
+- LINE Developers 的 LIFF Endpoint URL 必須設為 GitHub Pages 前端，不應設為 GAS Web App URL。
+
+此設計可避免 Google Apps Script HTML 提示列，並減少前端頁面載入時受到 GAS Web App 冷啟動影響。LINE Rich Menu 與 Flex Message 內的連結仍使用 `https://liff.line.me/LIFF_ID?...`，由 LINE LIFF 依 Endpoint 自動導向 GitHub Pages。
+
+若未來切換自訂網域，只需將 LIFF Endpoint 改為新的前端網址，並確認 GitHub Pages 或前端主機仍能保留 `?mode=admin`、`?mode=leave`、`?mode=makeup` 等查詢參數。

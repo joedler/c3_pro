@@ -28,7 +28,29 @@
 
 ---
 
-## 🗺️ 步驟三：設計並建立三個角色的圖文選單 (Rich Menu)
+## 🌐 步驟三：設定 LIFF Endpoint 為 GitHub Pages 前端
+
+正式環境採用「**GitHub Pages 前端 + GAS API 後端**」：
+
+- 前端網址：`https://joedler.github.io/c3_pro/`
+- 後端 API：Apps Script Web App URL
+- LINE 圖文選單與 Flex Message 仍使用：`https://liff.line.me/YOUR_LIFF_ID?...`
+
+請到 **LINE Developers Console → LIFF → 目標 LIFF App**，將 **Endpoint URL** 設為：
+
+```text
+https://joedler.github.io/c3_pro/
+```
+
+注意事項：
+
+- 不要把 Endpoint URL 設成 GAS Web App URL，否則會出現 Google Apps Script 提示列，且前端載入較慢。
+- Rich Menu 的網址仍維持 `https://liff.line.me/YOUR_LIFF_ID?mode=...`，LINE 會依照 LIFF Endpoint 自動帶到 GitHub Pages。
+- 修改 Endpoint 後，請重新從 LINE 圖文選單開啟測試，不要只用舊瀏覽器分頁重整。
+
+---
+
+## 🗺️ 步驟四：設計並建立三個角色的圖文選單 (Rich Menu)
 
 為了讓學員、教練、管理員在綁定後能動態切換專屬功能選單，您需要在 LINE Developers 後台（或 LINE 官方帳號管理後台）建立以下三組圖文選單。
 
@@ -58,7 +80,7 @@
 
 ---
 
-## 🚀 步驟四：取得選單 ID 並回填試算表
+## 🚀 步驟五：取得選單 ID 並回填試算表
 
 1. 建立完上述三組選單後，您會獲得三組 Rich Menu ID（格式如 `richmenu-xxxxxxxxxxxx`）。
 2. 請將這三組 ID 回填至試算表 **「系統設定 (Config)」** 對應的格子：
