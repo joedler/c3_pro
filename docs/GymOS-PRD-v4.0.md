@@ -143,3 +143,65 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 此設計可避免 Google Apps Script HTML 提示列，並減少前端頁面載入時受到 GAS Web App 冷啟動影響。LINE Rich Menu 與 Flex Message 內的連結仍使用 `https://liff.line.me/LIFF_ID?...`，由 LINE LIFF 依 Endpoint 自動導向 GitHub Pages。
 
 若未來切換自訂網域，只需將 LIFF Endpoint 改為新的前端網址，並確認 GitHub Pages 或前端主機仍能保留 `?mode=admin`、`?mode=leave`、`?mode=makeup` 等查詢參數。
+
+---
+
+## 10. 前端與 API 效能優化紀錄
+
+### 10.1 管理端首頁載入優化
+
+管理端首頁原本會連續呼叫多支 API，包含課堂、課程、待繳費、首頁統計、公告、表單中繼資料、系統設定與品牌設定。此設計在 GAS 環境會造成多次 HTTP 往返、多次 token 驗證與多次 Google Sheets 讀取。
+
+已完成優化：
+
+- 新增 `admin.bootstrap`，將管理端首頁所需資料合併為單一 API。
+- 後端在同一次執行中讀取 Sheets 並組裝資料，減少重複讀表。
+- 品牌設定、公告、首頁統計、教練/教室中繼資料與推播設定一併回傳。
+- 管理端實測由約 35 秒降至約 9 秒。
+
+### 10.2 全域背景維護節流
+
+原本每次前端 API 呼叫都會觸發自動結課與自動續期檢查，導致首頁一次載入多支 API 時重複執行背景任務。
+
+已完成優化：
+
+- 在 GAS `doPost` 入口加入 `runBackgroundMaintenanceIfDue()`。
+- 透過 `CacheService` 將背景維護節流為 10 分鐘內最多執行一次。
+- 透過 `LockService` 避免多人同時開頁時重複觸發。
+- 此優化同時套用於管理端、學員端與其他 API 入口。
+
+### 10.3 學員端首頁載入優化
+
+學員端原本雖然 API 數量較少，但仍會分別載入公告、學員資料與品牌設定。後續確認主要可優化項為重複讀取學員首頁資料。
+
+已完成優化：
+
+- 新增 `member.bootstrap`，將公告、學員首頁資料、未來課堂、請假/補課摘要與品牌設定合併回傳。
+- 移除學員端額外呼叫 `admin.getBrandConfig` 的流程。
+- 對 `member.bootstrap` 加入 30 秒短快取，快取 key 依 LINE UID 區分。
+- 綁定、加選、請假、補課成功後會清除該學員 bootstrap 快取。
+- 學員端實測由約 13 秒降至約 5 秒多。
+
+### 10.4 前端靜態資源優化
+
+正式前端已從瀏覽器端 Tailwind CDN 即時編譯，改為本機建置後的靜態 CSS：
+
+- 新增 `tailwind.config.js`。
+- 新增 `src/web/input.css`。
+- 新增 `src/web/assets/app.css`。
+- `package.json` 新增 `npm run build:css`。
+- `deploy.ps1` 部署前會先執行 Tailwind CSS build。
+- 前端不再載入 `https://cdn.tailwindcss.com`。
+- Google Fonts 已移除，改用系統字體堆疊，減少外部資源依賴。
+
+### 10.5 診斷計時保留策略
+
+目前前端保留 console 分段計時，僅供開發與驗收期間觀察，不顯示於使用者畫面。
+
+保留的 console 訊息：
+
+- `[GymOS frontend perf]`：前端初始化、LIFF 初始化、資料載入與 appReady 分段計時。
+- `[GymOS API perf]`：每支 API 的前端往返耗時。
+- `[GymOS LIFF background perf]`：非 LINE 環境下的背景 LIFF 初始化耗時。
+
+正式交付前若客戶不需觀察效能，可移除或以設定旗標關閉這些 console 訊息。
