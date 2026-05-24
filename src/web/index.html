@@ -2378,16 +2378,18 @@
             if (!this.gasUrl) {
               this.showConfig = true;
             } else {
-              // 載入 SaaS 品牌自訂 Title & Logo
-              try {
-                const brandConfig = await this.apiCall('admin.getBrandConfig');
-                if (brandConfig) {
-                  this.brandTitle = brandConfig.brandTitle || 'GymOS';
-                  this.brandLogoUrl = brandConfig.brandLogoUrl || '';
-                  document.title = this.brandTitle + ' — 智慧健身房管理系統';
+              // 管理端品牌設定會隨 admin.bootstrap 一次載入，避免首頁多打一支 API。
+              if (!isAdminRoute) {
+                try {
+                  const brandConfig = await this.apiCall('admin.getBrandConfig');
+                  if (brandConfig) {
+                    this.brandTitle = brandConfig.brandTitle || 'GymOS';
+                    this.brandLogoUrl = brandConfig.brandLogoUrl || '';
+                    document.title = this.brandTitle + ' — 智慧健身房管理系統';
+                  }
+                } catch(e) {
+                  console.warn('⚡ 無法載入品牌自訂配置：', e);
                 }
-              } catch(e) {
-                console.warn('⚡ 無法載入品牌自訂配置：', e);
               }
 
               // 統一路由決策：全部強制導向 profile 首頁，不再自動展開任何頁籤
@@ -2457,37 +2459,20 @@
         async loadInitialData() {
           try {
             if (this.currentMode === 'admin') {
-              this.adminSessions = await this.apiCall('admin.getSessions');
-              this.adminClasses = await this.apiCall('admin.getClasses');
-              this.pendingPayments = await this.apiCall('admin.getPendingPayments');
-              
-              // 取得今日統計與最新公告
-              try {
-                this.adminDashboardStats = await this.apiCall('admin.getDashboardStats');
-              } catch(e) {
-                console.warn('⚡ 無法載入今日統計：', e);
-              }
-              try {
-                this.announcements = await this.apiCall('admin.getAnnouncements');
-              } catch(e) {
-                console.warn('⚡ 無法載入最新公告：', e);
-              }
-              
-              try {
-                const meta = await this.apiCall('admin.getFormMetaData');
-                this.adminRooms = meta.rooms || [];
-                this.adminCoaches = meta.coaches || [];
-              } catch(e) {
-                console.warn('⚡ 無法載入表單中繼資料：', e);
-              }
-
-              try {
-                const configRes = await this.apiCall('admin.getSystemConfig', { key: 'LINE_AUTO_PUSH_RENEW' });
-                this.lineAutoPushRenew = configRes.value !== 'false';
-                localStorage.setItem('gymos_line_auto_push_renew', String(this.lineAutoPushRenew));
-              } catch(e) {
-                console.warn('⚡ 無法載入 LINE 續期推播設定：', e);
-              }
+              const bootstrap = await this.apiCall('admin.bootstrap');
+              const brandConfig = bootstrap.brandConfig || {};
+              this.brandTitle = brandConfig.brandTitle || 'GymOS';
+              this.brandLogoUrl = brandConfig.brandLogoUrl || '';
+              document.title = this.brandTitle + ' — 智慧健身房管理系統';
+              this.adminSessions = bootstrap.sessions || [];
+              this.adminClasses = bootstrap.classes || [];
+              this.pendingPayments = bootstrap.pendingPayments || [];
+              this.adminDashboardStats = bootstrap.dashboardStats || { todaySessions: [], todayLeaves: [], todayMakeups: [] };
+              this.announcements = bootstrap.announcements || [];
+              this.adminRooms = (bootstrap.meta && bootstrap.meta.rooms) || [];
+              this.adminCoaches = (bootstrap.meta && bootstrap.meta.coaches) || [];
+              this.lineAutoPushRenew = !bootstrap.systemConfig || bootstrap.systemConfig.lineAutoPushRenew !== false;
+              localStorage.setItem('gymos_line_auto_push_renew', String(this.lineAutoPushRenew));
             } else if (this.currentMode === 'bind') {
               // Student binding
             } else if (this.currentMode === 'enroll') {

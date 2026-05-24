@@ -54,6 +54,221 @@ function runBackgroundMaintenanceIfDue(): void {
   }
 }
 
+function formatDateYmd(val: any): string {
+  if (!val) return '';
+  try {
+    if (val instanceof Date) {
+      return Utilities.formatDate(val, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+  } catch (e) {}
+  return String(val).substring(0, 10);
+}
+
+function formatTimeHHMM(val: any): string {
+  if (!val) return '';
+  try {
+    const str = String(val).trim();
+    if (str.includes('T')) {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      }
+    }
+    const match = str.match(/(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+  } catch (e) {}
+  return String(val).substring(0, 5);
+}
+
+function getBrandConfigForFrontend(): Record<string, any> {
+  let logoUrl = Config.get('BRAND_LOGO_URL', '');
+  if (logoUrl) {
+    const gdRegex = /https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/(view|edit|preview)?/;
+    const match = logoUrl.match(gdRegex);
+    if (match && match[1]) {
+      logoUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+  }
+  return {
+    brandTitle: Config.get('BRAND_TITLE', 'GymOS'),
+    brandLogoUrl: logoUrl
+  };
+}
+
+function getActiveAnnouncementsFromRows(allAnnouncements: any[]): Record<string, any>[] {
+  const now = new Date();
+  const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
+
+  return allAnnouncements
+    .filter(ann => {
+      const pubTime = ann.publish_time ? new Date(ann.publish_time) : null;
+      const expTime = ann.expire_time ? new Date(ann.expire_time) : null;
+      if (!pubTime) return false;
+
+      const pubTimeStr = ann.publish_time instanceof Date
+        ? Utilities.formatDate(ann.publish_time, 'Asia/Taipei', 'yyyy-MM-dd')
+        : String(ann.publish_time || '').substring(0, 10);
+
+      return (now >= pubTime || nowStr >= pubTimeStr) && (!expTime || now <= expTime);
+    })
+    .sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return new Date(b.publish_time).getTime() - new Date(a.publish_time).getTime();
+    });
+}
+
+function getAdminBootstrapData(): Record<string, any> {
+  const sessions = SheetHelper.getRows<any>('Sessions');
+  const classes = SheetHelper.getRows<any>('Classes');
+  const staff = SheetHelper.getRows<any>('Staff');
+  const rooms = SheetHelper.getRows<any>('Rooms');
+  const enrollments = SheetHelper.getRows<any>('Enrollments');
+  const members = SheetHelper.getRows<any>('Members');
+  const leaves = SheetHelper.getRows<any>('Leave_Requests');
+  const makeups = SheetHelper.getRows<any>('Makeup_Requests');
+  const announcements = SheetHelper.getRows<any>('Announcements');
+
+  const classMap = new Map(classes.map(c => [String(c.class_id).trim(), c]));
+  const staffMap = new Map(staff.map(s => [String(s.line_uid).trim(), s]));
+  const roomMap = new Map(rooms.map(r => [String(r.room_id).trim(), r]));
+  const memberMap = new Map(members.map(m => [String(m.member_id).trim(), m]));
+
+  const adminSessions = sessions
+    .filter(s => s.status !== 'cancelled')
+    .map(s => {
+      const cls = classMap.get(String(s.class_id).trim());
+      const date = formatDateYmd(s.session_date || s.date);
+      return {
+        sessionId: s.session_id,
+        classId: s.class_id,
+        className: cls ? cls.class_name : '未知課程',
+        date: date || '未定日期',
+        startTime: s.start_time,
+        endTime: s.end_time
+      };
+    })
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  const adminClasses = classes.map(c => {
+    const coach = staffMap.get(String(c.coach_line_uid).trim());
+    const room = roomMap.get(String(c.room_id).trim());
+    const enrolledCount = enrollments.filter(e =>
+      String(e.class_id).trim() === String(c.class_id).trim() &&
+      (e.status === 'active' || e.status === 'pending_payment')
+    ).length;
+
+    return {
+      classId: c.class_id,
+      className: c.class_name,
+      classType: c.class_type,
+      level: c.level,
+      coachLineUid: c.coach_line_uid,
+      roomId: c.room_id,
+      coachName: coach ? coach.real_name : '未定教練',
+      roomName: room ? room.room_name : '未定教室',
+      maxCapacity: Number(c.max_capacity) || 0,
+      enrolled: enrolledCount,
+      dayOfWeek: c.day_of_week,
+      startTime: formatTimeHHMM(c.start_time),
+      endTime: formatTimeHHMM(c.end_time),
+      periodStart: formatDateYmd(c.period_start),
+      periodWeeks: Number(c.period_weeks) || 0,
+      status: c.status
+    };
+  });
+
+  const pendingPayments = enrollments
+    .filter(e => e.status === 'pending_payment')
+    .map(e => {
+      const member = memberMap.get(String(e.member_id).trim());
+      const cls = classMap.get(String(e.class_id).trim());
+      return {
+        classId: e.class_id,
+        className: cls ? cls.class_name : '未知班級',
+        level: cls ? cls.level : '未知程度',
+        memberId: e.member_id,
+        realName: member ? member.real_name : '未知學員',
+        gender: member ? member.gender : '',
+        notes: e.notes,
+        enrollDate: e.enroll_date
+      };
+    });
+
+  const todayStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+  const todaySessions = sessions
+    .filter(s => formatDateYmd(s.date || s.session_date) === todayStr && s.status !== 'cancelled')
+    .map(s => {
+      const cls = classMap.get(String(s.class_id).trim());
+      const coach = cls ? staffMap.get(String(cls.coach_line_uid).trim()) : null;
+      return {
+        sessionId: s.session_id,
+        className: cls ? cls.class_name : '未知課程',
+        startTime: s.start_time,
+        endTime: s.end_time,
+        coachName: coach ? coach.real_name : '未知教練',
+        actualCount: Number(s.actual_count) || 0
+      };
+    });
+
+  const todayLeaves = leaves
+    .filter(l => {
+      const s = sessions.find(sess => sess.session_id === l.session_id);
+      return s && formatDateYmd(s.date || s.session_date) === todayStr;
+    })
+    .map(l => {
+      const member = memberMap.get(String(l.member_id).trim());
+      const s = sessions.find(sess => sess.session_id === l.session_id);
+      const cls = s ? classMap.get(String(s.class_id).trim()) : null;
+      return {
+        leaveId: l.leave_id,
+        realName: member ? member.real_name : '未知學員',
+        className: cls ? cls.class_name : '未知課程',
+        reason: l.reason || '無備註'
+      };
+    });
+
+  const todayMakeups = makeups
+    .filter(m => {
+      const s = sessions.find(sess => sess.session_id === m.target_session_id);
+      return s && formatDateYmd(s.date || s.session_date) === todayStr;
+    })
+    .map(mk => {
+      const member = memberMap.get(String(mk.member_id).trim());
+      const s = sessions.find(sess => sess.session_id === mk.target_session_id);
+      const cls = s ? classMap.get(String(s.class_id).trim()) : null;
+      return {
+        makeupId: mk.makeup_id,
+        realName: member ? member.real_name : '未知學員',
+        className: cls ? cls.class_name : '未知課程'
+      };
+    });
+
+  const activeStaff = staff.filter(s => s.status === 'active' && (s.role === 'coach' || s.role === 'admin'));
+
+  return {
+    brandConfig: getBrandConfigForFrontend(),
+    sessions: adminSessions,
+    classes: adminClasses,
+    pendingPayments,
+    dashboardStats: { todaySessions, todayLeaves, todayMakeups },
+    announcements: getActiveAnnouncementsFromRows(announcements),
+    meta: {
+      coaches: activeStaff.map(s => ({ lineUid: s.line_uid, name: s.real_name })),
+      rooms: rooms.map(r => ({ roomId: r.room_id, roomName: r.room_name }))
+    },
+    systemConfig: {
+      lineAutoPushRenew: Config.get('LINE_AUTO_PUSH_RENEW', 'true') !== 'false'
+    }
+  };
+}
+
 function doGet(e: GoogleAppsScript.Events.DoGet): any {
   try {
     const action = e.parameter.action;
@@ -225,6 +440,10 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
 
       // --- 管理員模組 ---
+      'admin.bootstrap': () => {
+        AuthService.requireRole(user, ['admin']);
+        return getAdminBootstrapData();
+      },
       'admin.getSchedule': () => {
         AuthService.requireRole(user, ['admin']);
         return AdminService.getSchedule(data, user);
@@ -812,19 +1031,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         return { message: '圖文選單重新建立與圖片同步成功' };
       },
       'admin.getBrandConfig': () => {
-        let logoUrl = Config.get('BRAND_LOGO_URL', '');
-        if (logoUrl) {
-          // Google Drive分享網址防呆轉換為直連圖片網址
-          const gdRegex = /https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/(view|edit|preview)?/;
-          const match = logoUrl.match(gdRegex);
-          if (match && match[1]) {
-            logoUrl = `https://lh3.googleusercontent.com/d/${match[1]}`;
-          }
-        }
-        return {
-          brandTitle: Config.get('BRAND_TITLE', 'GymOS'),
-          brandLogoUrl: logoUrl
-        };
+        return getBrandConfigForFrontend();
       },
       'admin.publishAnnouncement': () => {
         AuthService.requireRole(user, ['admin']);
