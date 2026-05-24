@@ -1979,6 +1979,7 @@
         loading: false,
         liffReady: false,
         appReady: false,
+        initStarted: false,
         activeLiffId: '初始化中...',
         selectedEnrollments: [],
         
@@ -2241,6 +2242,12 @@
         },
         
         async init() {
+          if (this.initStarted) {
+            console.info('[GymOS frontend perf]', { skipped: 'duplicate-init' });
+            return;
+          }
+          this.initStarted = true;
+
           const perfStart = performance.now();
           const perfMarks = [];
           const markPerf = (label, extra = {}) => {
@@ -2394,20 +2401,6 @@
               this.showConfig = true;
               markPerf('api:url-missing');
             } else {
-              // 管理端品牌設定會隨 admin.bootstrap 一次載入，避免首頁多打一支 API。
-              if (!isAdminRoute) {
-                try {
-                  const brandConfig = await this.apiCall('admin.getBrandConfig');
-                  if (brandConfig) {
-                    this.brandTitle = brandConfig.brandTitle || 'GymOS';
-                    this.brandLogoUrl = brandConfig.brandLogoUrl || '';
-                    document.title = this.brandTitle + ' — 智慧健身房管理系統';
-                  }
-                } catch(e) {
-                  console.warn('⚡ 無法載入品牌自訂配置：', e);
-                }
-              }
-
               // 統一路由決策：全部強制導向 profile 首頁，不再自動展開任何頁籤
               if (mode && mode !== 'leave' && mode !== 'makeup') {
                 this.currentMode = mode;
@@ -2519,6 +2512,10 @@
               // 單一 API 呼叫取得公告 + 學員資料 + 未來課堂 + 請假紀錄。
               const bootstrap = await this.apiCall('member.bootstrap');
               const info = bootstrap.info || {};
+              const brandConfig = bootstrap.brandConfig || {};
+              this.brandTitle = brandConfig.brandTitle || 'GymOS';
+              this.brandLogoUrl = brandConfig.brandLogoUrl || '';
+              document.title = this.brandTitle + ' — 智慧健身房管理系統';
               this.announcements = bootstrap.announcements || [];
               if (info.bound) {
                 this.studentProfile.realName = info.realName;

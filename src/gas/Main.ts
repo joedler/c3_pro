@@ -400,7 +400,8 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'member.bootstrap': () => {
         return {
           info: MemberService.getInfo(user),
-          announcements: PublicService.getActiveAnnouncements()
+          announcements: PublicService.getActiveAnnouncements(),
+          brandConfig: getBrandConfigForFrontend()
         };
       },
       'member.getClassesForEnrollment': () => {
