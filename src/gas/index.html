@@ -2241,6 +2241,21 @@
         },
         
         async init() {
+          const perfStart = performance.now();
+          const perfMarks = [];
+          const markPerf = (label, extra = {}) => {
+            perfMarks.push({
+              label,
+              ms: Math.round(performance.now() - perfStart),
+              ...extra
+            });
+          };
+          let isInLine = false;
+          markPerf('init:start', {
+            href: window.location.href,
+            userAgent: navigator.userAgent
+          });
+
           // 支援 LINE LIFF 特有的 liff.state 參數解碼（避免 LINE 導向時遺失 mode 等路由參數）
           let searchStr = window.location.search;
           const mainParams = new URLSearchParams(searchStr);
@@ -2252,6 +2267,7 @@
           const params = new URLSearchParams(searchStr);
           const mode = params.get('mode');
           const isAdminRoute = mode === 'admin';
+          markPerf('route:parsed', { mode: mode || 'default', isAdminRoute });
           // 此時還不設定 currentMode，等 LIFF 初始化完成後才在下方統一決定真實的 mode
           
           const apiParam = params.get('api') || mainParams.get('api');
@@ -2267,6 +2283,7 @@
             this.gasUrl = this.gasUrl.split('?')[0].split('&')[0];
             localStorage.setItem('gymos_gas_url', this.gasUrl);
           }
+          markPerf('api:url-ready', { hasGasUrl: !!this.gasUrl });
 
 
           const liffId = '2010118365-aUSNBtpx';
@@ -2274,54 +2291,84 @@
                   // 🚀 頂級商業化：正式初始化 LINE LIFF SDK，解鎖手機 LINE 容器的安全性沙盒，並獲取學員真實身分！
                   if (typeof liff !== 'undefined') {
                     try {
+                      markPerf('liff:sdk-ready');
                       this.activeLiffId = liffId;
                       
                       // 判斷是否在 LINE App 內 (包括 LINE 內建瀏覽器或 LIFF 容器)
-                      const isInLine = /Line/i.test(navigator.userAgent) || (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+                      isInLine = /Line/i.test(navigator.userAgent) || (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+                      markPerf('liff:environment', { isInLine });
                       
                       if (isInLine) {
                         // 在 LINE 內部，需要同步等待以獲取身份 Token，但最多只等 3.5 秒，逾時則轉為背景初始化且不阻礙用戶
+                        markPerf('liff:init-start');
                         await Promise.race([
                           liff.init({ liffId: liffId }),
                           new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3500))
                         ]);
+                        markPerf('liff:init-done');
                         
                         this.liffReady = true;
                         
+                        markPerf('liff:isLoggedIn-start');
                         if (liff.isLoggedIn()) {
+                          markPerf('liff:isLoggedIn-true');
                           const accessToken = liff.getAccessToken();
+                          markPerf('liff:getAccessToken-done', { hasAccessToken: !!accessToken });
                           if (accessToken) {
                             this.devToken = accessToken;
                             localStorage.setItem('gymos_dev_token', accessToken);
                           }
+                          markPerf('liff:getProfile-start');
                           const profile = await liff.getProfile();
+                          markPerf('liff:getProfile-done');
                           this.sessionUser = {
                             uid: profile.userId,
                             role: 'member',
                             name: profile.displayName
                           };
                         } else {
+                          markPerf('liff:isLoggedIn-false-login');
+                          console.info('[GymOS frontend perf]', {
+                            mode: mode || 'profile',
+                            isInLine,
+                            marks: perfMarks
+                          });
                           liff.login();
                           return; // 正在進行 LINE 登入轉跳，停止加載後續 API
                         }
                       } else {
                         // 管理端在電腦瀏覽器開啟時，必須先完成 LINE Login 以取得 Staff 權限。
                         if (isAdminRoute) {
+                          markPerf('liff:init-start');
                           await liff.init({ liffId: liffId });
+                          markPerf('liff:init-done');
                           this.liffReady = true;
                           if (liff.isLoggedIn()) {
+                            markPerf('liff:isLoggedIn-true');
                             const accessToken = liff.getAccessToken();
+                            markPerf('liff:getAccessToken-done', { hasAccessToken: !!accessToken });
                             if (accessToken) {
                               this.devToken = accessToken;
                               localStorage.setItem('gymos_dev_token', accessToken);
                             }
                           } else {
+                            markPerf('liff:isLoggedIn-false-login');
+                            console.info('[GymOS frontend perf]', {
+                              mode: mode || 'profile',
+                              isInLine,
+                              marks: perfMarks
+                            });
                             liff.login({ redirectUri: window.location.href });
                             return;
                           }
                         } else {
                           // 在普通外部瀏覽器的一般學員頁，採非同步背景初始化，不阻塞首頁加載。
+                          markPerf('liff:init-background-start');
                           liff.init({ liffId: liffId }).then(() => {
+                            console.info('[GymOS LIFF background perf]', {
+                              ms: Math.round(performance.now() - perfStart),
+                              isLoggedIn: liff.isLoggedIn()
+                            });
                             this.liffReady = true;
                             if (liff.isLoggedIn()) {
                               const accessToken = liff.getAccessToken();
@@ -2334,14 +2381,18 @@
                         }
                       }
                     } catch (err) {
+                      markPerf('liff:error', { message: err && err.message ? err.message : String(err) });
                       console.warn('⚡ LIFF SDK 初始化失敗或逾時，採模擬身份繼續載入：', err);
                     }
+                  } else {
+                    markPerf('liff:sdk-missing');
                   }
 
           // 4. 當連線設定與身份驗證都就緒後，再執行資料加載！
           try {
             if (!this.gasUrl) {
               this.showConfig = true;
+              markPerf('api:url-missing');
             } else {
               // 管理端品牌設定會隨 admin.bootstrap 一次載入，避免首頁多打一支 API。
               if (!isAdminRoute) {
@@ -2365,13 +2416,22 @@
                 this.activeSubView = '';
               }
               this.applyTheme();
+              markPerf('loadInitialData:start', { currentMode: this.currentMode });
               await this.loadInitialData();
+              markPerf('loadInitialData:done', { currentMode: this.currentMode });
             }
           } catch (e) {
+            markPerf('init:error', { message: e && e.message ? e.message : String(e) });
             console.error('Initial load data failed:', e);
           } finally {
             this.appReady = true;
             this.applyTheme();
+            markPerf('appReady:true', { currentMode: this.currentMode });
+            console.info('[GymOS frontend perf]', {
+              mode: this.currentMode || mode || 'profile',
+              isInLine,
+              marks: perfMarks
+            });
           }
         },
         
@@ -2394,6 +2454,7 @@
             throw new Error('Missing GAS URL');
           }
           
+          const apiStarted = performance.now();
           this.loading = true;
           try {
             const response = await fetch(this.gasUrl, {
@@ -2411,8 +2472,17 @@
             if (res.status !== 200) {
               throw new Error(res.data && res.data.error ? res.data.error : 'API 伺服器傳回錯誤');
             }
+            console.info('[GymOS API perf]', {
+              action,
+              ms: Math.round(performance.now() - apiStarted)
+            });
             return res.data;
           } catch (e) {
+            console.info('[GymOS API perf]', {
+              action,
+              ms: Math.round(performance.now() - apiStarted),
+              error: e && e.message ? e.message : String(e)
+            });
             this.addToast(e.message || 'API 連線失敗，請檢查 API 網址是否正確並已啟用 CORS！', 'error');
             throw e;
           } finally {
