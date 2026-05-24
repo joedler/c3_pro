@@ -52,6 +52,12 @@ class MakeupService {
       throw new Error('此請假紀錄已安排過補課，無法重複補課。');
     }
 
+    const originalSession = SheetHelper.getRow<any>('Sessions', 'session_id', leave.session_id);
+    if (!originalSession) {
+      throw new Error('找不到原請假課堂資料，無法安排補課。');
+    }
+    const originalClassId = String(originalSession.class_id || '').trim();
+
     // 3. 解析學員等級分數
     const memberLevelNum = this.getLevelNumber(member.level);
 
@@ -62,6 +68,7 @@ class MakeupService {
 
     allClasses.forEach(c => {
       // 班級必須為 active 或 open，且開放補課
+      if (String(c.class_id || '').trim() === originalClassId) return;
       if (c.status !== 'active' && c.status !== 'open') return;
       if (c.allow_makeup !== true && String(c.allow_makeup).toLowerCase() !== 'true') return;
       if (c.level === '不固定') return; // 一律禁止補入不固定班級
@@ -218,10 +225,20 @@ class MakeupService {
       throw new Error('此請假紀錄已安排過補課，無法重複安排。');
     }
 
+    const originalSession = SheetHelper.getRow<any>('Sessions', 'session_id', leave.session_id);
+    if (!originalSession) {
+      throw new Error('找不到原請假課堂資料，無法安排補課。');
+    }
+    const originalClassId = String(originalSession.class_id || '').trim();
+
     // 3. 取得目標補課課堂與班級資料
     const targetSession = SheetHelper.getRow<any>('Sessions', 'session_id', targetSessionId);
     if (!targetSession || targetSession.status !== 'scheduled') {
       throw new Error('目標補課課堂已停課或非正常排定狀態。');
+    }
+
+    if (String(targetSession.class_id || '').trim() === originalClassId) {
+      throw new Error('補課需選擇其他班級，不能回補自己的原班級。');
     }
 
     // 4. 驗證時間：目標課堂必須是在未來

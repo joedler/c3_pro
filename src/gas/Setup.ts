@@ -15,7 +15,6 @@ function setupDatabase(): void {
   }
 
   const defaultSettings: [string, string, string][] = [
-    ['GYM_NAME', 'C3 Fitness', '健身房名稱'],
     ['LINE_CHANNEL_ACCESS_TOKEN', 'YOUR_LINE_TOKEN', 'LINE Bot Channel Access Token'],
     ['LINE_CHANNEL_SECRET', 'YOUR_LINE_SECRET', 'LINE Bot Channel Secret'],
     ['LIFF_ID', 'YOUR_LIFF_ID', 'LINE LIFF ID'],
@@ -25,10 +24,6 @@ function setupDatabase(): void {
     ['IMG_MENU_MEMBER', '', '學員版選單圖 (支援 Google Drive 網址)'],
     ['IMG_MENU_COACH', '', '教練版選單圖 (支援 Google Drive 網址)'],
     ['IMG_MENU_ADMIN', '', '管理員版選單圖 (支援 Google Drive 網址)'],
-    ['MAX_LEAVE_PER_PERIOD', '3', '每期最多請假堂數'],
-    ['MAX_MAKEUP_PER_PERIOD', '3', '每期最多補課堂數'],
-    ['MAKEUP_ADVANCE_DAYS', '1', '補課需提前幾天申請'],
-    ['LEAVE_ADVANCE_HOURS', '24', '請假需提前幾小時'],
     ['MODULE_SCHEDULE', 'true', '啟用模組：課程排程'],
     ['MODULE_LEAVE', 'true', '啟用模組：請假補課'],
     ['MODULE_ATTENDANCE', 'true', '啟用模組：出勤管理'],
