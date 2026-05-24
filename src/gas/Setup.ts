@@ -5,10 +5,13 @@
  */
 
 const PRODUCTION_CONFIG_SETTINGS: [string, string, string][] = [
-  ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)'],
   ['BRAND_TITLE', 'C3 Fitness', '前端品牌標題'],
   ['LINE_AUTO_PUSH_RENEW', 'false', '前端設定連動：是否主動推送 LINE 繳費/續期通知']
 ];
+
+function isDatabaseResetAllowed(): boolean {
+  return PropertiesService.getScriptProperties().getProperty('ALLOW_DATABASE_RESET') === 'true';
+}
 
 function setupDatabase(): void {
   let ss = SpreadsheetApp.getActiveSpreadsheet();

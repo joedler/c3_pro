@@ -16,6 +16,10 @@ function onOpen() {
  */
 function uiResetDatabaseAndSeed() {
   const ui = SpreadsheetApp.getUi();
+  if (!isDatabaseResetAllowed()) {
+    ui.alert('🔒 已鎖定', '資料庫重置安全鎖目前為關閉狀態。\n若真的需要清空重建，請先到 GAS 指令碼屬性將 ALLOW_DATABASE_RESET 設為 true，執行完畢後立刻改回 false。', ui.ButtonSet.OK);
+    return;
+  }
   const response = ui.alert('⚠️ 警告', '確定要初始化（清除）所有資料表，並導入最新的 17 班課程種子資料嗎？', ui.ButtonSet.YES_NO);
   if (response === ui.Button.YES) {
     try {
