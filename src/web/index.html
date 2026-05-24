@@ -61,6 +61,374 @@
         radial-gradient(at 100% 100%, rgba(255, 213, 74, 0.03) 0px, transparent 50%);
     }
 
+    body.theme-admin {
+      background-color: #111315;
+      background-image:
+        radial-gradient(at 0% 0%, rgba(245, 180, 0, 0.035) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(255, 215, 106, 0.025) 0px, transparent 50%);
+      color: #F5F5F0;
+    }
+
+    body.theme-member {
+      background-color: #F6F5EF;
+      background-image: none;
+      color: #171717;
+    }
+
+    body:not(.theme-admin):not(.theme-member) {
+      background-color: #F6F5EF;
+      background-image: none;
+      color: #171717;
+    }
+
+    /* Theme layer: scoped color overrides keep Alpine/GAS behavior untouched. */
+    .theme-admin .bg-slate-950,
+    .theme-admin .bg-slate-950\/20,
+    .theme-admin .bg-slate-950\/40,
+    .theme-admin .bg-slate-950\/50,
+    .theme-admin .bg-slate-950\/60,
+    .theme-admin .bg-slate-950\/80 {
+      background-color: rgba(17, 19, 21, 0.94) !important;
+    }
+
+    .theme-admin .bg-slate-900,
+    .theme-admin .bg-slate-900\/10,
+    .theme-admin .bg-slate-900\/20,
+    .theme-admin .bg-slate-900\/40,
+    .theme-admin .bg-slate-900\/60,
+    .theme-admin .bg-slate-900\/90 {
+      background-color: rgba(27, 30, 34, 0.9) !important;
+    }
+
+    .theme-admin .bg-slate-800,
+    .theme-admin .bg-slate-800\/80 {
+      background-color: #242830 !important;
+    }
+
+    .theme-admin .border-slate-900,
+    .theme-admin .border-slate-900\/60,
+    .theme-admin .border-slate-800,
+    .theme-admin .border-slate-800\/40,
+    .theme-admin .border-slate-800\/60,
+    .theme-admin .border-slate-800\/80,
+    .theme-admin .border-slate-700 {
+      border-color: #2A2E34 !important;
+    }
+
+    .theme-admin .text-slate-200,
+    .theme-admin .text-slate-300 {
+      color: #D8D9D4 !important;
+    }
+
+    .theme-admin .text-slate-400 {
+      color: #A8ADB4 !important;
+    }
+
+    .theme-admin .text-slate-500,
+    .theme-admin .text-slate-600 {
+      color: #747B84 !important;
+    }
+
+    .theme-admin .bg-gradient-to-r:not(.bg-clip-text),
+    .theme-admin .bg-gradient-to-tr:not(.bg-clip-text) {
+      background-image: none !important;
+      background-color: #171A1F !important;
+    }
+
+    .theme-admin .border-brand-500\/50,
+    .theme-admin .hover\:border-amber-500\/50:hover {
+      border-color: rgba(245, 180, 0, 0.32) !important;
+    }
+
+    .theme-admin .bg-brand-500\/5,
+    .theme-admin .bg-amber-500\/5,
+    .theme-admin .hover\:bg-amber-500\/5:hover {
+      background-color: rgba(245, 180, 0, 0.08) !important;
+    }
+
+    .theme-admin .bg-brand-500\/10,
+    .theme-admin .bg-brand-500\/20,
+    .theme-admin .bg-amber-500\/10,
+    .theme-admin .bg-yellow-500\/10 {
+      background-color: rgba(245, 180, 0, 0.12) !important;
+    }
+
+    .theme-admin .text-amber-400,
+    .theme-admin .text-yellow-400 {
+      color: #FFD76A !important;
+    }
+
+    .theme-admin .text-indigo-400,
+    .theme-admin .text-blue-400,
+    .theme-admin .text-emerald-400,
+    .theme-admin .text-teal-400 {
+      color: #D8D9D4 !important;
+    }
+
+    .theme-admin .bg-indigo-500\/5,
+    .theme-admin .bg-indigo-500\/10,
+    .theme-admin .bg-emerald-500\/5,
+    .theme-admin .bg-emerald-500\/10,
+    .theme-admin .bg-blue-600\/10,
+    .theme-admin .bg-purple-600\/5,
+    .theme-admin .bg-purple-600\/10 {
+      background-color: rgba(216, 217, 212, 0.08) !important;
+    }
+
+    .theme-admin .border-indigo-500\/20,
+    .theme-admin .border-indigo-500\/50,
+    .theme-admin .border-emerald-500\/20,
+    .theme-admin .border-emerald-500\/30,
+    .theme-admin .border-emerald-500\/50 {
+      border-color: rgba(216, 217, 212, 0.18) !important;
+    }
+
+    .theme-admin .bg-emerald-500\/10.text-emerald-400,
+    .theme-admin .bg-indigo-500\/10.text-indigo-400,
+    .theme-admin .bg-blue-600\/10.text-blue-400 {
+      color: #D8D9D4 !important;
+    }
+
+    .theme-admin .hover\:text-white:hover {
+      color: #F5F5F0 !important;
+    }
+
+    .theme-admin .hover\:border-slate-700:hover {
+      border-color: #3B4048 !important;
+    }
+
+    .theme-admin .admin-summary-card {
+      background: linear-gradient(180deg, rgba(27, 30, 34, 0.94), rgba(20, 23, 27, 0.94)) !important;
+      border-color: #343A42 !important;
+      box-shadow:
+        inset 0 1px 0 rgba(245, 245, 240, 0.04),
+        0 14px 32px rgba(0, 0, 0, 0.18) !important;
+      backdrop-filter: blur(10px);
+    }
+
+    .theme-admin .admin-summary-card:hover {
+      background: linear-gradient(180deg, rgba(31, 35, 40, 0.96), rgba(22, 25, 29, 0.96)) !important;
+      border-color: #4A5058 !important;
+    }
+
+    .theme-admin .admin-summary-card[class*="border-brand"],
+    .theme-admin .admin-summary-card[class*="border-indigo"],
+    .theme-admin .admin-summary-card[class*="border-emerald"] {
+      background: linear-gradient(180deg, rgba(36, 34, 27, 0.98), rgba(24, 25, 24, 0.98)) !important;
+      border-color: rgba(245, 180, 0, 0.5) !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 215, 106, 0.08),
+        0 16px 36px rgba(0, 0, 0, 0.22) !important;
+    }
+
+    .theme-admin .admin-summary-card h4 {
+      color: #F5F5F0 !important;
+    }
+
+    .theme-admin .admin-summary-card .admin-summary-label {
+      color: #B8BDC4 !important;
+    }
+
+    .theme-admin .admin-summary-card .admin-summary-footer {
+      border-color: rgba(216, 217, 212, 0.2) !important;
+      color: #8A929C !important;
+    }
+
+    .theme-admin .admin-summary-icon {
+      background-color: rgba(245, 180, 0, 0.1) !important;
+      color: #FFD76A !important;
+      box-shadow: inset 0 1px 0 rgba(255, 215, 106, 0.08);
+    }
+
+    .theme-member .bg-slate-950,
+    .theme-member .bg-slate-950\/20,
+    .theme-member .bg-slate-950\/40,
+    .theme-member .bg-slate-950\/50,
+    .theme-member .bg-slate-950\/60,
+    .theme-member .bg-slate-950\/80,
+    .theme-member .bg-slate-900,
+    .theme-member .bg-slate-900\/10,
+    .theme-member .bg-slate-900\/20,
+    .theme-member .bg-slate-900\/40,
+    .theme-member .bg-slate-900\/60,
+    .theme-member .bg-slate-900\/90 {
+      background-color: #FFFFFF !important;
+    }
+
+    .theme-member .bg-slate-800,
+    .theme-member .bg-slate-800\/80 {
+      background-color: #ECE9DF !important;
+    }
+
+    .theme-member .bg-slate-700 {
+      background-color: #DDD7CA !important;
+    }
+
+    .theme-member .border-slate-950,
+    .theme-member .border-slate-900,
+    .theme-member .border-slate-900\/60,
+    .theme-member .border-slate-800,
+    .theme-member .border-slate-800\/40,
+    .theme-member .border-slate-800\/60,
+    .theme-member .border-slate-800\/80,
+    .theme-member .border-slate-700 {
+      border-color: #DDD7CA !important;
+    }
+
+    .theme-member .text-white,
+    .theme-member .text-slate-100,
+    .theme-member .text-slate-200,
+    .theme-member .text-slate-300 {
+      color: #171717 !important;
+    }
+
+    .theme-member .text-slate-400 {
+      color: #6F716F !important;
+    }
+
+    .theme-member .text-slate-500,
+    .theme-member .text-slate-600 {
+      color: #8A867D !important;
+    }
+
+    .theme-member input,
+    .theme-member select,
+    .theme-member textarea {
+      color: #171717 !important;
+      background-color: #FFFFFF !important;
+      border-color: #DDD7CA !important;
+    }
+
+    .theme-member input::placeholder,
+    .theme-member textarea::placeholder {
+      color: #8A867D !important;
+    }
+
+    .theme-member .bg-brand-500,
+    .theme-member .bg-brand-600 {
+      background-color: #171717 !important;
+      color: #F5F5F0 !important;
+    }
+
+    .theme-member .hover\:bg-brand-400:hover,
+    .theme-member .hover\:bg-brand-500:hover {
+      background-color: #2B2A26 !important;
+    }
+
+    .theme-member .shadow-brand-500\/20,
+    .theme-member .shadow-brand-600\/20 {
+      box-shadow: 0 12px 28px rgba(23, 23, 23, 0.16) !important;
+    }
+
+    .theme-member .text-brand-400,
+    .theme-member .text-brand-500 {
+      color: #C99516 !important;
+    }
+
+    .theme-member .border-brand-500,
+    .theme-member .border-brand-500\/10,
+    .theme-member .border-brand-500\/20,
+    .theme-member .border-brand-500\/25,
+    .theme-member .border-brand-500\/30,
+    .theme-member .border-brand-500\/50,
+    .theme-member .border-brand-700 {
+      border-color: rgba(201, 149, 22, 0.45) !important;
+    }
+
+    .theme-member .bg-brand-500\/5,
+    .theme-member .bg-brand-500\/10,
+    .theme-member .bg-brand-500\/20,
+    .theme-member .bg-brand-950\/20 {
+      background-color: rgba(201, 149, 22, 0.12) !important;
+    }
+
+    .theme-member .text-emerald-400,
+    .theme-member .text-teal-400 {
+      color: #269D65 !important;
+    }
+
+    .theme-member .bg-emerald-500\/5,
+    .theme-member .bg-emerald-500\/10,
+    .theme-member .bg-teal-500 {
+      background-color: rgba(38, 157, 101, 0.12) !important;
+    }
+
+    .theme-member .border-emerald-500\/20,
+    .theme-member .border-emerald-500\/30,
+    .theme-member .border-emerald-500\/50 {
+      border-color: rgba(38, 157, 101, 0.4) !important;
+    }
+
+    .theme-member .text-amber-400,
+    .theme-member .text-yellow-400 {
+      color: #C99516 !important;
+    }
+
+    .theme-member .bg-amber-500\/5,
+    .theme-member .bg-amber-500\/10,
+    .theme-member .bg-amber-950\/5,
+    .theme-member .bg-yellow-500\/10 {
+      background-color: rgba(244, 201, 93, 0.2) !important;
+    }
+
+    .theme-member .border-amber-500\/20,
+    .theme-member .border-amber-500\/25,
+    .theme-member .border-amber-600\/30,
+    .theme-member .border-yellow-500\/20,
+    .theme-member .border-yellow-500\/25 {
+      border-color: rgba(201, 149, 22, 0.38) !important;
+    }
+
+    .theme-member .text-rose-400 {
+      color: #D84B4B !important;
+    }
+
+    .theme-member .bg-rose-500\/5,
+    .theme-member .bg-rose-500\/10,
+    .theme-member .bg-rose-600\/10 {
+      background-color: rgba(216, 75, 75, 0.12) !important;
+    }
+
+    .theme-member .border-rose-500\/20,
+    .theme-member .border-rose-500\/30 {
+      border-color: rgba(216, 75, 75, 0.4) !important;
+    }
+
+    .theme-member .text-indigo-400,
+    .theme-member .text-blue-400 {
+      color: #4F6F83 !important;
+    }
+
+    .theme-member .bg-indigo-500\/5,
+    .theme-member .bg-indigo-500\/10,
+    .theme-member .bg-blue-600\/10,
+    .theme-member .bg-purple-600\/10,
+    .theme-member .bg-purple-600\/5 {
+      background-color: rgba(79, 111, 131, 0.11) !important;
+    }
+
+    .theme-member .border-indigo-500\/20,
+    .theme-member .border-indigo-500\/50 {
+      border-color: rgba(79, 111, 131, 0.36) !important;
+    }
+
+    .theme-member .bg-gradient-to-r,
+    .theme-member .bg-gradient-to-tr {
+      background-image: none !important;
+    }
+
+    .theme-member .text-transparent.bg-clip-text {
+      color: #171717 !important;
+      background-image: none !important;
+    }
+
+    .theme-member .shadow-brand-500\/20,
+    .theme-member .shadow-brand-600\/20,
+    .theme-member .shadow-emerald-500\/30,
+    .theme-member .shadow-slate-950\/50 {
+      box-shadow: 0 10px 24px rgba(23, 23, 23, 0.08) !important;
+    }
+
     /* 隱藏橫向滾動條 */
     .scrollbar-none::-webkit-scrollbar {
       display: none;
@@ -109,7 +477,7 @@
     }
   </style>
 </head>
-<body class="text-slate-200 min-h-screen flex flex-col antialiased" x-data="gymApp" x-init="init()" x-cloak>
+<body class="theme-member text-slate-200 min-h-screen flex flex-col antialiased" x-data="gymApp" x-init="init()">
 
   <!-- Global Toast Alerts -->
   <div class="fixed top-5 right-5 z-[60] flex flex-col gap-2 max-w-sm">
@@ -213,11 +581,11 @@
             <div class="space-y-3 pt-3">
               <label class="block text-xs font-bold text-slate-400">⚙️ 測試沙盒切換面板</label>
               <div class="grid grid-cols-5 gap-1.5 text-center text-[9px]">
-                <button @click="switchMode('admin'); showConfig = false" :class="currentMode === 'admin' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">管理端</button>
-                <button @click="switchMode('bind'); showConfig = false" :class="currentMode === 'bind' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員綁定</button>
-                <button @click="switchMode('leave'); showConfig = false" :class="currentMode === 'leave' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">請假申請</button>
-                <button @click="switchMode('makeup'); showConfig = false" :class="currentMode === 'makeup' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">補課預約</button>
-                <button @click="switchMode('enroll'); showConfig = false" :class="currentMode === 'enroll' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員加選</button>
+                <button @click="switchMode('admin'); showConfig = false" :class="currentMode === 'admin' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">管理端</button>
+                <button @click="switchMode('bind'); showConfig = false" :class="currentMode === 'bind' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員綁定</button>
+                <button @click="switchMode('leave'); showConfig = false" :class="currentMode === 'leave' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">請假申請</button>
+                <button @click="switchMode('makeup'); showConfig = false" :class="currentMode === 'makeup' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">補課預約</button>
+                <button @click="switchMode('enroll'); showConfig = false" :class="currentMode === 'enroll' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員加選</button>
               </div>
             </div>
 
@@ -232,7 +600,7 @@
       </div>
       
       <div class="flex gap-3 mt-6">
-        <button @click="saveConfiguration()" class="w-[60%] bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all">儲存並重新載入</button>
+        <button @click="saveConfiguration()" class="w-[60%] bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3 text-xs font-bold transition-all">儲存並重新載入</button>
         <button @click="showConfig = false" class="w-[40%] bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 text-xs font-bold transition-all">關閉</button>
       </div>
     </div>
@@ -249,17 +617,17 @@
 
     <!-- ================= ADMIN CONSOLE PANEL ================= -->
     <template x-if="currentMode === 'admin'">
-      <div class="space-y-8" x-data="{ showClassModal: false, showBindModal: false }">
+      <div class="space-y-8">
         
         <!-- Frameless Fluid Operations Panel Switcher -->
         <div class="space-y-6">
           <div class="border-none bg-transparent px-0 py-0 md:border md:border-slate-800 md:bg-slate-900/40 md:px-6 md:py-4 flex flex-wrap gap-3 justify-end items-center rounded-2xl backdrop-blur-md">
             <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-              <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 w-full md:w-auto space-x-1 items-center">
-                <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">📊 首頁摘要</button>
-                <button @click="activeTab = 'active_classes'" :class="activeTab === 'active_classes' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">📋 已開辦課程</button>
-                <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">🏫 班級經營</button>
-                <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'" class="flex-1 md:flex-none md:px-4 py-2 text-[11px] font-semibold rounded-lg transition-all">💰 繳費確認</button>
+              <div class="flex overflow-x-auto scrollbar-none bg-slate-950 p-1 rounded-xl border border-slate-800 w-full md:w-auto space-x-1 items-center">
+                <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">📊 首頁摘要</button>
+                <button @click="activeTab = 'active_classes'" :class="activeTab === 'active_classes' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">📋 課程列表</button>
+                <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">🏫 班級經營</button>
+                <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">💰 繳費確認</button>
                 
                 <!-- 🔄 手動重新整理按鈕移到最右側 -->
                 <button @click="loadInitialData()" 
@@ -276,7 +644,7 @@
 
           <div class="p-2 space-y-6">
             <!-- Summary Tab -->
-            <div x-show="activeTab === 'dashboard'" class="space-y-6" x-transition>
+            <div x-show="activeTab === 'dashboard'" class="space-y-6">
               
               <!-- Announcement Marquee / Broadcast Bar -->
               <div class="relative w-full overflow-hidden bg-gradient-to-r from-brand-600/10 via-purple-600/5 to-blue-600/10 border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 backdrop-blur-md">
@@ -295,7 +663,7 @@
                     </template>
                   </div>
                 </div>
-                <button @click="showAnnouncementModal = true" class="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-950/20 flex items-center justify-center gap-1.5 active:scale-95">
+                <button @click="showAnnouncementModal = true" class="flex-shrink-0 px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95">
                   <span>📢</span>
                   <span>發布公告</span>
                 </button>
@@ -307,15 +675,15 @@
                   <!-- Card 1: 今日上課統計 -->
                   <div @click="expandedCard = (expandedCard === 'todaySessions' ? '' : 'todaySessions')" 
                        :class="expandedCard === 'todaySessions' ? 'border-brand-500/50 bg-brand-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                       class="p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
+                       class="admin-summary-card p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">🏋️ 今日課程</span>
+                        <span class="admin-summary-label text-[10px] sm:text-xs font-bold text-slate-400">🏋️ 今日課程</span>
                         <h4 class="text-xl sm:text-3xl font-black text-white mt-1" x-text="adminDashboardStats.todaySessions.length + ' 堂'">0 堂</h4>
                       </div>
-                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-brand-500/10 flex items-center justify-center text-base sm:text-xl text-brand-400 group-hover:scale-110 transition-all">🏋️</div>
+                      <div class="admin-summary-icon w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-brand-500/10 flex items-center justify-center text-base sm:text-xl text-brand-400 group-hover:scale-110 transition-all">🏋️</div>
                     </div>
-                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                    <div class="admin-summary-footer mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
                       <span>今日明細</span>
                       <span x-text="expandedCard === 'todaySessions' ? '▲' : '▼'">▼</span>
                     </div>
@@ -324,15 +692,15 @@
                   <!-- Card 2: 今日請假人數 -->
                   <div @click="expandedCard = (expandedCard === 'todayLeaves' ? '' : 'todayLeaves')" 
                        :class="expandedCard === 'todayLeaves' ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                       class="p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
+                       class="admin-summary-card p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">🏖️ 今日請假</span>
+                        <span class="admin-summary-label text-[10px] sm:text-xs font-bold text-slate-400">🏖️ 今日請假</span>
                         <h4 class="text-xl sm:text-3xl font-black text-indigo-400 mt-1" x-text="adminDashboardStats.todayLeaves.length + ' 人'">0 人</h4>
                       </div>
-                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-base sm:text-xl text-indigo-400 group-hover:scale-110 transition-all">🏖️</div>
+                      <div class="admin-summary-icon w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-base sm:text-xl text-indigo-400 group-hover:scale-110 transition-all">🏖️</div>
                     </div>
-                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                    <div class="admin-summary-footer mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
                       <span>請假名單</span>
                       <span x-text="expandedCard === 'todayLeaves' ? '▲' : '▼'">▼</span>
                     </div>
@@ -341,15 +709,15 @@
                   <!-- Card 3: 今日補課人數 -->
                   <div @click="expandedCard = (expandedCard === 'todayMakeups' ? '' : 'todayMakeups')" 
                        :class="expandedCard === 'todayMakeups' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/10'" 
-                       class="p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
+                       class="admin-summary-card p-3.5 sm:p-5 rounded-2xl border backdrop-blur-md cursor-pointer hover:border-slate-700 transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">🔄 今日補課</span>
+                        <span class="admin-summary-label text-[10px] sm:text-xs font-bold text-slate-400">🔄 今日補課</span>
                         <h4 class="text-xl sm:text-3xl font-black text-emerald-400 mt-1" x-text="adminDashboardStats.todayMakeups.length + ' 人'">0 人</h4>
                       </div>
-                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-base sm:text-xl text-emerald-400 group-hover:scale-110 transition-all">🔄</div>
+                      <div class="admin-summary-icon w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-base sm:text-xl text-emerald-400 group-hover:scale-110 transition-all">🔄</div>
                     </div>
-                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                    <div class="admin-summary-footer mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
                       <span>補課名單</span>
                       <span x-text="expandedCard === 'todayMakeups' ? '▲' : '▼'">▼</span>
                     </div>
@@ -357,15 +725,15 @@
 
                   <!-- Card 4: 待繳學費人數 (Moved to last column) -->
                   <div @click="activeTab = 'ledger'" 
-                       class="p-3.5 sm:p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group flex flex-col justify-between">
+                       class="admin-summary-card p-3.5 sm:p-5 border border-slate-800 bg-slate-900/10 hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl backdrop-blur-md cursor-pointer transition-all select-none relative group flex flex-col justify-between">
                     <div class="flex items-center justify-between">
                       <div>
-                        <span class="text-[10px] sm:text-xs font-bold text-slate-400">💰 待繳學費</span>
+                        <span class="admin-summary-label text-[10px] sm:text-xs font-bold text-slate-400">💰 待繳學費</span>
                         <h4 class="text-xl sm:text-3xl font-black text-amber-400 mt-1" x-text="pendingPayments.length + ' 人'">0 人</h4>
                       </div>
-                      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-base sm:text-xl text-amber-400 group-hover:scale-110 transition-all">💰</div>
+                      <div class="admin-summary-icon w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-base sm:text-xl text-amber-400 group-hover:scale-110 transition-all">💰</div>
                     </div>
-                    <div class="mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
+                    <div class="admin-summary-footer mt-2.5 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-500 border-t border-slate-850 pt-2">
                       <span>前往確認</span>
                       <span>➜</span>
                     </div>
@@ -375,7 +743,7 @@
                 <!-- Expanded Lists Panel (Expands cleanly below the grid of 4 cards) -->
                 <div class="mt-4 space-y-4">
                   <!-- Panel 1: 今日課程名冊 -->
-                  <div x-show="expandedCard === 'todaySessions'" x-transition>
+                  <div x-show="expandedCard === 'todaySessions'">
                     <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
                       <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏋️ 今日課程課堂明細統計</h4>
                       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -399,7 +767,7 @@
                   </div>
 
                   <!-- Panel 2: 今日請假名單 -->
-                  <div x-show="expandedCard === 'todayLeaves'" x-transition>
+                  <div x-show="expandedCard === 'todayLeaves'">
                     <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
                       <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 今日學員請假名冊摘要</h4>
                       <div class="space-y-2">
@@ -420,7 +788,7 @@
                   </div>
 
                   <!-- Panel 3: 今日補課名單 -->
-                  <div x-show="expandedCard === 'todayMakeups'" x-transition>
+                  <div x-show="expandedCard === 'todayMakeups'">
                     <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
                       <h4 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 今日跨班補課學員名冊</h4>
                       <div class="space-y-2">
@@ -444,7 +812,7 @@
             </div>
 
             <!-- Active Classes Tab (📋 已開辦課程) -->
-            <div x-show="activeTab === 'active_classes'" class="space-y-6" x-transition>
+            <div x-show="activeTab === 'active_classes'" class="space-y-6">
               <!-- 已開辦課程 -->
               <div class="space-y-3">
                 <h3 class="text-white font-bold text-sm flex items-center gap-2">📋 已開辦課程</h3>
@@ -504,7 +872,7 @@
               </div>
             </div>
 
-            <div x-show="activeTab === 'classes'" class="space-y-6" x-transition>
+            <div x-show="activeTab === 'classes'" class="space-y-6">
               
               <!-- Block 1: 調整課程 (臨時課堂調整中心) -->
               <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -629,8 +997,8 @@
                         }
                       }
                     " 
-                            :class="adjustScope === 'day' ? 'bg-rose-700 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-500'"
-                            class="px-5 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all flex items-center gap-1.5 w-full sm:w-auto justify-center">
+                            :class="adjustScope === 'day' ? 'bg-rose-700 hover:bg-rose-600 text-white' : 'bg-brand-500 hover:bg-brand-400 text-slate-950'"
+                            class="px-5 py-3 text-xs font-bold rounded-xl shadow-lg transition-all flex items-center gap-1.5 w-full sm:w-auto justify-center">
                       <span x-text="adjustScope === 'day' ? '🌪️ 執行當日全部停課一日' : '⚠️ 送出單堂課程調整'"></span>
                     </button>
                   </div>
@@ -752,7 +1120,7 @@
                 </div>
                 
                 <div class="flex justify-end gap-3 mt-6">
-                  <button @click="submitCreateClass()" class="px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 w-full sm:w-auto text-center">
+                  <button @click="submitCreateClass()" class="px-6 py-3 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 w-full sm:w-auto text-center">
                     送出並排程建構
                   </button>
                 </div>
@@ -761,10 +1129,10 @@
             </div>
 
             <!-- Tuition Ledger Tab (Upgraded x3.0) -->
-            <div x-show="activeTab === 'ledger'" class="space-y-6" x-transition>
+            <div x-show="activeTab === 'ledger'" class="space-y-6">
               <div class="bg-slate-900/60 p-4 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <h3 class="text-white font-bold text-sm">💰 學費核點與啟用中心</h3>
+                  <h3 class="text-white font-bold text-sm">💰 學費確認/課程啟用</h3>
                   <p class="text-[11px] text-slate-400 mt-1">當學員自動續期或後台選課後，狀態為待繳費。在此點擊「確認已繳費」，將一鍵正式開通上課權限並自動向該學員推送 LINE Flex 繳納成功通知。</p>
                 </div>
               </div>
@@ -779,7 +1147,7 @@
                   
                   <button @click="batchConfirmTuitionPayment()" 
                           :disabled="selectedEnrollments.length === 0"
-                          class="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-850 disabled:to-slate-850 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-950/20 disabled:shadow-none transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 border border-transparent disabled:border-slate-800">
+                          class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 disabled:bg-slate-800 text-slate-950 disabled:text-slate-500 rounded-xl text-xs font-bold shadow-lg shadow-brand-500/20 disabled:shadow-none transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 border border-transparent disabled:border-slate-800">
                     <span>🚀</span>
                     <span>批量確認已繳費</span>
                   </button>
@@ -791,7 +1159,7 @@
                   <div class="p-12 text-center space-y-3">
                     <div class="text-3xl">🎉</div>
                     <h4 class="text-sm font-bold text-white">目前無待繳學費學員</h4>
-                    <p class="text-xs text-slate-500">所有學員均已完成學費核點並啟用課程！</p>
+                    <p class="text-xs text-slate-500">所有學員均已完成繳費並啟用課程！</p>
                   </div>
                 </template>
 
@@ -902,7 +1270,7 @@
                   <button @click="showRenewModal = false" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-all bg-slate-950 border border-slate-800 rounded-xl">
                     取消
                   </button>
-                  <button @click="submitRenewClass()" class="px-5 py-2 text-xs font-bold text-white bg-yellow-600 hover:bg-yellow-500 rounded-xl transition-all shadow-lg active:scale-95">
+                  <button @click="submitRenewClass()" class="px-5 py-2 text-xs font-bold text-slate-950 bg-brand-500 hover:bg-brand-400 rounded-xl transition-all shadow-lg active:scale-95">
                     🚀 確定一鍵續期並自動轉移
                   </button>
                 </div>
@@ -910,7 +1278,7 @@
             </div>
 
             <!-- Calendar Schedule Tab -->
-            <div x-show="activeTab === 'schedule'" class="space-y-4" x-transition>
+            <div x-show="activeTab === 'schedule'" class="space-y-4">
               <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900/60 p-4 border border-slate-800 rounded-2xl">
                 <div>
                   <h3 class="text-white font-bold text-sm">📅 實時營運日曆與公開課表看板</h3>
@@ -923,7 +1291,6 @@
               </div>
               <div id="calendar" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-4"></div>
             </div>
-          </div>
 
           <!-- Announcement Modal -->
           <div x-show="showAnnouncementModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
@@ -961,7 +1328,7 @@
                 </div>
               </div>
               <div class="flex gap-3 pt-3 border-t border-slate-800">
-                <button @click="submitPublishAnnouncement()" class="flex-grow bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-3 text-xs font-bold transition-all shadow-lg active:scale-95">確認並公開發布</button>
+                <button @click="submitPublishAnnouncement()" class="flex-grow bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3 text-xs font-bold transition-all shadow-lg active:scale-95">確認並公開發布</button>
                 <button @click="showAnnouncementModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-5 py-3 text-xs font-bold transition-all">取消</button>
               </div>
             </div>
@@ -1047,7 +1414,7 @@
           </div>
 
           <button @click="if(studentBindForm.realName && studentBindForm.birthday && studentBindForm.height && studentBindForm.weight) { studentBindForm.step = 2; } else { addToast('請完整填寫所有個人資料欄位！', 'error'); }" 
-                  class="w-full bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white rounded-xl py-3.5 text-xs font-bold shadow-lg shadow-brand-600/20 transition-all mt-2 flex items-center justify-center gap-1.5">
+                  class="w-full bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3.5 text-xs font-bold shadow-lg shadow-brand-500/20 transition-all mt-2 flex items-center justify-center gap-1.5">
             下一步：選擇欲預約之班型 ➡️
           </button>
         </div>
@@ -1098,7 +1465,7 @@
               ⬅️ 返回
             </button>
             <button @click="loadAvailableClasses(); studentBindForm.step = 3" 
-                    class="flex-grow w-2/3 bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-600/20">
+                    class="flex-grow w-2/3 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-500/20">
               下一步：選擇時段 ➡️
             </button>
           </div>
@@ -1180,7 +1547,7 @@
             </button>
             <button @click="if(studentBindForm.classId) { studentBindForm.step = 4; } else { addToast('請先選擇一個上課時段！', 'error'); }" 
                     :disabled="!studentBindForm.classId"
-                    class="flex-grow w-2/3 bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-600/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="flex-grow w-2/3 bg-brand-500 hover:bg-brand-400 disabled:bg-slate-800 text-slate-950 disabled:text-slate-500 rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
               下一步：確認綁定 ➡️
             </button>
           </div>
@@ -1219,7 +1586,7 @@
               ⬅️ 返回
             </button>
             <button @click="submitStudentBind()" 
-                    class="flex-grow w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5">
+                    class="flex-grow w-2/3 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3.5 text-xs font-bold transition-all shadow-lg shadow-brand-500/20 flex items-center justify-center gap-1.5">
               <span x-show="loading" class="animate-spin">⏳</span>
               確認綁定並送出選課 ➡️
             </button>
@@ -1359,7 +1726,7 @@
 
           <!-- 自助加選新班級捷徑 (Premium Card Button) -->
           <div class="border-t border-slate-800/60 pt-4" x-show="studentProfile.classNames">
-            <button @click="switchMode('enroll')" class="w-full py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-950/20 active:scale-[0.98] flex items-center justify-center gap-2">
+            <button @click="switchMode('enroll')" class="w-full py-3 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-500/20 active:scale-[0.98] flex items-center justify-center gap-2">
               <span>➕</span>
               <span>自助加選其他新班級課程</span>
             </button>
@@ -1604,9 +1971,7 @@
                           :disabled="cls.enrolled >= cls.maxCapacity || cls.status === 'full'"
                           :class="cls.enrolled >= cls.maxCapacity || cls.status === 'full' 
                             ? 'bg-slate-800 text-slate-600 border-slate-900 cursor-not-allowed' 
-                            : (cls.isOverlimit 
-                               ? 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white shadow-md shadow-amber-950/20' 
-                               : 'bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white shadow-md shadow-brand-950/20')"
+                            : 'bg-brand-500 hover:bg-brand-400 text-slate-950 shadow-md shadow-brand-500/20'"
                           class="px-4 py-2 rounded-xl text-[11px] font-bold border border-transparent transition-all active:scale-[0.97]">
                     <span x-text="cls.enrolled >= cls.maxCapacity || cls.status === 'full' ? '人數已滿' : (cls.isOverlimit ? '⚠️ 申請越級加選' : '➕ 自助加選')"></span>
                   </button>
@@ -1784,6 +2149,12 @@
         
         removeToast(id) {
           this.toasts = this.toasts.filter(t => t.id !== id);
+        },
+
+        applyTheme() {
+          const isAdmin = this.currentMode === 'admin';
+          document.body.classList.toggle('theme-admin', isAdmin);
+          document.body.classList.toggle('theme-member', !isAdmin);
         },
 
         formatTime(timeStr) {
@@ -1998,17 +2369,20 @@
                 this.currentMode = 'profile';
                 this.activeSubView = '';
               }
+              this.applyTheme();
               await this.loadInitialData();
             }
           } catch (e) {
             console.error('Initial load data failed:', e);
           } finally {
             this.appReady = true;
+            this.applyTheme();
           }
         },
         
         switchMode(mode) {
           this.currentMode = mode;
+          this.applyTheme();
           // Set query param without reloading to support routing
           const url = new URL(window.location.href);
           url.searchParams.set('mode', mode);

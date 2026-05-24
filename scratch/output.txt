@@ -1,0 +1,65 @@
+ 910: </div>
+ 911: 
+ 912: <!-- Calendar Schedule Tab -->
+ 913: <div x-show="activeTab === 'schedule'" class="space-y-4" x-transition>
+ 914: <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900/60 p-4 border border-slate-800 rounded-2xl">
+ 915: <div>
+ 916: <h3 class="text-white font-bold text-sm">📅 實時營運日曆與公開課表看板</h3>
+ 917: <p class="text-[11px] text-slate-400">此看板實時與 Google 日曆伺服器同步。點擊日曆中的課堂可直接查詢詳細學員名冊。</p>
+ 918: </div>
+ 919: <a href="https://calendar.google.com/calendar/embed?src=c_e2cb04b77f11ca80c0dbca74a4cf794101e402927d7fb5625fe9f23db9dfd2d3%40group.calendar.google.com" target="_blank" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-950/20 active:scale-95">
+ 920: <span>📅</span>
+ 921: <span>在 Google 日曆 App 中開啟</span>
+ 922: </a>
+ 923: </div>
+ 924: <div id="calendar" class="bg-slate-950/40 border border-slate-800 rounded-2xl p-4"></div>
+ 925: </div>
+ 926: </div>
+ 927: 
+ 928: <!-- Announcement Modal -->
+ 929: <div x-show="showAnnouncementModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
+ 930: <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-4">
+ 931: <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+ 932: <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📢 發布系統最新公告</h3>
+ 933: <button @click="showAnnouncementModal = false" class="text-slate-400 hover:text-white">&times;</button>
+ 934: </div>
+ 935: <div class="space-y-4">
+ 936: <div>
+ 937: <label class="block text-xs font-bold text-slate-400 mb-1.5">公告標題</label>
+ 938: <input type="text" x-model="announcementForm.title" placeholder="例如: 雙十連假營運時段公告" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+ 939: </div>
+ 940: <div>
+ 941: <label class="block text-xs font-bold text-slate-400 mb-1.5">公告性質等級</label>
+ 942: <select x-model="announcementForm.type" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+ 943: <option value="info">💬 普通公告 (藍標)</option>
+ 944: <option value="alert">🚨 重要紧急公告 (紅標/微動畫)</option>
+ 945: </select>
+ 946: </div>
+ 947: <div>
+ 948: <label class="block text-xs font-bold text-slate-400 mb-1.5">公告細節內容</label>
+ 949: <textarea x-model="announcementForm.content" placeholder="請在此填寫公告要傳達的詳細內容..." rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500 resize-none"></textarea>
+ 950: </div>
+ 951: 
+ 952: <!-- LINE Synchronous Push Alert & Checkbox -->
+ 953: <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2">
+ 954: <label class="flex items-center gap-2 cursor-pointer select-none">
+ 955: <input type="checkbox" x-model="announcementForm.sendLine" class="rounded text-brand-600 focus:ring-brand-500 border-slate-800 bg-slate-900">
+ 956: <span class="text-xs font-bold text-white">🔄 同步推播至學員 LINE 聊天室</span>
+ 957: </label>
+ 958: <p class="text-[10px] text-amber-500 leading-relaxed font-semibold">
+ 959: ⚠️ 提示：網頁公告發布永久免費，但 LINE 同步推送會使用官方帳號的免費群發訊息額度，請謹慎使用以防超額收費！
+ 960: </p>
+ 961: </div>
+ 962: </div>
+ 963: <div class="flex gap-3 pt-3 border-t border-slate-800">
+ 964: <button @click="submitPublishAnnouncement()" class="flex-grow bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3 text-xs font-bold transition-all shadow-lg active:scale-95">確認並公開發布</button>
+ 965: <button @click="showAnnouncementModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-5 py-3 text-xs font-bold transition-all">取消</button>
+ 966: </div>
+ 967: </div>
+ 968: </div>
+ 969: 
+ 970: </div>
+ 971: </template>
+ 972: 
+ 973: <!-- ================= STUDENT BINDING PORTAL (Spec v2.0 4-Step Wizard) ================= -->
+ 974: <template x-if="currentMode === 'bind'">
