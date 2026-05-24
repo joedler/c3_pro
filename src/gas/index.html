@@ -2286,6 +2286,7 @@
           
           const params = new URLSearchParams(searchStr);
           const mode = params.get('mode');
+          const isAdminRoute = mode === 'admin';
           // 此時還不設定 currentMode，等 LIFF 初始化完成後才在下方統一決定真實的 mode
           
           const apiParam = params.get('api') || mainParams.get('api');
@@ -2339,8 +2340,9 @@
                           return; // 正在進行 LINE 登入轉跳，停止加載後續 API
                         }
                       } else {
-                        // 在普通外部瀏覽器 (例如 Chrome、Safari、Edge 等)，採非同步背景初始化，絕對不阻塞首頁加載！
-                        liff.init({ liffId: liffId }).then(() => {
+                        // 管理端在電腦瀏覽器開啟時，必須先完成 LINE Login 以取得 Staff 權限。
+                        if (isAdminRoute) {
+                          await liff.init({ liffId: liffId });
                           this.liffReady = true;
                           if (liff.isLoggedIn()) {
                             const accessToken = liff.getAccessToken();
@@ -2348,8 +2350,23 @@
                               this.devToken = accessToken;
                               localStorage.setItem('gymos_dev_token', accessToken);
                             }
+                          } else {
+                            liff.login({ redirectUri: window.location.href });
+                            return;
                           }
-                        }).catch(e => console.warn('Non-blocking LIFF init failed:', e));
+                        } else {
+                          // 在普通外部瀏覽器的一般學員頁，採非同步背景初始化，不阻塞首頁加載。
+                          liff.init({ liffId: liffId }).then(() => {
+                            this.liffReady = true;
+                            if (liff.isLoggedIn()) {
+                              const accessToken = liff.getAccessToken();
+                              if (accessToken) {
+                                this.devToken = accessToken;
+                                localStorage.setItem('gymos_dev_token', accessToken);
+                              }
+                            }
+                          }).catch(e => console.warn('Non-blocking LIFF init failed:', e));
+                        }
                       }
                     } catch (err) {
                       console.warn('⚡ LIFF SDK 初始化失敗或逾時，採模擬身份繼續載入：', err);

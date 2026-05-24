@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C3 Fitness</title>
+  <script>
+    const target = new URL('./src/web/index.html', window.location.href);
+    target.search = window.location.search;
+    target.hash = window.location.hash;
+    window.location.replace(target.toString());
+  </script>
+</head>
+<body>
+  <noscript>
+    <a href="./src/web/index.html">進入 C3 Fitness</a>
+  </noscript>
+</body>
+</html>
