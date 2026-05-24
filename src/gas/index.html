@@ -2481,15 +2481,10 @@
               this.studentEnrollForm.classes = res.classes || [];
               this.studentEnrollForm.memberLevel = res.memberLevel || 'L1';
             } else if (this.currentMode === 'profile' || this.currentMode === 'leave' || this.currentMode === 'makeup') {
-              // Load announcements for student marquee
-              try {
-                this.announcements = await this.apiCall('admin.getAnnouncements');
-              } catch(e) {
-                console.warn('⚡ 無法載入最新公告：', e);
-              }
-
-              // 單一 API 呼叫即取得學員資料 + 未來課堂 + 請假紀錄（極速載入！）
-              const info = await this.apiCall('member.getInfo');
+              // 單一 API 呼叫取得公告 + 學員資料 + 未來課堂 + 請假紀錄。
+              const bootstrap = await this.apiCall('member.bootstrap');
+              const info = bootstrap.info || {};
+              this.announcements = bootstrap.announcements || [];
               if (info.bound) {
                 this.studentProfile.realName = info.realName;
                 this.studentProfile.level = info.level;
@@ -2506,9 +2501,6 @@
                 // 直接從 getInfo 回傳値中提取已內嵌的即時課堂與請假紀錄
                 this.upcomingSessions = info.upcomingSessions || [];
                 this.pendingLeaves = info.pendingLeaves || [];
-                
-                // Debug: 印出原始計數支持檢查
-                if (info._debug) console.log('[GymOS Debug]', JSON.stringify(info._debug, null, 2));
               } else {
                 this.addToast('您尚未綁定學員檔案，請先進行綁定。', 'info');
                 this.currentMode = 'bind';

@@ -292,17 +292,17 @@ class MemberService {
     // 4. 取得出勤與請假統計
     const attendances = SheetHelper.getRows<any>('Attendance').filter(a => a.member_id === memberId);
     const allLeaveRows = SheetHelper.getRows<any>('Leave_Requests').filter(l => l.member_id === memberId);
-    Logger.log(`[Debug] 請假原始資料(member=${memberId}): ${JSON.stringify(allLeaveRows.map(l => ({ id: l.leave_id, status: l.status, memberId: l.member_id })))}`);
     const leaveRequests = allLeaveRows.filter(l => l.status === 'approved');
     const makeupRequests = SheetHelper.getRows<any>('Makeup_Requests').filter(
       m => m.member_id === memberId
     );
+    const allSessions = SheetHelper.getRows<any>('Sessions');
 
     // 各項計數器
     const totalPaid = enrollments.reduce((sum, e) => sum + (Number(e.total_paid_sessions) || 0), 0);
     
     // 已上堂數：指實際經過的周數或次數（不扣除請假）
-    const completedSessions = SheetHelper.getRows<any>('Sessions').filter(
+    const completedSessions = allSessions.filter(
       s => classIds.includes(s.class_id) && s.status === 'completed'
     );
     const attendedCount = completedSessions.length;
@@ -338,7 +338,6 @@ class MemberService {
     }
 
     // === 一併內嵌 upcomingSessions（未來4週可請假課堂），避免額外 API 往返 ===
-    const allSessions = SheetHelper.getRows<any>('Sessions');
     const now = new Date();
     const fourWeeksLater = new Date(now.getTime() + 4 * 7 * 24 * 60 * 60 * 1000);
     const leaveSessionIds = leaveRequests.map(l => l.session_id);
@@ -421,14 +420,7 @@ class MemberService {
       makeupInfo: `已登記 ${reservedMakeups} 堂`,
       remainingCount,
       upcomingSessions,
-      pendingLeaves,
-      _debug: {
-        leaveCount,
-        reservedMakeups,
-        makeupCount,
-        availableMakeupCount,
-        makeupRequestsRaw: makeupRequests.map(m => ({ id: m.makeup_id, status: m.status, target: m.target_session_id }))
-      }
+      pendingLeaves
     };
   }
 
@@ -788,4 +780,3 @@ class MemberService {
     return `${y}${m}${d}`;
   }
 }
-

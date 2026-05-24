@@ -397,6 +397,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'member.getInfo': () => {
         return MemberService.getInfo(user);
       },
+      'member.bootstrap': () => {
+        return {
+          info: MemberService.getInfo(user),
+          announcements: PublicService.getActiveAnnouncements()
+        };
+      },
       'member.getClassesForEnrollment': () => {
         AuthService.requireRole(user, ['member']);
         return MemberService.getClassesForEnrollment(user);
