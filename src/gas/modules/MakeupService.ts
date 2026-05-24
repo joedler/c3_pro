@@ -4,6 +4,10 @@
  */
 
 class MakeupService {
+  private static normalizeId(value: any): string {
+    return String(value || '').trim();
+  }
+
   private static getLevelNumber(levelStr: string): number {
     if (!levelStr) return 0;
     const match = String(levelStr).match(/\d+/);
@@ -56,7 +60,16 @@ class MakeupService {
     if (!originalSession) {
       throw new Error('找不到原請假課堂資料，無法安排補課。');
     }
-    const originalClassId = String(originalSession.class_id || '').trim();
+    const originalClassId = this.normalizeId(originalSession.class_id);
+    const memberClassIds = new Set(
+      SheetHelper.getRows<any>('Enrollments')
+        .filter(e => e.member_id === member.member_id && e.status === 'active')
+        .map(e => this.normalizeId(e.class_id))
+        .filter(id => id !== '')
+    );
+    if (originalClassId) {
+      memberClassIds.add(originalClassId);
+    }
 
     // 3. 解析學員等級分數
     const memberLevelNum = this.getLevelNumber(member.level);
@@ -68,7 +81,7 @@ class MakeupService {
 
     allClasses.forEach(c => {
       // 班級必須為 active 或 open，且開放補課
-      if (String(c.class_id || '').trim() === originalClassId) return;
+      if (memberClassIds.has(this.normalizeId(c.class_id))) return;
       if (c.status !== 'active' && c.status !== 'open') return;
       if (c.allow_makeup !== true && String(c.allow_makeup).toLowerCase() !== 'true') return;
       if (c.level === '不固定') return; // 一律禁止補入不固定班級
@@ -229,7 +242,16 @@ class MakeupService {
     if (!originalSession) {
       throw new Error('找不到原請假課堂資料，無法安排補課。');
     }
-    const originalClassId = String(originalSession.class_id || '').trim();
+    const originalClassId = this.normalizeId(originalSession.class_id);
+    const memberClassIds = new Set(
+      SheetHelper.getRows<any>('Enrollments')
+        .filter(e => e.member_id === memberId && e.status === 'active')
+        .map(e => this.normalizeId(e.class_id))
+        .filter(id => id !== '')
+    );
+    if (originalClassId) {
+      memberClassIds.add(originalClassId);
+    }
 
     // 3. 取得目標補課課堂與班級資料
     const targetSession = SheetHelper.getRow<any>('Sessions', 'session_id', targetSessionId);
@@ -237,8 +259,9 @@ class MakeupService {
       throw new Error('目標補課課堂已停課或非正常排定狀態。');
     }
 
-    if (String(targetSession.class_id || '').trim() === originalClassId) {
-      throw new Error('補課需選擇其他班級，不能回補自己的原班級。');
+    if (memberClassIds.has(this.normalizeId(targetSession.class_id))) {
+      Logger.log(`[補課阻擋] 學員 ${memberId} 嘗試補入自己的班級: ${targetSession.class_id}`);
+      throw new Error('補課需選擇其他班級，不能回補自己的原班級或已報名班級。');
     }
 
     // 4. 驗證時間：目標課堂必須是在未來
