@@ -2485,6 +2485,9 @@
               const bootstrap = await this.apiCall('member.bootstrap');
               const info = bootstrap.info || {};
               this.announcements = bootstrap.announcements || [];
+              if (bootstrap._perf) {
+                console.info('[GymOS member bootstrap perf]', bootstrap._perf);
+              }
               if (info.bound) {
                 this.studentProfile.realName = info.realName;
                 this.studentProfile.level = info.level;
