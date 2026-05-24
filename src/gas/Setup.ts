@@ -4,11 +4,6 @@
  * 支援 100% 繁體中文試算表呈現，欄位定義與名稱由 SheetHelper.ts 統一管理。
  */
 
-const PRODUCTION_CONFIG_SETTINGS: [string, string, string][] = [
-  ['BRAND_TITLE', 'C3 Fitness', '前端品牌標題'],
-  ['LINE_AUTO_PUSH_RENEW', 'false', '前端設定連動：是否主動推送 LINE 繳費/續期通知']
-];
-
 function isDatabaseResetAllowed(): boolean {
   return PropertiesService.getScriptProperties().getProperty('ALLOW_DATABASE_RESET') === 'true';
 }
@@ -22,9 +17,6 @@ function setupDatabase(): void {
     }
     ss = SpreadsheetApp.openById(spreadsheetId);
   }
-
-  const defaultSettings = PRODUCTION_CONFIG_SETTINGS;
-
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表
   for (const [engSheetName, chineseSheetName] of Object.entries(SheetHelper.SHEET_NAME_MAP)) {
     let sheet = ss.getSheetByName(chineseSheetName);
@@ -43,11 +35,6 @@ function setupDatabase(): void {
         .setFontColor('#ffffff')
         .setFontWeight('bold')
         .setHorizontalAlignment('center');
-
-      // 寫入預設設定值 (僅在全新建立 Config 時寫入)
-      if (engSheetName === 'Config') {
-        sheet.getRange(2, 1, defaultSettings.length, 3).setValues(defaultSettings);
-      }
 
       // 寫入預設教室 (僅在全新建立 Rooms 時寫入)
       if (engSheetName === 'Rooms') {
@@ -81,17 +68,6 @@ function setupDatabase(): void {
 
         Logger.log(`【無損升級】在工作表「${chineseSheetName}」中追加了新欄位：${missingHeaders.join(', ')}`);
       }
-
-      // 針對 Config 資料表：如果有新擴充的預設變數，安全地追加到末尾而不動原先的值
-      if (engSheetName === 'Config' && sheet.getLastRow() > 0) {
-        const existingKeys = sheet.getRange(1, 1, sheet.getLastRow(), 1).getValues().map(row => row[0]);
-        const missingSettings = defaultSettings.filter(setting => !existingKeys.includes(setting[0]));
-        if (missingSettings.length > 0) {
-          const nextRow = sheet.getLastRow() + 1;
-          sheet.getRange(nextRow, 1, missingSettings.length, 3).setValues(missingSettings);
-          Logger.log(`【無損升級】在設定表（Config）中安全追加了預設變數：${missingSettings.map(s => s[0]).join(', ')}`);
-        }
-      }
     }
 
     // 自動微調欄寬
@@ -118,49 +94,28 @@ function setupDatabase(): void {
 }
 
 /**
- * 正式環境 Config 清理工具。
- * 僅保留客戶營運可理解的低風險設定；機密、系統 ID、圖片路徑與未生效模組開關不再留在試算表。
+ * 正式環境 Config 分頁刪除工具。
+ * 設定已改由 GAS 指令碼屬性、程式預設值與 GitHub Pages 固定路徑管理。
  */
 function cleanupProductionConfig(): Record<string, any> {
-  const keepSettings = PRODUCTION_CONFIG_SETTINGS;
-  const keepKeys = new Set(keepSettings.map(setting => setting[0]));
-  const sheet = SheetHelper.getSheet('Config');
-  const lastRow = sheet.getLastRow();
-  const deletedKeys: string[] = [];
-  const keptKeys: string[] = [];
-
-  if (lastRow > 1) {
-    const rows = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
-    for (let i = rows.length - 1; i >= 0; i--) {
-      const rowNumber = i + 2;
-      const key = String(rows[i][0] || '').trim();
-      if (!key || !keepKeys.has(key)) {
-        deletedKeys.push(key || `(空白列 ${rowNumber})`);
-        sheet.deleteRow(rowNumber);
-      } else {
-        keptKeys.push(key);
-      }
-    }
+  const activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  const ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : activeSpreadsheet;
+  if (!ss) {
+    throw new Error('找不到可操作的試算表。');
   }
-
-  const refreshedLastRow = sheet.getLastRow();
-  const existingKeys = refreshedLastRow > 1
-    ? new Set(sheet.getRange(2, 1, refreshedLastRow - 1, 1).getValues().map(row => String(row[0] || '').trim()))
-    : new Set<string>();
-  const missingSettings = keepSettings.filter(setting => !existingKeys.has(setting[0]));
-
-  if (missingSettings.length > 0) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, missingSettings.length, 3).setValues(missingSettings);
+  const sheet = ss.getSheetByName('系統設定') || ss.getSheetByName('Config');
+  if (!sheet) {
+    return { success: true, message: 'Config 分頁已不存在，不需要清理。' };
   }
-
-  sheet.autoResizeColumns(1, Math.max(sheet.getLastColumn(), 3));
+  if (ss.getSheets().length <= 1) {
+    throw new Error('無法刪除唯一的工作表。');
+  }
+  ss.deleteSheet(sheet);
   Config.loadCache();
-
   const result = {
     success: true,
-    keptKeys: keepSettings.map(setting => setting[0]),
-    deletedKeys: deletedKeys.reverse(),
-    addedKeys: missingSettings.map(setting => setting[0])
+    message: 'Config/系統設定分頁已刪除。'
   };
   Logger.log(`[Config 清理完成] ${JSON.stringify(result)}`);
   return result;
@@ -330,16 +285,9 @@ function setupRichMenus(): void {
       }
       Logger.log(`[LINE RichMenu] ${menu.role} 背景圖片自動上傳綁定成功!`);
 
-      // D. 回寫更新至 Google 試算表的 Config 系統設定
+      // D. 回寫更新至 GAS 指令碼屬性
       PropertiesService.getScriptProperties().setProperty(menu.configKey, richMenuId);
-      const configRows = SheetHelper.getRows<any>('Config');
-      const targetRow = configRows.find(row => row.key === menu.configKey);
-      if (targetRow) {
-        SheetHelper.updateRow('Config', 'key', menu.configKey, { value: richMenuId });
-        Logger.log(`[LINE Config回填] 成功將 ${menu.configKey} 的值更新為 ${richMenuId}！`);
-      } else {
-        Logger.log(`[LINE Config回填] ${menu.configKey} 已寫入 GAS 專案屬性，試算表不再新增此系統欄位。`);
-      }
+      Logger.log(`[LINE 設定回填] ${menu.configKey} 已寫入 GAS 指令碼屬性。`);
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       Logger.log(`[⚠️ LINE RichMenu 建立失敗 - ${menu.role}] ${errMsg}`);
@@ -384,32 +332,11 @@ function setupRichMenus(): void {
 
 /**
  * 專屬提供給 Google Sheets UI 選單使用的「一鍵更新圖文選單」按鈕綁定函式
- * 執行前先自動確保 Config 表有正確的圖片網址欄位
+ * 使用 GitHub Pages 固定圖片與 GAS 指令碼屬性設定，不再依賴 Config 分頁。
  */
 function uiUpdateRichMenus() {
   try {
     const ui = SpreadsheetApp.getUi();
-
-    // 確保有預留圖片網址的欄位
-    const configRows = SheetHelper.getRows<any>('Config');
-    const imageKeys = ['IMG_MENU_MEMBER', 'IMG_MENU_COACH', 'IMG_MENU_ADMIN'];
-    let fieldsAdded = false;
-
-    imageKeys.forEach(key => {
-      if (!configRows.find(r => r.key === key)) {
-        SheetHelper.addRow('Config', {
-          key: key,
-          value: '',
-          description: `${key.replace('IMG_MENU_', '')} 版選單圖 (支援 Google Drive 網址)`
-        });
-        fieldsAdded = true;
-      }
-    });
-
-    if (fieldsAdded) {
-      ui.alert('✅ 已為您在 Config 表中新增圖片網址欄位！\n請貼上您的 Google Drive 圖片網址後，再點擊一次更新按鈕。');
-      return;
-    }
 
     ui.alert('⏳ 開始為您重新建立並覆蓋圖文選單...\n處理時間約 5~10 秒，請稍候。');
 

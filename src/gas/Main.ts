@@ -1088,12 +1088,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         if (!allowedKeys.has(String(key))) {
           throw new Error('此設定不允許由前端管理頁修改。');
         }
-        const exists = SheetHelper.getRow<any>('Config', 'key', key);
-        if (exists) {
-          SheetHelper.updateRow('Config', 'key', key, { value: String(value) });
-        } else {
-          SheetHelper.addRow('Config', { key: key, value: String(value), description: '前端設定連動' });
-        }
+        PropertiesService.getScriptProperties().setProperty(String(key), String(value));
         Config.loadCache();
         return { success: true };
       },

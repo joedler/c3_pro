@@ -7,7 +7,6 @@
 class SheetHelper {
   // 英文 Sheet Name 到繁體中文 Sheet Name 的映射
   public static readonly SHEET_NAME_MAP: Record<string, string> = {
-    Config: '系統設定',
     Members: '學員資料',
     Classes: '班級設定',
     Sessions: '課堂紀錄',
@@ -22,11 +21,6 @@ class SheetHelper {
 
   // 每一張 Sheet 的英文欄位名到繁體中文欄位名的對照表
   public static readonly COLUMN_MAP: Record<string, Record<string, string>> = {
-    Config: {
-      key: '設定鍵',
-      value: '設定值',
-      description: '說明'
-    },
     Members: {
       member_id: '學員ID',
       line_uid: 'LINE帳號ID',

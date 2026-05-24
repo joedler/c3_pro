@@ -236,14 +236,11 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 
 ## 12. 系統設定分層規範
 
-正式產品化後，設定資料分成三層管理，避免客戶在試算表看到過多機密、系統 ID 或已固定的資源路徑。
+正式產品化後，設定資料不再放在客戶可見的試算表 `Config/系統設定` 分頁。該分頁可直接刪除，避免客戶看到機密、系統 ID、固定資源路徑或不需理解的維護開關。
 
-### 12.1 留在試算表 `Config`
+### 12.1 試算表 `Config` 分頁
 
-這一層只保留客戶或管理者看得懂、且可在營運中調整的低風險設定：
-
-- `BRAND_TITLE`：前端品牌標題。
-- `LINE_AUTO_PUSH_RENEW`：是否主動推送 LINE 繳費/續期通知。
+正式環境不保留 `Config/系統設定` 分頁。舊分頁若仍存在，程式只把它當作過渡期備援讀取；刪除後不影響前端、LINE、LIFF、Rich Menu 或 Google Calendar 運作。
 
 ### 12.2 移到 GAS 專案屬性
 
@@ -257,6 +254,8 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 - `GOOGLE_CALENDAR_ID`：客戶 Google Calendar ID。
 - `GOOGLE_OAUTH_CLIENT_ID`、`GOOGLE_OAUTH_CLIENT_SECRET`、`GOOGLE_OAUTH_REFRESH_TOKEN`：若未來採 OAuth 模式才使用。
 - `RICH_MENU_MEMBER`、`RICH_MENU_COACH`、`RICH_MENU_ADMIN`：LINE Rich Menu 建立後產生的 ID。
+- `BRAND_TITLE`：前端品牌標題，未設定時預設為 `C3 Fitness`。
+- `LINE_AUTO_PUSH_RENEW`：是否主動推送 LINE 繳費/續期通知，管理端齒輪儲存後會寫入此屬性。
 - `ALLOW_DATABASE_RESET`：資料庫重置安全鎖，只在維護或初始化時短暫設為 `true`，執行完畢後必須改回 `false` 或刪除。
 
 ### 12.3 固定在程式或 GitHub Pages 路徑
@@ -272,19 +271,14 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 
 本專案採漸進式搬移，不要求一次刪除所有舊設定。正式建議順序如下：
 
-1. 先在 GAS 專案屬性建立 `LINE_CHANNEL_ACCESS_TOKEN`、`LINE_CHANNEL_SECRET`、`LIFF_ID`、`GOOGLE_CALENDAR_ID`。
+1. 先在 GAS 專案屬性建立 `LINE_CHANNEL_ACCESS_TOKEN`、`LINE_CHANNEL_SECRET`、`LIFF_ID`、`GOOGLE_CALENDAR_ID`、`BRAND_TITLE`。
 2. 執行一次 LINE 圖文選單同步，讓 `RICH_MENU_MEMBER`、`RICH_MENU_COACH`、`RICH_MENU_ADMIN` 寫入 GAS 專案屬性。
-3. 確認管理端、學員端、Rich Menu 切換與日曆同步都正常。
-4. 再從試算表 `Config` 刪除機密、系統 ID 與固定圖片路徑，只留下 12.1 的營運設定。
+3. 在管理端齒輪確認 `LINE_AUTO_PUSH_RENEW` 狀態，儲存後由後端寫入 GAS 專案屬性。
+4. 確認管理端、學員端、Rich Menu 切換與日曆同步都正常。
+5. 執行 `cleanupProductionConfig()` 刪除試算表 `Config/系統設定` 分頁。
 
 ### 12.5 正式 Config 清理工具
 
-專案提供 GAS 手動函式 `cleanupProductionConfig()`，僅供開發者或維護者在 Apps Script 編輯器中手動執行。此函式會：
+專案提供 GAS 手動函式 `cleanupProductionConfig()`，僅供開發者或維護者在 Apps Script 編輯器中手動執行。此函式會直接刪除舊的 `系統設定` 或 `Config` 分頁。
 
-- 保留 `BRAND_TITLE`、`LINE_AUTO_PUSH_RENEW`。
-- 刪除已搬到 GAS 專案屬性的 LINE、LIFF、Google Calendar、OAuth、Rich Menu ID。
-- 刪除已固定在 GitHub Pages 的 Logo 與 Rich Menu 圖片路徑。
-- 刪除未實作實際功能切換的 `MODULE_SCHEDULE`、`MODULE_LEAVE`、`MODULE_ATTENDANCE`、`MODULE_NOTIFY`、`MODULE_FINANCE`。
-- 若兩個正式保留項缺少任一項，會自動補回預設值。
-
-此工具不放在前端管理頁，避免日常營運誤觸。
+此工具不放在前端管理頁，避免日常營運誤觸。若分頁已不存在，重複執行也只會回傳「不需要清理」。
