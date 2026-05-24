@@ -276,3 +276,15 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 2. 執行一次 LINE 圖文選單同步，讓 `RICH_MENU_MEMBER`、`RICH_MENU_COACH`、`RICH_MENU_ADMIN` 寫入 GAS 專案屬性。
 3. 確認管理端、學員端、Rich Menu 切換與日曆同步都正常。
 4. 再從試算表 `Config` 刪除機密、系統 ID 與固定圖片路徑，只留下 12.1 的營運設定。
+
+### 12.5 正式 Config 清理工具
+
+專案提供 GAS 手動函式 `cleanupProductionConfig()`，僅供開發者或維護者在 Apps Script 編輯器中手動執行。此函式會：
+
+- 保留 `BRAND_TITLE`、`LINE_AUTO_PUSH_RENEW`、`ALLOW_DATABASE_RESET`。
+- 刪除已搬到 GAS 專案屬性的 LINE、LIFF、Google Calendar、OAuth、Rich Menu ID。
+- 刪除已固定在 GitHub Pages 的 Logo 與 Rich Menu 圖片路徑。
+- 刪除未實作實際功能切換的 `MODULE_SCHEDULE`、`MODULE_LEAVE`、`MODULE_ATTENDANCE`、`MODULE_NOTIFY`、`MODULE_FINANCE`。
+- 若三個正式保留項缺少任一項，會自動補回預設值。
+
+此工具不放在前端管理頁，避免日常營運誤觸。

@@ -4,6 +4,12 @@
  * 支援 100% 繁體中文試算表呈現，欄位定義與名稱由 SheetHelper.ts 統一管理。
  */
 
+const PRODUCTION_CONFIG_SETTINGS: [string, string, string][] = [
+  ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)'],
+  ['BRAND_TITLE', 'C3 Fitness', '前端品牌標題'],
+  ['LINE_AUTO_PUSH_RENEW', 'false', '前端設定連動：是否主動推送 LINE 繳費/續期通知']
+];
+
 function setupDatabase(): void {
   let ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
@@ -14,11 +20,7 @@ function setupDatabase(): void {
     ss = SpreadsheetApp.openById(spreadsheetId);
   }
 
-  const defaultSettings: [string, string, string][] = [
-    ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)'],
-    ['BRAND_TITLE', 'C3 Fitness', '前端品牌標題'],
-    ['LINE_AUTO_PUSH_RENEW', 'false', '前端設定連動：是否主動推送 LINE 繳費/續期通知']
-  ];
+  const defaultSettings = PRODUCTION_CONFIG_SETTINGS;
 
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表
   for (const [engSheetName, chineseSheetName] of Object.entries(SheetHelper.SHEET_NAME_MAP)) {
@@ -110,6 +112,55 @@ function setupDatabase(): void {
   }
 
   Logger.log('=== GymOS v3.0 繁體中文資料庫結構「無損遷移與升級」執行成功 ===');
+}
+
+/**
+ * 正式環境 Config 清理工具。
+ * 僅保留客戶營運可理解的低風險設定；機密、系統 ID、圖片路徑與未生效模組開關不再留在試算表。
+ */
+function cleanupProductionConfig(): Record<string, any> {
+  const keepSettings = PRODUCTION_CONFIG_SETTINGS;
+  const keepKeys = new Set(keepSettings.map(setting => setting[0]));
+  const sheet = SheetHelper.getSheet('Config');
+  const lastRow = sheet.getLastRow();
+  const deletedKeys: string[] = [];
+  const keptKeys: string[] = [];
+
+  if (lastRow > 1) {
+    const rows = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const rowNumber = i + 2;
+      const key = String(rows[i][0] || '').trim();
+      if (!key || !keepKeys.has(key)) {
+        deletedKeys.push(key || `(空白列 ${rowNumber})`);
+        sheet.deleteRow(rowNumber);
+      } else {
+        keptKeys.push(key);
+      }
+    }
+  }
+
+  const refreshedLastRow = sheet.getLastRow();
+  const existingKeys = refreshedLastRow > 1
+    ? new Set(sheet.getRange(2, 1, refreshedLastRow - 1, 1).getValues().map(row => String(row[0] || '').trim()))
+    : new Set<string>();
+  const missingSettings = keepSettings.filter(setting => !existingKeys.has(setting[0]));
+
+  if (missingSettings.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, missingSettings.length, 3).setValues(missingSettings);
+  }
+
+  sheet.autoResizeColumns(1, Math.max(sheet.getLastColumn(), 3));
+  Config.loadCache();
+
+  const result = {
+    success: true,
+    keptKeys: keepSettings.map(setting => setting[0]),
+    deletedKeys: deletedKeys.reverse(),
+    addedKeys: missingSettings.map(setting => setting[0])
+  };
+  Logger.log(`[Config 清理完成] ${JSON.stringify(result)}`);
+  return result;
 }
 
 /**
