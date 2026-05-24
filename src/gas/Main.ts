@@ -31,6 +31,15 @@ function uiResetDatabaseAndSeed() {
 function doGet(e: GoogleAppsScript.Events.DoGet): any {
   try {
     const action = e.parameter.action;
+
+    // Browser entry: opening the Web App directly should render the LIFF/Admin UI.
+    if (!action) {
+      return HtmlService
+        .createHtmlOutputFromFile('index')
+        .setTitle('C3 Fitness')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
     
     // 定義公開 API 路由 (不需要驗證 Token)
     const publicRoutes: Record<string, () => any> = {
@@ -90,7 +99,7 @@ function doGet(e: GoogleAppsScript.Events.DoGet): any {
       }
     };
 
-    if (!action || !publicRoutes[action]) {
+    if (!publicRoutes[action]) {
       return respond(400, { error: `未知的 action: ${action}` });
     }
 

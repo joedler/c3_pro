@@ -10,6 +10,9 @@ function Push-ToGAS {
   Write-Host "[1/2] Pushing to Google Apps Script..." -ForegroundColor Cyan
   Push-Location $PSScriptRoot
   try {
+    Copy-Item -Path (Join-Path $PSScriptRoot "src\web\index.html") -Destination (Join-Path $GAS_DIR "index.html") -Force
+    Write-Host "[OK] Synced src\web\index.html to GAS HtmlService index.html" -ForegroundColor Green
+
     $oldErrorPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     npx clasp push --force
