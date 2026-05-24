@@ -231,3 +231,48 @@ GymOS v4.0 採用「非對稱跨帳號授權機制」，完美將執行引擎與
 - 目標課堂必須仍有空位，空位以正式選課人數扣除請假人數，再加上已核准補課人數後計算。
 - 補課清單與補課送出端都會排除原請假課堂所屬班級，避免學員使用補課額度回補自己的原班級。
 - 補課成功後會寫入 `Makeup_Requests`，回填該請假紀錄的 `makeup_session_id`，並在目標課堂 `Attendance` 標記為 `makeup`，再同步 Google Calendar 課堂資訊。
+
+---
+
+## 12. 系統設定分層規範
+
+正式產品化後，設定資料分成三層管理，避免客戶在試算表看到過多機密、系統 ID 或已固定的資源路徑。
+
+### 12.1 留在試算表 `Config`
+
+這一層只保留客戶或管理者看得懂、且可在營運中調整的低風險設定：
+
+- `BRAND_TITLE`：前端品牌標題。
+- `LINE_AUTO_PUSH_RENEW`：是否主動推送 LINE 繳費/續期通知。
+- `ALLOW_DATABASE_RESET`：資料庫重置安全鎖，只在維護或初始化時短暫開啟。
+
+### 12.2 移到 GAS 專案屬性
+
+這一層屬於部署、機密、平台 ID 或系統自動產生值，不應放在客戶日常可見的試算表中。程式會優先讀取 GAS Script Properties，若尚未搬移，才退回讀取舊 `Config` 備援值。
+
+- `SPREADSHEET_ID`：客戶資料庫試算表 ID。
+- `GCP_SERVICE_ACCOUNT_KEY`：Google Calendar 服務帳號金鑰。
+- `LINE_CHANNEL_ACCESS_TOKEN`：LINE Bot Channel Access Token。
+- `LINE_CHANNEL_SECRET`：LINE Bot Channel Secret。
+- `LIFF_ID`：LINE LIFF ID。
+- `GOOGLE_CALENDAR_ID`：客戶 Google Calendar ID。
+- `GOOGLE_OAUTH_CLIENT_ID`、`GOOGLE_OAUTH_CLIENT_SECRET`、`GOOGLE_OAUTH_REFRESH_TOKEN`：若未來採 OAuth 模式才使用。
+- `RICH_MENU_MEMBER`、`RICH_MENU_COACH`、`RICH_MENU_ADMIN`：LINE Rich Menu 建立後產生的 ID。
+
+### 12.3 固定在程式或 GitHub Pages 路徑
+
+這一層是專案固定資源，不再要求客戶填在試算表。若舊 `Config` 仍有值，程式仍可讀取；若沒有值，會自動使用以下 GitHub Pages 路徑：
+
+- `BRAND_LOGO_URL`：`https://joedler.github.io/c3_pro/img/logo/logo.png`
+- `IMG_MENU_MEMBER`：`https://joedler.github.io/c3_pro/img/rich-menu/member.jpg`
+- `IMG_MENU_COACH`：`https://joedler.github.io/c3_pro/img/rich-menu/coach.jpg`
+- `IMG_MENU_ADMIN`：`https://joedler.github.io/c3_pro/img/rich-menu/admin.jpg`
+
+### 12.4 搬移策略
+
+本專案採漸進式搬移，不要求一次刪除所有舊設定。正式建議順序如下：
+
+1. 先在 GAS 專案屬性建立 `LINE_CHANNEL_ACCESS_TOKEN`、`LINE_CHANNEL_SECRET`、`LIFF_ID`、`GOOGLE_CALENDAR_ID`。
+2. 執行一次 LINE 圖文選單同步，讓 `RICH_MENU_MEMBER`、`RICH_MENU_COACH`、`RICH_MENU_ADMIN` 寫入 GAS 專案屬性。
+3. 確認管理端、學員端、Rich Menu 切換與日曆同步都正常。
+4. 再從試算表 `Config` 刪除機密、系統 ID 與固定圖片路徑，只留下 12.1 的營運設定。

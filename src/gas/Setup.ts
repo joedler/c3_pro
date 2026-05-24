@@ -15,26 +15,9 @@ function setupDatabase(): void {
   }
 
   const defaultSettings: [string, string, string][] = [
-    ['LINE_CHANNEL_ACCESS_TOKEN', 'YOUR_LINE_TOKEN', 'LINE Bot Channel Access Token'],
-    ['LINE_CHANNEL_SECRET', 'YOUR_LINE_SECRET', 'LINE Bot Channel Secret'],
-    ['LIFF_ID', 'YOUR_LIFF_ID', 'LINE LIFF ID'],
-    ['RICH_MENU_MEMBER', 'YOUR_RICH_MENU_MEMBER_ID', '學員版 LINE 圖文選單 ID'],
-    ['RICH_MENU_COACH', 'YOUR_RICH_MENU_COACH_ID', '教練版 LINE 圖文選單 ID'],
-    ['RICH_MENU_ADMIN', 'YOUR_RICH_MENU_ADMIN_ID', '管理員版 LINE 圖文選單 ID'],
-    ['IMG_MENU_MEMBER', '', '學員版選單圖 (支援 Google Drive 網址)'],
-    ['IMG_MENU_COACH', '', '教練版選單圖 (支援 Google Drive 網址)'],
-    ['IMG_MENU_ADMIN', '', '管理員版選單圖 (支援 Google Drive 網址)'],
-    ['MODULE_SCHEDULE', 'true', '啟用模組：課程排程'],
-    ['MODULE_LEAVE', 'true', '啟用模組：請假補課'],
-    ['MODULE_ATTENDANCE', 'true', '啟用模組：出勤管理'],
-    ['MODULE_NOTIFY', 'true', '啟用模組：通知系統'],
-    ['MODULE_FINANCE', 'true', '啟用模組：財務管理'],
     ['ALLOW_DATABASE_RESET', 'false', '安全鎖定：允許前端一鍵重置資料庫與課程種子 (true/false)'],
-    ['GOOGLE_OAUTH_CLIENT_ID', '', 'Google Calendar API：OAuth Client ID (SaaS 模式)'],
-    ['GOOGLE_OAUTH_CLIENT_SECRET', '', 'Google Calendar API：OAuth Client Secret (SaaS 模式)'],
-    ['GOOGLE_OAUTH_REFRESH_TOKEN', '', 'Google Calendar API：自動連結儲存的 Refresh Token (系統自動產生)'],
-    ['BRAND_TITLE', 'GymOS', 'SaaS 動態更換網頁品牌標題'],
-    ['BRAND_LOGO_URL', '', 'SaaS 動態更換網頁品牌 Logo 網址 (留空則使用預設閃電 SVG 圖標)']
+    ['BRAND_TITLE', 'C3 Fitness', '前端品牌標題'],
+    ['LINE_AUTO_PUSH_RENEW', 'false', '前端設定連動：是否主動推送 LINE 繳費/續期通知']
   ];
 
   // 遍歷所有在 SheetHelper 中定義的 Sheets，建立中文工作表
@@ -141,35 +124,10 @@ function setupRichMenus(): void {
   const liffId = Config.get('LIFF_ID');
 
   if (!token || token === 'YOUR_LINE_TOKEN') {
-    throw new Error('【設定錯誤】尚未在試算表「系統設定 (Config)」中填入您真實的 LINE_CHANNEL_ACCESS_TOKEN！請填妥後再執行此功能。');
+    throw new Error('【設定錯誤】尚未在 GAS 專案屬性或試算表備援 Config 中設定 LINE_CHANNEL_ACCESS_TOKEN！請填妥後再執行此功能。');
   }
   if (!liffId || liffId === 'YOUR_LIFF_ID') {
-    throw new Error('【設定錯誤】尚未在試算表「系統設定 (Config)」中填入您真實的 LIFF_ID！請填妥後再執行此功能。');
-  }
-
-  // 🎯 自動化修復：若試算表內缺少這三個欄位，自動為管理員填入，避免手動輸入錯誤！
-  const configRows = SheetHelper.getRows<any>('Config');
-  const imageKeys = ['IMG_MENU_MEMBER', 'IMG_MENU_COACH', 'IMG_MENU_ADMIN'];
-  let fieldsAdded = false;
-
-  imageKeys.forEach(key => {
-    if (!configRows.find(r => r.key === key)) {
-      const descMap: Record<string, string> = {
-        'IMG_MENU_MEMBER': '學員版選單圖 (支援 Google Drive 網址)',
-        'IMG_MENU_COACH': '教練版選單圖 (支援 Google Drive 網址)',
-        'IMG_MENU_ADMIN': '管理員版選單圖 (支援 Google Drive 網址)'
-      };
-      SheetHelper.addRow('Config', {
-        key: key,
-        value: '',
-        description: descMap[key]
-      });
-      fieldsAdded = true;
-    }
-  });
-
-  if (fieldsAdded) {
-    Config.loadCache();
+    throw new Error('【設定錯誤】尚未在 GAS 專案屬性或試算表備援 Config 中設定 LIFF_ID！請填妥後再執行此功能。');
   }
 
   // 1. 定義 3 個圖文選單配置結構與符合 LINE 規定比例 (2500x843) 的 Unsplash 精準裁剪背景圖
@@ -319,22 +277,14 @@ function setupRichMenus(): void {
       Logger.log(`[LINE RichMenu] ${menu.role} 背景圖片自動上傳綁定成功!`);
 
       // D. 回寫更新至 Google 試算表的 Config 系統設定
+      PropertiesService.getScriptProperties().setProperty(menu.configKey, richMenuId);
       const configRows = SheetHelper.getRows<any>('Config');
       const targetRow = configRows.find(row => row.key === menu.configKey);
       if (targetRow) {
         SheetHelper.updateRow('Config', 'key', menu.configKey, { value: richMenuId });
         Logger.log(`[LINE Config回填] 成功將 ${menu.configKey} 的值更新為 ${richMenuId}！`);
       } else {
-        const descMap: Record<string, string> = {
-          'RICH_MENU_MEMBER': '學員版 LINE 圖文選單 ID',
-          'RICH_MENU_COACH': '教練版 LINE 圖文選單 ID',
-          'RICH_MENU_ADMIN': '管理員版 LINE 圖文選單 ID'
-        };
-        SheetHelper.addRow('Config', {
-          key: menu.configKey,
-          value: richMenuId,
-          description: descMap[menu.configKey] || ''
-        });
+        Logger.log(`[LINE Config回填] ${menu.configKey} 已寫入 GAS 專案屬性，試算表不再新增此系統欄位。`);
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);

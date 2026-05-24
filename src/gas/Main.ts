@@ -1080,6 +1080,10 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       'admin.saveSystemConfig': () => {
         AuthService.requireRole(user, ['admin']);
         const { key, value } = data;
+        const allowedKeys = new Set(['LINE_AUTO_PUSH_RENEW', 'BRAND_TITLE']);
+        if (!allowedKeys.has(String(key))) {
+          throw new Error('此設定不允許由前端管理頁修改。');
+        }
         const exists = SheetHelper.getRow<any>('Config', 'key', key);
         if (exists) {
           SheetHelper.updateRow('Config', 'key', key, { value: String(value) });
