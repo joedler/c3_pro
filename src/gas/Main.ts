@@ -28,6 +28,32 @@ function uiResetDatabaseAndSeed() {
   }
 }
 
+function runBackgroundMaintenanceIfDue(): void {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'GYMOS_BACKGROUND_MAINTENANCE_LAST_RUN';
+  if (cache.get(cacheKey)) {
+    return;
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(300)) {
+    return;
+  }
+
+  try {
+    if (cache.get(cacheKey)) {
+      return;
+    }
+
+    // Throttle heavy sheet/calendar maintenance so a single page load does not repeat it for every API call.
+    cache.put(cacheKey, String(Date.now()), 600);
+    ClassEngine.autoCompletePastSessions();
+    ClassEngine.autoRenewClasses();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doGet(e: GoogleAppsScript.Events.DoGet): any {
   try {
     const action = e.parameter.action;
@@ -133,10 +159,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       return respond(400, { error: '缺少 action 參數' });
     }
 
-    // 每次前端 API 呼叫時，動態修復並自動完成所有已過期的 scheduled 課堂與辦理自動續期
+    // 節流背景維護：避免同一次開頁連續多個 API 都掃描課表與日曆。
     try {
-      ClassEngine.autoCompletePastSessions();
-      ClassEngine.autoRenewClasses();
+      runBackgroundMaintenanceIfDue();
     } catch (err) {
       Logger.log(`[系統背景任務處理錯誤] ${err}`);
     }
