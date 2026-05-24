@@ -14,6 +14,9 @@ Thumbs.db
 # Uncomment below if you want to keep your scriptId secret in git:
 # .clasp.json
 
+# Local analysis / preview scratch files
+scratch/
+
 # IDEs
 .idea/
 .vscode/

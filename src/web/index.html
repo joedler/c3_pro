@@ -514,7 +514,7 @@
 
       <div class="flex items-center gap-3">
         <!-- Configuration settings -->
-        <button @click="showConfig = true" class="p-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition-all" title="設定 API 網址與角色">
+        <button x-show="currentMode === 'admin'" @click="showConfig = true" class="p-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition-all" title="管理端系統設定">
           ⚙️
         </button>
         <div class="hidden sm:flex flex-col text-right">
@@ -526,25 +526,21 @@
   </header>
 
   <!-- Configuration Modal -->
-  <div x-show="showConfig" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
+  <div x-show="showConfig && currentMode === 'admin'" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-5">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">⚙️ 系統 API 與設定</h3>
-          <!-- 5-click easter egg version tag -->
-          <span @click="devClickCount++; if (devClickCount >= 5) { showDevOptions = true; alert('🔓 開發者模式已解鎖！') }" class="cursor-pointer px-2 py-0.5 text-[9px] font-semibold bg-brand-500/10 border border-brand-500/20 text-brand-500 rounded-full select-none" x-text="'v3.0 ' + currentMode.toUpperCase()"></span>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">⚙️ 管理端系統設定</h3>
+          <!-- Admin-only maintenance unlock: click version tag 5 times -->
+          <span @click="unlockMaintenanceTools()" class="cursor-pointer px-2 py-0.5 text-[9px] font-semibold bg-brand-500/10 border border-brand-500/20 text-brand-500 rounded-full select-none" x-text="'v3.0 ' + currentMode.toUpperCase()"></span>
         </div>
         <button @click="showConfig = false" class="text-slate-400 hover:text-white text-lg">&times;</button>
       </div>
       
       <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-400 mb-1.5">Apps Script 網頁應用程式網址</label>
-          <input type="text" x-model="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
-        </div>
-
         <!-- LINE Message push quota saving toggle -->
-        <div class="border-t border-slate-800 pt-4">
+        <div>
+          <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-brand-500">一般管理設定</div>
           <label class="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" x-model="lineAutoPushRenew" class="rounded border-slate-800 bg-slate-950 text-brand-500 focus:ring-brand-500 w-4 h-4">
             <span class="text-xs font-bold text-slate-300">開啟 LINE 繳費通知自動主動推送</span>
@@ -552,34 +548,31 @@
           <p class="text-[10px] text-slate-500 mt-1">關閉時，學員需打開 LINE 個人首頁查閱帳單，能節省每月 LINE 免費推播額度。</p>
         </div>
 
-        <!-- Developer Mode ONLY options -->
+        <div class="border-t border-slate-800 pt-4">
+          <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">系統資訊</div>
+          <dl class="grid grid-cols-[88px_1fr] gap-x-3 gap-y-2 text-[10px]">
+            <dt class="text-slate-500">目前登入者</dt>
+            <dd class="text-slate-300" x-text="sessionUser.name + ' / ' + sessionUser.role"></dd>
+            <dt class="text-slate-500">目前模式</dt>
+            <dd class="text-slate-300" x-text="currentMode"></dd>
+            <dt class="text-slate-500">版本</dt>
+            <dd class="text-slate-300">v3.0</dd>
+            <dt class="text-slate-500">後端 API</dt>
+            <dd class="text-slate-400 break-all" x-text="gasUrl"></dd>
+          </dl>
+        </div>
+
+        <!-- Admin maintenance tools ONLY options -->
         <template x-if="showDevOptions">
           <div class="space-y-4 pt-4 border-t border-slate-800" x-transition>
             <div>
-              <label class="block text-xs font-bold text-slate-400 mb-1.5">測試用模擬 LINE Token / UID</label>
-              <input type="text" x-model="devToken" placeholder="例如: TEST_UID_MEMBER_001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-1">快速選取測試學員</label>
-                <select @change="devToken = $event.target.value; localStorage.setItem('gymos_dev_token', devToken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
-                  <option value="">-- 請選擇學員 --</option>
-                  <option value="TEST_UID_U9876543210123456789012345678901">林小明 (MB-01 L1)</option>
-                  <option value="TEST_UID_U9876543210123456789012345678902">陳美華 (MB-02 L2)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-1">快速選取測試教職</label>
-                <select @change="devToken = $event.target.value; localStorage.setItem('gymos_dev_token', devToken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
-                  <option value="">-- 請選擇教職員 --</option>
-                  <option value="TEST_UID_U4abb6fb071cf072db0cc950d59780e11">訪客管理員 (Admin)</option>
-                  <option value="TEST_UID_U028285d818d2fb6acc952c416b833e33">張教練 (Coach)</option>
-                </select>
-              </div>
+              <label class="block text-xs font-bold text-slate-400 mb-1.5">後端 API 網址維護</label>
+              <input type="text" x-model="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+              <p class="text-[10px] text-slate-500 mt-1">只有更換 Apps Script 部署網址時才需要調整。</p>
             </div>
 
             <div class="space-y-3 pt-3">
-              <label class="block text-xs font-bold text-slate-400">⚙️ 測試沙盒切換面板</label>
+              <label class="block text-xs font-bold text-slate-400">⚙️ 頁面模式預覽</label>
               <div class="grid grid-cols-5 gap-1.5 text-center text-[9px]">
                 <button @click="switchMode('admin'); showConfig = false" :class="currentMode === 'admin' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">管理端</button>
                 <button @click="switchMode('bind'); showConfig = false" :class="currentMode === 'bind' ? 'bg-brand-500 text-slate-950 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'" class="py-2.5 rounded-lg transition-all">學員綁定</button>
@@ -590,9 +583,12 @@
             </div>
 
             <div class="space-y-2 pt-3">
-              <label class="block text-xs font-bold text-indigo-400">🖼️ 系統進階同步</label>
+              <label class="block text-xs font-bold text-indigo-400">🖼️ LINE 圖文選單同步</label>
               <button @click="syncRichMenus(); showConfig = false" class="w-full py-2.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95">
                 🖼️ 一鍵同步 LINE 圖文選單
+              </button>
+              <button @click="clearLocalIdentity()" class="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1">
+                清除本機測試身分並重新載入
               </button>
             </div>
           </div>
@@ -600,7 +596,7 @@
       </div>
       
       <div class="flex gap-3 mt-6">
-        <button @click="saveConfiguration()" class="w-[60%] bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3 text-xs font-bold transition-all">儲存並重新載入</button>
+        <button @click="saveConfiguration()" class="w-[60%] bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3 text-xs font-bold transition-all">儲存管理設定</button>
         <button @click="showConfig = false" class="w-[40%] bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 text-xs font-bold transition-all">關閉</button>
       </div>
     </div>
@@ -2010,7 +2006,7 @@
       Alpine.data('gymApp', () => ({
         // GAS URL connection (生產環境固定金鑰)
         gasUrl: 'https://script.google.com/macros/s/AKfycbw5qd3RILHE1zkWfFLJfcDL-Mitfx2UcHj9cyzETaISKgwONltAcm1SL36Z_EK3lFAp/exec',
-        devToken: localStorage.getItem('gymos_dev_token') || 'TEST_UID_MEMBER_001',
+        devToken: localStorage.getItem('gymos_dev_token') || ((location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'TEST_UID_MEMBER_001' : ''),
         showConfig: false,
         devClickCount: 0,
         showDevOptions: false,
@@ -2250,7 +2246,6 @@
         // Save backend settings
         async saveConfiguration() {
           localStorage.setItem('gymos_gas_url', this.gasUrl);
-          localStorage.setItem('gymos_dev_token', this.devToken);
           localStorage.setItem('gymos_line_auto_push_renew', String(this.lineAutoPushRenew));
           if (this.currentMode === 'admin') {
             try {
@@ -2260,8 +2255,24 @@
             }
           }
           this.showConfig = false;
-          this.addToast('API 連線與認證設定已儲存！系統正在重整...', 'success');
-          setTimeout(() => window.location.reload(), 1000);
+          this.addToast('管理設定已儲存。', 'success');
+        },
+
+        unlockMaintenanceTools() {
+          if (this.currentMode !== 'admin') return;
+          this.devClickCount++;
+          if (this.devClickCount >= 5 && !this.showDevOptions) {
+            this.showDevOptions = true;
+            this.addToast('維護工具已開啟，請謹慎操作。', 'info');
+          }
+        },
+
+        clearLocalIdentity() {
+          localStorage.removeItem('gymos_dev_token');
+          this.devToken = '';
+          this.showConfig = false;
+          this.addToast('已清除本機測試身分，正在重新載入...', 'success');
+          setTimeout(() => window.location.reload(), 700);
         },
         
         async init() {
@@ -2672,6 +2683,9 @@
         },
 
         async syncRichMenus() {
+          if (!confirm('確定要重新同步 LINE 圖文選單？此操作會重新建立或覆蓋官方帳號圖文選單，可能影響所有使用者。')) {
+            return;
+          }
           try {
             this.addToast('⏳ 正在向 LINE 同步覆蓋圖文選單圖，大約需要 5-10 秒，請稍候...', 'info');
             this.loading = true;

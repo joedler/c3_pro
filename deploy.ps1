@@ -37,7 +37,12 @@ function Push-ToGitHub {
   Push-Location $PSScriptRoot
   try {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-    git add .
+    git add .gitignore .clasp.json package.json package-lock.json tsconfig.json deploy.ps1 src docs img
+    git diff --cached --quiet
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "[OK] No Git changes to commit" -ForegroundColor Green
+      return
+    }
     git commit -m "deploy: $timestamp"
     git push
     if ($LASTEXITCODE -ne 0) {
