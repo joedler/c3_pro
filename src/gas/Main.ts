@@ -269,6 +269,19 @@ function getAdminBootstrapData(): Record<string, any> {
   };
 }
 
+function getMemberBootstrapCacheKey(user: UserSession): string {
+  return `GYMOS_MEMBER_BOOTSTRAP_${String(user.uid || 'guest').substring(0, 80)}`;
+}
+
+function clearMemberBootstrapCache(user: UserSession): void {
+  if (!user || !user.uid) return;
+  try {
+    CacheService.getScriptCache().remove(getMemberBootstrapCacheKey(user));
+  } catch (e) {
+    Logger.log(`[member.bootstrap cache clear failed] ${e}`);
+  }
+}
+
 function doGet(e: GoogleAppsScript.Events.DoGet): any {
   try {
     const action = e.parameter.action;
@@ -392,17 +405,28 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         return MemberService.getAvailableClasses(data);
       },
       'member.bind': () => {
-        return MemberService.bind(data, user);
+        const result = MemberService.bind(data, user);
+        clearMemberBootstrapCache(user);
+        return result;
       },
       'member.getInfo': () => {
         return MemberService.getInfo(user);
       },
       'member.bootstrap': () => {
-        return {
+        const cache = CacheService.getScriptCache();
+        const cacheKey = getMemberBootstrapCacheKey(user);
+        const cached = cache.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+
+        const result = {
           info: MemberService.getInfo(user),
           announcements: PublicService.getActiveAnnouncements(),
           brandConfig: getBrandConfigForFrontend()
         };
+        cache.put(cacheKey, JSON.stringify(result), 30);
+        return result;
       },
       'member.getClassesForEnrollment': () => {
         AuthService.requireRole(user, ['member']);
@@ -410,7 +434,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       },
       'member.enrollNewClass': () => {
         AuthService.requireRole(user, ['member']);
-        return MemberService.enrollNewClass(data, user);
+        const result = MemberService.enrollNewClass(data, user);
+        clearMemberBootstrapCache(user);
+        return result;
       },
       'member.getUpcomingSessions': () => {
         AuthService.requireRole(user, ['member']);
@@ -422,11 +448,15 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
       },
       'leave.request': () => {
         AuthService.requireRole(user, ['member']);
-        return LeaveService.request(data, user);
+        const result = LeaveService.request(data, user);
+        clearMemberBootstrapCache(user);
+        return result;
       },
       'makeup.request': () => {
         AuthService.requireRole(user, ['member']);
-        return MakeupService.request(data, user);
+        const result = MakeupService.request(data, user);
+        clearMemberBootstrapCache(user);
+        return result;
       },
       'makeup.available': () => {
         AuthService.requireRole(user, ['member']);
