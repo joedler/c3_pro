@@ -5,44 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GymOS — 智慧健身房管理系統 (PRD v3.0)</title>
   
-  <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://static.line-scdn.net">
   
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- LINE LIFF SDK 已移至下方統一載入，避免重複引入浪費載入時間 -->
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#FFD54A',
-              100: '#FFD54A',
-              500: '#F5B400',
-              600: '#ca8a04',
-              700: '#a16207',
-              900: '#713f12',
-            },
-            c3: {
-              black: '#0A0A0A',
-              dark: '#141414',
-              gold: '#F5B400',
-              goldLight: '#FFD54A',
-              gray: '#BDBDBD',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="https://joedler.github.io/c3_pro/src/web/assets/app.css">
   
   <!-- LINE LIFF SDK -->
   <script defer src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>

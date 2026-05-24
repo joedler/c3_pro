@@ -10,6 +10,13 @@ function Push-ToGAS {
   Write-Host "[1/2] Pushing to Google Apps Script..." -ForegroundColor Cyan
   Push-Location $PSScriptRoot
   try {
+    Write-Host "Building Tailwind CSS..." -ForegroundColor Cyan
+    npm.cmd run build:css
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "[ERROR] Tailwind CSS build failed" -ForegroundColor Red
+      exit 1
+    }
+
     Copy-Item -Path (Join-Path $PSScriptRoot "src\web\index.html") -Destination (Join-Path $GAS_DIR "index.html") -Force
     Write-Host "[OK] Synced src\web\index.html to GAS HtmlService index.html" -ForegroundColor Green
 
@@ -40,7 +47,7 @@ function Push-ToGitHub {
   Push-Location $PSScriptRoot
   try {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-    git add .gitignore .clasp.json index.html package.json package-lock.json tsconfig.json deploy.ps1 src docs img
+    git add .gitignore .clasp.json index.html package.json package-lock.json tailwind.config.js tsconfig.json deploy.ps1 src docs img
     git diff --cached --quiet
     if ($LASTEXITCODE -eq 0) {
       Write-Host "[OK] No Git changes to commit" -ForegroundColor Green
