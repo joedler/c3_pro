@@ -256,24 +256,14 @@ class MemberService {
    * 取得學員個人資訊卡片所需之核心數據 (F-M02)
    */
   public static getInfo(user: UserSession): Record<string, any> {
-    const perfStart = Date.now();
-    const perf: Record<string, number> = {};
-    let markLast = perfStart;
-    const mark = (label: string): void => {
-      const now = Date.now();
-      perf[label] = now - markLast;
-      markLast = now;
-    };
-
     if (!user || !user.uid) {
-      return { bound: false, _perf: { totalMs: Date.now() - perfStart } };
+      return { bound: false };
     }
 
     // 1. 取得學員基本資料
     const member = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
-    mark('readMemberMs');
     if (!member || member.status !== 'active') {
-      return { bound: false, _perf: { ...perf, totalMs: Date.now() - perfStart } };
+      return { bound: false };
     }
 
     const memberId = member.member_id;
@@ -282,7 +272,6 @@ class MemberService {
     const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
       e => e.member_id === memberId && (e.status === 'active' || e.status === 'pending_payment')
     );
-    mark('readEnrollmentsMs');
 
     if (enrollments.length === 0) {
       return {
@@ -290,8 +279,7 @@ class MemberService {
         realName: member.real_name,
         level: member.level,
         hasClasses: false,
-        message: '目前尚未選修任何課程，請聯絡管理員幫您安排班級。',
-        _perf: { ...perf, totalMs: Date.now() - perfStart }
+        message: '目前尚未選修任何課程，請聯絡管理員幫您安排班級。'
       };
     }
 
@@ -300,20 +288,15 @@ class MemberService {
     // 3. 取得班級與課程設定 (Classes)
     const allClasses = SheetHelper.getRows<any>('Classes');
     const myClasses = allClasses.filter(c => classIds.includes(c.class_id) && (c.status === 'active' || c.status === 'open'));
-    mark('readClassesMs');
 
     // 4. 取得出勤與請假統計
     const attendances = SheetHelper.getRows<any>('Attendance').filter(a => a.member_id === memberId);
-    mark('readAttendanceMs');
     const allLeaveRows = SheetHelper.getRows<any>('Leave_Requests').filter(l => l.member_id === memberId);
     const leaveRequests = allLeaveRows.filter(l => l.status === 'approved');
-    mark('readLeavesMs');
     const makeupRequests = SheetHelper.getRows<any>('Makeup_Requests').filter(
       m => m.member_id === memberId
     );
-    mark('readMakeupsMs');
     const allSessions = SheetHelper.getRows<any>('Sessions');
-    mark('readSessionsMs');
 
     // 各項計數器
     const totalPaid = enrollments.reduce((sum, e) => sum + (Number(e.total_paid_sessions) || 0), 0);
@@ -420,7 +403,6 @@ class MemberService {
         };
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-    mark('composeResponseMs');
 
     return {
       bound: true,
@@ -438,8 +420,7 @@ class MemberService {
       makeupInfo: `已登記 ${reservedMakeups} 堂`,
       remainingCount,
       upcomingSessions,
-      pendingLeaves,
-      _perf: { ...perf, totalMs: Date.now() - perfStart }
+      pendingLeaves
     };
   }
 

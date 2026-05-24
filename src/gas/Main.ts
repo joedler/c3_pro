@@ -398,22 +398,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         return MemberService.getInfo(user);
       },
       'member.bootstrap': () => {
-        const startedAt = Date.now();
-        const info = MemberService.getInfo(user);
-        const afterInfo = Date.now();
-        const announcements = PublicService.getActiveAnnouncements();
-        const finishedAt = Date.now();
-        const perf = {
-          totalMs: finishedAt - startedAt,
-          memberInfoMs: afterInfo - startedAt,
-          announcementsMs: finishedAt - afterInfo,
-          memberInfoDetail: info._perf || null
-        };
-        Logger.log(`[member.bootstrap perf] ${JSON.stringify(perf)}`);
         return {
-          info,
-          announcements,
-          _perf: perf
+          info: MemberService.getInfo(user),
+          announcements: PublicService.getActiveAnnouncements()
         };
       },
       'member.getClassesForEnrollment': () => {

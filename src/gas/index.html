@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GymOS — 智慧健身房管理系統 (PRD v3.0)</title>
   
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.tailwindcss.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://static.line-scdn.net">
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,7 +20,7 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Outfit', 'Noto Sans TC', 'sans-serif'],
+            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', 'sans-serif'],
           },
           colors: {
             brand: {
@@ -46,7 +45,7 @@
   </script>
   
   <!-- LINE LIFF SDK -->
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script defer src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   
   <!-- Alpine.js CDN -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -2485,9 +2484,6 @@
               const bootstrap = await this.apiCall('member.bootstrap');
               const info = bootstrap.info || {};
               this.announcements = bootstrap.announcements || [];
-              if (bootstrap._perf) {
-                console.info('[GymOS member bootstrap perf]', bootstrap._perf);
-              }
               if (info.bound) {
                 this.studentProfile.realName = info.realName;
                 this.studentProfile.level = info.level;
