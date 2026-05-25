@@ -2814,6 +2814,17 @@
             });
             this.addToast(`🎉 成功加選「${result.className}」！`, 'success');
             this.studentEnrollForm.successData = result;
+
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+              liff.sendMessages([
+                {
+                  type: 'text',
+                  text: `【GymOS 加選課程】我已完成加選課程申請，加選班級：${result.className}。`
+                }
+              ]).catch(err => {
+                console.error('LIFF sendMessages failed:', err);
+              });
+            }
           } catch (e) {
             console.error(e);
           }

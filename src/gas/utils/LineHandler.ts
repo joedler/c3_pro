@@ -5,11 +5,10 @@
 
 class LineHandler {
   private static readonly C3_GOLD = '#F5B400';
-  private static readonly C3_BLACK = '#0A0A0A';
-  private static readonly C3_PANEL = '#171717';
-  private static readonly C3_TEXT = '#F8FAFC';
-  private static readonly C3_MUTED = '#A3A3A3';
-  private static readonly C3_LINE = '#2A2A2A';
+  private static readonly C3_SURFACE = '#FFFCF6';
+  private static readonly C3_TEXT = '#0F172A';
+  private static readonly C3_MUTED = '#64748B';
+  private static readonly C3_LINE = '#E7DEC9';
 
   private static flexRow(label: string, value: string, valueColor: string = LineHandler.C3_TEXT): any {
     return {
@@ -37,11 +36,31 @@ class LineHandler {
     const accentColor = data.accentColor || this.C3_GOLD;
     const bodyContents: any[] = [
       {
+        type: 'box',
+        layout: 'horizontal',
+        contents: [
+          {
+            type: 'box',
+            layout: 'vertical',
+            width: '40px',
+            height: '40px',
+            cornerRadius: '10px',
+            backgroundColor: '#0A0A0A',
+            alignItems: 'center',
+            justifyContent: 'center',
+            contents: [
+              { type: 'text', text: 'C3', color: this.C3_GOLD, weight: 'bold', size: 'sm', align: 'center' }
+            ]
+          }
+        ]
+      },
+      {
         type: 'text',
         text: data.title,
         weight: 'bold',
-        size: 'md',
-        color: accentColor,
+        size: 'xl',
+        color: this.C3_TEXT,
+        margin: 'lg',
         wrap: true
       }
     ];
@@ -52,7 +71,7 @@ class LineHandler {
         text: data.subtitle,
         wrap: true,
         size: 'xs',
-        color: this.C3_TEXT,
+        color: this.C3_MUTED,
         margin: 'md'
       });
     }
@@ -100,12 +119,20 @@ class LineHandler {
     const bubble: any = {
       type: 'bubble',
       size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        height: '8px',
+        paddingAll: '0px',
+        backgroundColor: accentColor,
+        contents: [{ type: 'filler' }]
+      },
       body: {
         type: 'box',
         layout: 'vertical',
         spacing: 'md',
         contents: bodyContents,
-        backgroundColor: this.C3_BLACK
+        backgroundColor: this.C3_SURFACE
       }
     };
 
@@ -115,7 +142,7 @@ class LineHandler {
         layout: 'vertical',
         spacing: 'sm',
         contents: footerContents,
-        backgroundColor: this.C3_BLACK
+        backgroundColor: this.C3_SURFACE
       };
     }
 
@@ -138,6 +165,59 @@ class LineHandler {
       note: '課程已轉為預排上課，請依課表時間準時出席。',
       buttonLabel: '查看我的課程',
       buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+    });
+  }
+
+  private static buildServiceCenterFlex(role: 'admin' | 'coach' | 'member' | 'guest', liffId: string): any {
+    if (role === 'admin') {
+      return this.buildC3InfoCard({
+        title: 'C3 Fitness 管理端服務中心',
+        subtitle: '管理員可從後台查看首頁摘要、課程列表、班級經營與繳費確認。',
+        accentColor: '#F5B400',
+        rows: [
+          this.flexRow('管理後台', '首頁摘要、課程列表、繳費確認'),
+          this.flexRow('LINE 管理', '同步圖文選單、公告通知')
+        ],
+        buttonLabel: '開啟管理後台',
+        buttonUri: `https://liff.line.me/${liffId}?mode=admin`,
+        secondaryButtonLabel: '同步/更新選單權限',
+        secondaryMessage: '同步選單'
+      });
+    }
+    if (role === 'coach') {
+      return this.buildC3InfoCard({
+        title: 'C3 Fitness 教練服務中心',
+        subtitle: '教練可查詢今日課表，確認授課時段與學員異動。',
+        accentColor: '#111827',
+        rows: [
+          this.flexRow('授課查詢', '輸入「今日課表」查看 Google 行事曆'),
+          this.flexRow('權限同步', '輸入「同步選單」更新教練選單')
+        ],
+        secondaryButtonLabel: '查看今日課表',
+        secondaryMessage: '今日課表'
+      });
+    }
+    if (role === 'guest') {
+      return this.buildC3InfoCard({
+        title: '請先完成帳號綁定',
+        subtitle: '系統尚未辨識您的身份，請先完成安全綁定。',
+        accentColor: '#7C3AED',
+        buttonLabel: '一鍵安全綁定',
+        buttonUri: `https://liff.line.me/${liffId}?mode=bind`
+      });
+    }
+    return this.buildC3InfoCard({
+      title: 'C3 Fitness 會員服務中心',
+      subtitle: '查詢課程、線上請假、預約補課都可從會員中心進入。',
+      accentColor: this.C3_GOLD,
+      rows: [
+        this.flexRow('課程查詢', '課表、堂數、請假與補課紀錄'),
+        this.flexRow('線上服務', '請假申請、補課預約、選單同步')
+      ],
+      buttonLabel: '進入我的會員中心',
+      buttonUri: `https://liff.line.me/${liffId}`,
+      secondaryButtonLabel: '同步/更新選單權限',
+      secondaryMessage: '同步選單'
     });
   }
 
@@ -323,75 +403,54 @@ class LineHandler {
           const className = cls ? cls.class_name : '未設定班級';
           const totalSessions = cls ? (Number(cls.total_sessions) || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : 0;
           
-          const flexBubble = {
-            type: 'bubble',
-            header: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                { type: 'text', text: '🎉 帳號綁定與選課成功', color: '#ffffff', weight: 'bold', size: 'md' }
-              ],
-              backgroundColor: '#3b82f6'
-            },
-            body: {
-              type: 'box',
-              layout: 'vertical',
-              spacing: 'sm',
-              contents: [
-                { type: 'text', text: `親愛的 ${member.real_name} 您好：`, weight: 'bold', size: 'sm' },
-                { type: 'text', text: '您的帳號已成功完成 GymOS 系統對接與安全綁定！', size: 'xs', color: '#4b5563' },
-                { type: 'separator', margin: 'md' },
-                {
-                  type: 'box',
-                  layout: 'vertical',
-                  margin: 'md',
-                  spacing: 'xs',
-                  contents: [
-                    {
-                      type: 'box',
-                      layout: 'horizontal',
-                      contents: [
-                        { type: 'text', text: '預約班級', size: 'xs', color: '#64748b', flex: 3 },
-                        { type: 'text', text: className, size: 'xs', color: '#1e293b', flex: 7, weight: 'bold', wrap: true }
-                      ]
-                    },
-                    {
-                      type: 'box',
-                      layout: 'horizontal',
-                      contents: [
-                        { type: 'text', text: '本期堂數', size: 'xs', color: '#64748b', flex: 3 },
-                        { type: 'text', text: `${totalSessions} 堂`, size: 'xs', color: '#1e293b', flex: 7 }
-                      ]
-                    },
-                    {
-                      type: 'box',
-                      layout: 'horizontal',
-                      contents: [
-                        { type: 'text', text: '選課狀態', size: 'xs', color: '#64748b', flex: 3 },
-                        { type: 'text', text: '⏳ 待確認繳費', size: 'xs', color: '#f59e0b', flex: 7, weight: 'bold' }
-                      ]
-                    }
-                  ]
-                },
-                { type: 'separator', margin: 'md' },
-                { type: 'text', text: '📢 請儘速完成下一期學費繳納。管理員在後台確認已繳費後，您的課程將會立刻變更為「預排上課」，並開啟全部課堂權限！', wrap: true, size: 'xxs', color: '#6b7280', margin: 'md' }
-              ]
-            },
-            footer: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                {
-                  type: 'button',
-                  action: { type: 'uri', label: '📊 進入我的課程', uri: `https://liff.line.me/${liffId}?mode=leave` },
-                  style: 'primary',
-                  color: '#3b82f6'
-                }
-              ]
-            }
-          };
+          const flexBubble = this.buildC3InfoCard({
+            title: '學員綁定 / 選課成功',
+            subtitle: `${member.real_name} 您好，帳號已完成安全綁定，並建立待繳費選課紀錄。`,
+            accentColor: '#059669',
+            rows: [
+              this.flexRow('預約班級', className),
+              this.flexRow('本期堂數', `${totalSessions} 堂`),
+              this.flexRow('選課狀態', '待確認繳費', '#F59E0B')
+            ],
+            note: '管理員確認繳費後，課程會正式啟用並轉為預排上課。',
+            buttonLabel: '進入我的課程',
+            buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+          });
 
           this.sendReply(replyToken, [{ type: 'flex', altText: '帳號綁定與選課預約成功', contents: flexBubble }]);
+          return;
+        }
+      }
+    }
+
+    // 0.6 攔截學員加選課程自動回覆
+    if (cleanText.indexOf('【GymOS 加選課程】') !== -1) {
+      const member = SheetHelper.getRow<any>('Members', 'line_uid', userId);
+      if (member) {
+        const enrollments = SheetHelper.getRows<any>('Enrollments')
+          .filter(e => e.member_id === member.member_id)
+          .sort((a, b) => b.enrollment_id.localeCompare(a.enrollment_id));
+
+        if (enrollments.length > 0) {
+          const lastEnroll = enrollments[0];
+          const cls = SheetHelper.getRow<any>('Classes', 'class_id', lastEnroll.class_id);
+          const className = cls ? cls.class_name : '未設定班級';
+          const totalSessions = cls ? (Number(cls.total_sessions) || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : Number(lastEnroll.total_paid_sessions || 0);
+          const flexBubble = this.buildC3InfoCard({
+            title: '加選課程完成',
+            subtitle: `${member.real_name} 您好，已為您建立加選課程紀錄，等待管理員確認繳費。`,
+            accentColor: '#059669',
+            rows: [
+              this.flexRow('加選班級', className),
+              this.flexRow('本期堂數', `${totalSessions} 堂`),
+              this.flexRow('目前狀態', '待確認繳費', '#F59E0B')
+            ],
+            note: lastEnroll.notes || '管理員確認繳費後，課程會正式啟用。',
+            buttonLabel: '查看我的課程',
+            buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+          });
+
+          this.sendReply(replyToken, [{ type: 'flex', altText: '加選課程完成，等待繳費確認', contents: flexBubble }]);
           return;
         }
       }
@@ -525,26 +584,7 @@ class LineHandler {
         try {
           LineRichMenu.unlink(userId);
         } catch(e) {}
-        const liffId = Config.get('LIFF_ID');
-        const bindUrl = `https://liff.line.me/${liffId}?mode=bind`;
-        const notBoundFlex = {
-          type: 'bubble',
-          body: {
-            type: 'box',
-            layout: 'vertical',
-            contents: [
-              { type: 'text', text: '⚠️ 您尚未綁定帳號', weight: 'bold', size: 'md', color: '#dc2626', margin: 'md' },
-              { type: 'text', text: '系統中目前無您的資料或狀態為停用。請先點擊下方按鈕進行安全綁定！', wrap: true, size: 'xs', color: '#64748b', margin: 'lg' }
-            ]
-          },
-          footer: {
-            type: 'box',
-            layout: 'vertical',
-            contents: [
-              { type: 'button', action: { type: 'uri', label: '🔑 一鍵安全綁定', uri: bindUrl }, style: 'primary', color: '#8b5cf6' }
-            ]
-          }
-        };
+        const notBoundFlex = this.buildServiceCenterFlex('guest', liffId);
         this.sendReply(replyToken, [{ type: 'flex', altText: '請先完成 GymOS 帳號綁定', contents: notBoundFlex }]);
         return;
       }
@@ -562,34 +602,15 @@ class LineHandler {
         member: '📊 學員 (Member)'
       };
       
-      const syncFlex = {
-        type: 'bubble',
-        body: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            { type: 'text', text: '✅ 選單同步更新成功', weight: 'bold', size: 'md', color: '#10b981' },
-            { type: 'text', text: `${realName} 您好，系統已成功識別您的身分並完成最新的圖文選單綁定！`, wrap: true, size: 'xs', color: '#4b5563', margin: 'md' },
-            { type: 'separator', margin: 'md' },
-            {
-              type: 'box',
-              layout: 'vertical',
-              margin: 'md',
-              contents: [
-                {
-                  type: 'box',
-                  layout: 'horizontal',
-                  contents: [
-                    { type: 'text', text: '目前權限', size: 'xs', color: '#9ca3af', flex: 2 },
-                    { type: 'text', text: roleNameMap[resolvedRole], size: 'xs', color: '#1e293b', weight: 'bold', flex: 5 }
-                  ]
-                }
-              ]
-            },
-            { type: 'text', text: '💡 請關閉此對話視窗並重新進入，即可看見全新的功能按鈕鍵盤！', wrap: true, size: 'xxs', color: '#9ca3af', margin: 'lg' }
-          ]
-        }
-      };
+      const syncFlex = this.buildC3InfoCard({
+        title: '選單同步更新成功',
+        subtitle: `${realName} 您好，系統已完成最新圖文選單綁定。`,
+        accentColor: '#059669',
+        rows: [
+          this.flexRow('目前權限', roleNameMap[resolvedRole])
+        ],
+        note: '請關閉此對話視窗並重新進入，即可看見新的功能按鈕鍵盤。'
+      });
       
       this.sendReply(replyToken, [{ type: 'flex', altText: '選單更新成功', contents: syncFlex }]);
       return;
@@ -600,48 +621,7 @@ class LineHandler {
 
     // (A) 若學員或職員皆未綁定
     if (!member && !staff) {
-      const bindUrl = `https://liff.line.me/${liffId}?mode=bind`;
-      const notBoundFlex = {
-        type: 'bubble',
-        body: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'text',
-              text: '⚠️ 您尚未綁定帳號',
-              weight: 'bold',
-              size: 'md',
-              color: '#dc2626',
-              margin: 'md'
-            },
-            {
-              type: 'text',
-              text: '目前無法使用課務查詢功能。請先點擊下方連結，填寫真實姓名與生日進行安全綁定！',
-              wrap: true,
-              size: 'xs',
-              color: '#64748b',
-              margin: 'lg'
-            }
-          ]
-        },
-        footer: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'button',
-              action: {
-                type: 'uri',
-                label: '🔑 一鍵安全綁定',
-                uri: bindUrl
-              },
-              style: 'primary',
-              color: '#8b5cf6'
-            }
-          ]
-        }
-      };
+      const notBoundFlex = this.buildServiceCenterFlex('guest', liffId);
 
       this.sendReply(replyToken, [
         {
@@ -884,20 +864,13 @@ class LineHandler {
       return;
     }
 
-    // (D) 預設幫助引導
-    const helpBubble = this.buildC3InfoCard({
-      title: 'C3 Fitness 會員服務中心',
-      subtitle: '查詢課程、線上請假、預約補課都可從會員中心進入。',
-      accentColor: this.C3_GOLD,
-      rows: [
-        this.flexRow('課程查詢', '課表、堂數、請假與補課紀錄'),
-        this.flexRow('線上服務', '請假申請、補課預約、選單同步')
-      ],
-      buttonLabel: '進入我的會員中心',
-      buttonUri: `https://liff.line.me/${liffId}`,
-      secondaryButtonLabel: '同步/更新選單權限',
-      secondaryMessage: '同步選單'
-    });
+    // (D) 預設幫助引導依身份分流，避免管理員收到會員中心卡片
+    let fallbackRole: 'admin' | 'coach' | 'member' = 'member';
+    if (staff && String(staff.status).trim().toLowerCase() === 'active') {
+      const cleanRole = String(staff.role).trim().toLowerCase();
+      fallbackRole = (cleanRole === 'admin' || cleanRole.includes('管理')) ? 'admin' : 'coach';
+    }
+    const helpBubble = this.buildServiceCenterFlex(fallbackRole, liffId);
 
     this.sendReply(replyToken, [
       {
