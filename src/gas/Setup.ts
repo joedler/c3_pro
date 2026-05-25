@@ -432,7 +432,7 @@ function seedClasses(): void {
     // 無論 Sessions 是否為空，都對種子資料日期範圍做全面掃描刪除
     // 這樣即使試算表被手動清空後重跑，仍能刪除殘留的日曆事件
     // 注意：掃描起始日從最早可能的開課日往前抓到月初（不可引用尚未宣告的 START_DATES）
-    const rangeStart = new Date('2026-05-01T00:00:00');
+    const rangeStart = new Date('2026-03-01T00:00:00');
     const rangeEnd = new Date(rangeStart);
     rangeEnd.setMonth(rangeEnd.getMonth() + 6); // 掃描往後 6 個月
 
@@ -474,15 +474,15 @@ function seedClasses(): void {
     'DEFAULT': new Date('2026-05-01'),
 
     // --- A 類：基礎重訓 各班正式日期 ---
-    'A-MON-1000': new Date('2026-05-01'),
-    'A-MON-1900': new Date('2026-05-01'),
-    'A-MON-2000': new Date('2026-05-01'),
-    'A-TUE-1000': new Date('2026-05-01'),
-    'A-WED-1900': new Date('2026-05-01'),
-    'A-WED-2000': new Date('2026-05-01'),
-    'A-THU-2000': new Date('2026-05-01'),
+    'A-MON-1000': new Date('2026-06-01'),
+    'A-MON-1900': new Date('2026-05-25'),
+    'A-MON-2000': new Date('2026-03-09'),
+    'A-TUE-1000': new Date('2026-05-26'),
+    'A-WED-1900': new Date('2026-04-01'),
+    'A-WED-2000': new Date('2026-05-27'),
+    'A-THU-2000': new Date('2026-05-07'),
     'A-SAT-1000': new Date('2026-05-01'),
-    'A-SUN-1100': new Date('2026-05-01'),
+    'A-SUN-1100': new Date('2026-06-07'),
 
     // --- B 類：混合重訓 各班正式日期（建議固定設在當月 1 號以動態計算正確月份堂數） ---
     'B-MONWED-1840': new Date('2026-05-01'),
