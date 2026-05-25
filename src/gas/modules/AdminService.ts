@@ -142,61 +142,7 @@ class AdminService {
     // 🎯 雙軌制 LINE 群發：如果發布時勾選了 sendLine，且非模擬環境
     if (sendLine) {
       try {
-        const liffId = Config.get('LIFF_ID');
-        const flexBubble = {
-          type: 'bubble',
-          header: {
-            type: 'box',
-            layout: 'vertical',
-            contents: [
-              {
-                type: 'text',
-                text: '📢 健身房重要公告通知',
-                color: '#ffffff',
-                weight: 'bold',
-                size: 'md'
-              }
-            ],
-            backgroundColor: type === 'alert' ? '#ef4444' : '#8b5cf6'
-          },
-          body: {
-            type: 'box',
-            layout: 'vertical',
-            spacing: 'md',
-            contents: [
-              {
-                type: 'text',
-                text: title,
-                weight: 'bold',
-                size: 'sm',
-                color: '#1e293b'
-              },
-              {
-                type: 'text',
-                text: content,
-                wrap: true,
-                size: 'xs',
-                color: '#475569'
-              }
-            ]
-          },
-          footer: {
-            type: 'box',
-            layout: 'vertical',
-            contents: [
-              {
-                type: 'button',
-                action: {
-                  type: 'uri',
-                  label: '📊 開啟課表查看詳情',
-                  uri: `https://liff.line.me/${liffId}`
-                },
-                style: 'primary',
-                color: type === 'alert' ? '#ef4444' : '#8b5cf6'
-              }
-            ]
-          }
-        };
+        const flexBubble = LineHandler.buildAnnouncementFlex(title, content, type);
 
         LineHandler.broadcastMessage([
           {

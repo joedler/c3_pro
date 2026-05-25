@@ -168,6 +168,38 @@ class LineHandler {
     });
   }
 
+  public static buildAnnouncementFlex(title: string, content: string, type: string = 'info'): any {
+    const liffId = Config.get('LIFF_ID');
+    const isAlert = type === 'alert';
+    return this.buildC3InfoCard({
+      title: isAlert ? '重要公告通知' : '公告通知',
+      subtitle: title,
+      accentColor: isAlert ? '#E11D48' : this.C3_GOLD,
+      rows: [
+        this.flexRow('公告內容', content)
+      ],
+      buttonLabel: '開啟會員中心',
+      buttonUri: `https://liff.line.me/${liffId}`
+    });
+  }
+
+  public static buildRenewalReminderFlex(member: any, cls: any, newStartDate: string): any {
+    const liffId = Config.get('LIFF_ID');
+    return this.buildC3InfoCard({
+      title: '自動續期 / 待繳費提醒',
+      subtitle: `${member.real_name || '學員'} 您好，系統已為您保留新一期課程名額。`,
+      accentColor: this.C3_GOLD,
+      rows: [
+        this.flexRow('續期班級', cls.class_name || '健身課程'),
+        this.flexRow('新期首日', newStartDate),
+        this.flexRow('目前狀態', '待確認繳費', '#F59E0B')
+      ],
+      note: '完成繳費並由管理員確認後，課程會正式啟用。',
+      buttonLabel: '查看我的課程',
+      buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+    });
+  }
+
   private static buildServiceCenterFlex(role: 'admin' | 'coach' | 'member' | 'guest', liffId: string): any {
     if (role === 'admin') {
       return this.buildC3InfoCard({
@@ -269,60 +301,18 @@ class LineHandler {
     const liffId = Config.get('LIFF_ID');
     const bindUrl = `https://liff.line.me/${liffId}?mode=bind`;
 
-    const welcomeFlex = {
-      type: 'bubble',
-      size: 'mega',
-      header: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'text',
-            text: '歡迎使用 GymOS 智慧健身房',
-            color: '#ffffff',
-            weight: 'bold',
-            size: 'md'
-          }
-        ],
-        backgroundColor: '#7c3aed'
-      },
-      hero: {
-        type: 'image',
-        url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000',
-        size: 'full',
-        aspectRatio: '20:13',
-        aspectMode: 'cover'
-      },
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'text',
-            text: '您好！為了向您提供精準的課程統計、秒速線上請假與智慧補課預約，請點擊下方按鈕，一秒完成真實姓名與生日安全綁定！',
-            wrap: true,
-            size: 'sm',
-            color: '#475569'
-          }
-        ]
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'button',
-            action: {
-              type: 'uri',
-              label: '👤 綁定我的學員帳號',
-              uri: bindUrl
-            },
-            style: 'primary',
-            color: '#7c3aed'
-          }
-        ]
-      }
-    };
+    const welcomeFlex = this.buildC3InfoCard({
+      title: '歡迎加入 / 請綁定',
+      subtitle: '加入 LINE 官方帳號後，請先完成學員帳號安全綁定。',
+      accentColor: '#7C3AED',
+      rows: [
+        this.flexRow('綁定用途', '課程查詢、線上請假、補課預約'),
+        this.flexRow('需要資料', '真實姓名與生日')
+      ],
+      note: '完成綁定後，系統會為您建立課務資料與個人化圖文選單。',
+      buttonLabel: '綁定我的學員帳號',
+      buttonUri: bindUrl
+    });
 
     this.sendReply(replyToken, [
       {
@@ -353,17 +343,41 @@ class LineHandler {
           SheetHelper.updateRow('Staff', 'staff_id', target.staff_id, {
             line_uid: userId
           });
-          const reply = `🎉 歡迎 ${target.real_name} 教練！\n系統已自動匹配您的教練檔案並完成安全綁定！\n您的真實 LINE UID: ${userId}\n\n👉 請接著在對話框輸入「更新」或「同步選單」，即可開通最新的教練專屬功能！`;
-          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          const flexBubble = this.buildC3InfoCard({
+            title: '教練綁定成功',
+            subtitle: `${target.real_name} 教練您好，系統已自動匹配您的教練檔案並完成 LINE UID 對接。`,
+            accentColor: '#111827',
+            rows: [
+              this.flexRow('目前身份', '授課教練'),
+              this.flexRow('LINE UID', userId)
+            ],
+            note: '請接著輸入「同步選單」，即可開通最新的教練專屬功能。',
+            secondaryButtonLabel: '同步選單',
+            secondaryMessage: '同步選單'
+          });
+          this.sendReply(replyToken, [{ type: 'flex', altText: '教練綁定成功', contents: flexBubble }]);
           return;
         } else if (pendingStaff.length > 1) {
           const names = pendingStaff.map(s => s.real_name).join('、');
-          const reply = `ℹ️ 系統目前有以下教練尚未綁定：${names}\n\n請輸入「我是教練 [您的真實姓名]」（例如：我是教練 ${pendingStaff[0].real_name}）來完成精準綁定！`;
-          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          const flexBubble = this.buildC3InfoCard({
+            title: '教練綁定需要姓名',
+            subtitle: '系統目前有多位教練尚未綁定，請輸入完整姓名完成精準綁定。',
+            accentColor: '#F5B400',
+            rows: [
+              this.flexRow('待綁定教練', names),
+              this.flexRow('輸入格式', `我是教練 ${pendingStaff[0].real_name}`)
+            ]
+          });
+          this.sendReply(replyToken, [{ type: 'flex', altText: '請輸入教練姓名完成綁定', contents: flexBubble }]);
           return;
         } else {
-          const reply = `⚠️ 系統目前沒有尚未綁定的教練資料。\n請管理員先在試算表填妥您的教練資料並保持「LINE帳號ID」欄位空白。`;
-          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          const flexBubble = this.buildC3InfoCard({
+            title: '教練綁定異常',
+            subtitle: '系統目前沒有尚未綁定的教練資料。',
+            accentColor: '#E11D48',
+            note: '請管理員先在教練資料中建立資料，並保持 LINE 帳號 ID 欄位空白。'
+          });
+          this.sendReply(replyToken, [{ type: 'flex', altText: '教練綁定異常', contents: flexBubble }]);
           return;
         }
       } else {
@@ -378,12 +392,28 @@ class LineHandler {
           SheetHelper.updateRow('Staff', 'staff_id', target.staff_id, {
             line_uid: userId
           });
-          const reply = `🎉 歡迎 ${target.real_name} 教練！\n系統已完成您的 LINE 帳號自動對接！\n您的真實 LINE UID: ${userId}\n\n👉 請接著在對話框輸入「更新」或「同步選單」，即可開通最新的教練專屬功能！`;
-          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          const flexBubble = this.buildC3InfoCard({
+            title: '教練綁定成功',
+            subtitle: `${target.real_name} 教練您好，系統已完成您的 LINE 帳號對接。`,
+            accentColor: '#111827',
+            rows: [
+              this.flexRow('目前身份', '授課教練'),
+              this.flexRow('LINE UID', userId)
+            ],
+            note: '請接著輸入「同步選單」，即可開通最新的教練專屬功能。',
+            secondaryButtonLabel: '同步選單',
+            secondaryMessage: '同步選單'
+          });
+          this.sendReply(replyToken, [{ type: 'flex', altText: '教練綁定成功', contents: flexBubble }]);
           return;
         } else {
-          const reply = `❌ 找不到姓名為「${namePart}」的教練預設資料。\n請確認您的姓名輸入是否與管理員在試算表填寫的完全一致（字體、繁簡需相同）。`;
-          this.sendReply(replyToken, [{ type: 'text', text: reply }]);
+          const flexBubble = this.buildC3InfoCard({
+            title: '教練綁定異常',
+            subtitle: `找不到姓名為「${namePart}」的教練預設資料。`,
+            accentColor: '#E11D48',
+            note: '請確認姓名是否與管理員在教練資料中填寫的完全一致。'
+          });
+          this.sendReply(replyToken, [{ type: 'flex', altText: '教練綁定異常', contents: flexBubble }]);
           return;
         }
       }
@@ -638,52 +668,17 @@ class LineHandler {
       const calendarId = Config.get('GOOGLE_CALENDAR_ID') || 'primary';
       const calendarUrl = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(calendarId)}&ctz=Asia%2FTaipei`;
       
-      const coachFlex = {
-        type: 'bubble',
-        header: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'text',
-              text: `教練 ${staff.real_name || '教練'} — 授課日程表`,
-              color: '#ffffff',
-              weight: 'bold',
-              size: 'md'
-            }
-          ],
-          backgroundColor: '#0f172a'
-        },
-        body: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'text',
-              text: '請點擊下方按鈕以嵌入式網頁開啟您的課程 Google 日曆。您可以直接訂閱此日曆到您的手機行事曆中，隨時掌握最新的學員出席與變動名單！',
-              wrap: true,
-              size: 'sm',
-              color: '#334155'
-            }
-          ]
-        },
-        footer: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'button',
-              action: {
-                type: 'uri',
-                label: '📅 開啟 Google 行事曆',
-                uri: calendarUrl
-              },
-              style: 'primary',
-              color: '#0f172a'
-            }
-          ]
-        }
-      };
+      const coachFlex = this.buildC3InfoCard({
+        title: '教練今日課表',
+        subtitle: `${staff.real_name || '教練'} 您好，可開啟 Google 行事曆查看授課時段與學員異動。`,
+        accentColor: '#111827',
+        rows: [
+          this.flexRow('資料來源', 'Google Calendar'),
+          this.flexRow('顯示內容', '課堂時間、教室、出席與請假補課名單')
+        ],
+        buttonLabel: '開啟 Google 行事曆',
+        buttonUri: calendarUrl
+      });
 
       this.sendReply(replyToken, [
         {
@@ -722,137 +717,19 @@ class LineHandler {
         m => m.member_id === member.member_id && (m.status === 'approved' || m.status === 'completed')
       );
 
-      const dashboardFlex = {
-        type: 'bubble',
-        header: {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'text',
-              text: 'C3 Fitness 課務大數據儀表板',
-              color: '#0A0A0A',
-              weight: 'bold',
-              size: 'md'
-            }
-          ],
-          backgroundColor: '#F5B400'
-        },
-        body: {
-          type: 'box',
-          layout: 'vertical',
-          spacing: 'md',
-          contents: [
-            {
-              type: 'text',
-              text: `學員姓名: ${member.real_name}`,
-              weight: 'bold',
-              size: 'sm',
-              color: '#FFFFFF'
-            },
-            {
-              type: 'text',
-              text: `所屬班級: ${classNames}`,
-              size: 'xs',
-              color: '#BDBDBD',
-              wrap: true
-            },
-            {
-              type: 'separator',
-              margin: 'md'
-            },
-            {
-              type: 'box',
-              layout: 'horizontal',
-              margin: 'md',
-              contents: [
-                {
-                  type: 'box',
-                  layout: 'vertical',
-                  contents: [
-                    {
-                      type: 'text',
-                      text: '已上堂數',
-                      size: 'xxs',
-                      color: '#BDBDBD',
-                      align: 'center'
-                    },
-                    {
-                      type: 'text',
-                      text: `${attendances.length} 堂`,
-                      weight: 'bold',
-                      size: 'sm',
-                      align: 'center',
-                      color: '#10b981'
-                    }
-                  ]
-                },
-                {
-                  type: 'box',
-                  layout: 'vertical',
-                  contents: [
-                    {
-                      type: 'text',
-                      text: '累計請假',
-                      size: 'xxs',
-                      color: '#BDBDBD',
-                      align: 'center'
-                    },
-                    {
-                      type: 'text',
-                      text: `${leaves.length} 次`,
-                      weight: 'bold',
-                      size: 'sm',
-                      align: 'center',
-                      color: '#ef4444'
-                    }
-                  ]
-                },
-                {
-                  type: 'box',
-                  layout: 'vertical',
-                  contents: [
-                    {
-                      type: 'text',
-                      text: '已補課',
-                      size: 'xxs',
-                      color: '#BDBDBD',
-                      align: 'center'
-                    },
-                    {
-                      type: 'text',
-                      text: `${makeups.length} 次`,
-                      weight: 'bold',
-                      size: 'sm',
-                      align: 'center',
-                      color: '#3b82f6'
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          backgroundColor: '#0A0A0A'
-        },
-        footer: {
-          type: 'box',
-          layout: 'vertical',
-          spacing: 'sm',
-          contents: [
-            {
-              type: 'button',
-              action: {
-                type: 'uri',
-                label: '✨ 開啟會員中心 (請假/補課/課表)',
-                uri: mainLiffUrl
-              },
-              style: 'primary',
-              color: '#F5B400'
-            }
-          ],
-          backgroundColor: '#0A0A0A'
-        }
-      };
+      const dashboardFlex = this.buildC3InfoCard({
+        title: '我的課程 / 課務摘要',
+        subtitle: `${member.real_name} 您好，以下是您目前的課務統計摘要。`,
+        accentColor: this.C3_GOLD,
+        rows: [
+          this.flexRow('所屬班級', classNames),
+          this.flexRow('已上堂數', `${attendances.length} 堂`, '#059669'),
+          this.flexRow('累計請假', `${leaves.length} 次`, '#E11D48'),
+          this.flexRow('已補課', `${makeups.length} 次`, '#2563EB')
+        ],
+        buttonLabel: '開啟會員中心',
+        buttonUri: mainLiffUrl
+      });
 
       this.sendReply(replyToken, [
         {

@@ -801,10 +801,11 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
               const m = members.find(member => member.member_id === uid);
               if (m && m.line_uid) {
                 try {
-                  const message = `🔔 課程自動續期繳費通知 🔔\n\n親愛的 ${m.real_name} 您好：\n您所報名的【${c.class_name}】即將開啟新的一期課程！\n\n系統已自動為您保留新一期名額，狀態為「待繳費」。\n請於開課前完成繳費以確保您的上課權限！\n\n📅 新期首日：${newStartDateStr}\n💡 您可以打開 LINE 選單的「個人首頁」查看詳細帳單。`;
+                  const flexContent = LineHandler.buildRenewalReminderFlex(m, c, newStartDateStr);
                   LineHandler.pushMessage(m.line_uid, [{
-                    type: 'text',
-                    text: message
+                    type: 'flex',
+                    altText: `C3 Fitness ${c.class_name} 續期待繳費提醒`,
+                    contents: flexContent
                   }]);
                 } catch (lineErr) {
                   Logger.log(`[自動續期 LINE 通知失敗] 學員: ${m.real_name}, 錯誤: ${lineErr}`);
