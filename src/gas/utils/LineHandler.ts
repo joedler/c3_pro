@@ -4,6 +4,143 @@
  */
 
 class LineHandler {
+  private static readonly C3_GOLD = '#F5B400';
+  private static readonly C3_BLACK = '#0A0A0A';
+  private static readonly C3_PANEL = '#171717';
+  private static readonly C3_TEXT = '#F8FAFC';
+  private static readonly C3_MUTED = '#A3A3A3';
+  private static readonly C3_LINE = '#2A2A2A';
+
+  private static flexRow(label: string, value: string, valueColor: string = LineHandler.C3_TEXT): any {
+    return {
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'md',
+      contents: [
+        { type: 'text', text: label, size: 'xs', color: this.C3_MUTED, flex: 3 },
+        { type: 'text', text: value || '-', size: 'xs', color: valueColor, weight: 'bold', flex: 7, wrap: true }
+      ]
+    };
+  }
+
+  private static buildC3InfoCard(data: {
+    title: string;
+    subtitle?: string;
+    accentColor?: string;
+    rows?: any[];
+    note?: string;
+    buttonLabel?: string;
+    buttonUri?: string;
+    secondaryButtonLabel?: string;
+    secondaryMessage?: string;
+  }): any {
+    const accentColor = data.accentColor || this.C3_GOLD;
+    const bodyContents: any[] = [
+      {
+        type: 'text',
+        text: data.title,
+        weight: 'bold',
+        size: 'md',
+        color: accentColor,
+        wrap: true
+      }
+    ];
+
+    if (data.subtitle) {
+      bodyContents.push({
+        type: 'text',
+        text: data.subtitle,
+        wrap: true,
+        size: 'xs',
+        color: this.C3_TEXT,
+        margin: 'md'
+      });
+    }
+
+    if (data.rows && data.rows.length > 0) {
+      bodyContents.push({ type: 'separator', margin: 'lg', color: this.C3_LINE });
+      bodyContents.push({
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        margin: 'lg',
+        contents: data.rows
+      });
+    }
+
+    if (data.note) {
+      bodyContents.push({ type: 'separator', margin: 'lg', color: this.C3_LINE });
+      bodyContents.push({
+        type: 'text',
+        text: data.note,
+        wrap: true,
+        size: 'xxs',
+        color: this.C3_MUTED,
+        margin: 'md'
+      });
+    }
+
+    const footerContents: any[] = [];
+    if (data.buttonLabel && data.buttonUri) {
+      footerContents.push({
+        type: 'button',
+        action: { type: 'uri', label: data.buttonLabel, uri: data.buttonUri },
+        style: 'primary',
+        color: accentColor
+      });
+    }
+    if (data.secondaryButtonLabel && data.secondaryMessage) {
+      footerContents.push({
+        type: 'button',
+        action: { type: 'message', label: data.secondaryButtonLabel, text: data.secondaryMessage },
+        style: 'secondary'
+      });
+    }
+
+    const bubble: any = {
+      type: 'bubble',
+      size: 'mega',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: bodyContents,
+        backgroundColor: this.C3_BLACK
+      }
+    };
+
+    if (footerContents.length > 0) {
+      bubble.footer = {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: footerContents,
+        backgroundColor: this.C3_BLACK
+      };
+    }
+
+    return bubble;
+  }
+
+  public static buildPaymentActivationFlex(member: any, cls: any, totalSessions: number): any {
+    const liffId = Config.get('LIFF_ID');
+    const startDate = this.safeFormatSessionDate(cls.period_start);
+    return this.buildC3InfoCard({
+      title: '學費確認 / 課程啟用',
+      subtitle: `${member.real_name || '學員'} 您好，系統已完成繳費確認，您的課程已正式啟用。`,
+      accentColor: '#10B981',
+      rows: [
+        this.flexRow('課程班級', cls.class_name || '健身課程'),
+        this.flexRow('課程難度', String(cls.level || '-')),
+        this.flexRow('本期堂數', `${totalSessions} 堂`, '#10B981'),
+        this.flexRow('開始日期', startDate)
+      ],
+      note: '課程已轉為預排上課，請依課表時間準時出席。',
+      buttonLabel: '查看我的課程',
+      buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+    });
+  }
+
   /**
    * 處理 LINE 傳入的 Webhook Payload
    */
@@ -276,42 +413,19 @@ class LineHandler {
           const sessionDate = session ? this.safeFormatSessionDate(session.session_date) : '未知日期';
           const sessionTime = session ? `${this.safeFormatTime(session.start_time)} ~ ${this.safeFormatTime(session.end_time)}` : '未知時間';
           
-          const flexBubble = {
-            type: 'bubble',
-            header: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                { type: 'text', text: '🏖️ 請假登記成功 (自動核准)', color: '#ffffff', weight: 'bold', size: 'md' }
-              ],
-              backgroundColor: '#f59e0b'
-            },
-            body: {
-              type: 'box',
-              layout: 'vertical',
-              spacing: 'sm',
-              contents: [
-                { type: 'text', text: `學員姓名: ${member.real_name}`, weight: 'bold', size: 'sm' },
-                { type: 'text', text: `請假課程: ${className}`, size: 'xs', color: '#4b5563' },
-                { type: 'text', text: `課程時間: ${sessionDate} ${sessionTime}`, size: 'xs', color: '#4b5563' },
-                { type: 'separator', margin: 'md' },
-                { type: 'text', text: `✅ 請假單號: ${lastLeave.leave_id}`, size: 'xxs', color: '#9ca3af', margin: 'md' },
-                { type: 'text', text: '💡 系統已自動釋出 1 堂補課額度，請隨時於個人中心點選「跨班補課」預約新時段。', wrap: true, size: 'xxs', color: '#9ca3af', margin: 'sm' }
-              ]
-            },
-            footer: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                {
-                  type: 'button',
-                  action: { type: 'uri', label: '📊 進入我的課表', uri: `https://liff.line.me/${liffId}?mode=leave` },
-                  style: 'primary',
-                  color: '#f59e0b'
-                }
-              ]
-            }
-          };
+          const flexBubble = this.buildC3InfoCard({
+            title: '請假登記成功',
+            subtitle: `${member.real_name} 您好，系統已完成請假登記並自動釋出補課額度。`,
+            accentColor: '#F5B400',
+            rows: [
+              this.flexRow('請假課程', className),
+              this.flexRow('課程時間', `${sessionDate} ${sessionTime}`),
+              this.flexRow('請假單號', lastLeave.leave_id, '#F5B400')
+            ],
+            note: '可於會員中心使用此補課額度預約其他可補課班級。',
+            buttonLabel: '進入我的課表',
+            buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+          });
           
           this.sendReply(replyToken, [{ type: 'flex', altText: 'GymOS 請假完成通知信', contents: flexBubble }]);
           return;
@@ -335,42 +449,19 @@ class LineHandler {
           const sessionDate = session ? this.safeFormatSessionDate(session.session_date) : '未知日期';
           const sessionTime = session ? `${this.safeFormatTime(session.start_time)} ~ ${this.safeFormatTime(session.end_time)}` : '未知時間';
           
-          const flexBubble = {
-            type: 'bubble',
-            header: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                { type: 'text', text: '🔄 補課預約成功 (自動核准)', color: '#ffffff', weight: 'bold', size: 'md' }
-              ],
-              backgroundColor: '#3b82f6'
-            },
-            body: {
-              type: 'box',
-              layout: 'vertical',
-              spacing: 'sm',
-              contents: [
-                { type: 'text', text: `學員姓名: ${member.real_name}`, weight: 'bold', size: 'sm' },
-                { type: 'text', text: `補課班級: ${className}`, size: 'xs', color: '#4b5563' },
-                { type: 'text', text: `補課時間: ${sessionDate} ${sessionTime}`, size: 'xs', color: '#4b5563' },
-                { type: 'separator', margin: 'md' },
-                { type: 'text', text: `✅ 補課單號: ${lastMakeup.makeup_id}`, size: 'xxs', color: '#9ca3af', margin: 'md' },
-                { type: 'text', text: '💡 補課時段已成功寫入您的個人課表！請準時出席並直接向授課教練點名。', wrap: true, size: 'xxs', color: '#9ca3af', margin: 'sm' }
-              ]
-            },
-            footer: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                {
-                  type: 'button',
-                  action: { type: 'uri', label: '📅 展開我的課表', uri: `https://liff.line.me/${liffId}?mode=leave` },
-                  style: 'primary',
-                  color: '#3b82f6'
-                }
-              ]
-            }
-          };
+          const flexBubble = this.buildC3InfoCard({
+            title: '補課預約成功',
+            subtitle: `${member.real_name} 您好，補課時段已寫入您的個人課表。`,
+            accentColor: '#3B82F6',
+            rows: [
+              this.flexRow('補課班級', className),
+              this.flexRow('補課時間', `${sessionDate} ${sessionTime}`),
+              this.flexRow('補課單號', lastMakeup.makeup_id, '#3B82F6')
+            ],
+            note: '請準時出席，現場直接向授課教練點名即可。',
+            buttonLabel: '展開我的課表',
+            buttonUri: `https://liff.line.me/${liffId}?mode=leave`
+          });
           
           this.sendReply(replyToken, [{ type: 'flex', altText: 'GymOS 補課預約成功通知', contents: flexBubble }]);
           return;
@@ -794,58 +885,19 @@ class LineHandler {
     }
 
     // (D) 預設幫助引導
-    const helpBubble = {
-      type: 'bubble',
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'text',
-            text: '💡 C3 Fitness 會員服務中心',
-            weight: 'bold',
-            size: 'md',
-            color: '#F5B400'
-          },
-          {
-            type: 'text',
-            text: '您好！要查詢您目前的課堂堂數、預約跨班補課、或是辦理線上請假，請點擊下方按鈕直接進入您的專屬會員中心：',
-            wrap: true,
-            size: 'xs',
-            color: '#BDBDBD',
-            margin: 'md'
-          }
-        ],
-        backgroundColor: '#0A0A0A'
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        spacing: 'sm',
-        contents: [
-          {
-            type: 'button',
-            action: {
-              type: 'uri',
-              label: '✨ 進入我的會員中心',
-              uri: `https://liff.line.me/${liffId}`
-            },
-            style: 'primary',
-            color: '#F5B400'
-          },
-          {
-            type: 'button',
-            action: {
-              type: 'message',
-              label: '🔄 同步/更新選單權限',
-              text: '同步選單'
-            },
-            style: 'secondary'
-          }
-        ],
-        backgroundColor: '#0A0A0A'
-      }
-    };
+    const helpBubble = this.buildC3InfoCard({
+      title: 'C3 Fitness 會員服務中心',
+      subtitle: '查詢課程、線上請假、預約補課都可從會員中心進入。',
+      accentColor: this.C3_GOLD,
+      rows: [
+        this.flexRow('課程查詢', '課表、堂數、請假與補課紀錄'),
+        this.flexRow('線上服務', '請假申請、補課預約、選單同步')
+      ],
+      buttonLabel: '進入我的會員中心',
+      buttonUri: `https://liff.line.me/${liffId}`,
+      secondaryButtonLabel: '同步/更新選單權限',
+      secondaryMessage: '同步選單'
+    });
 
     this.sendReply(replyToken, [
       {
