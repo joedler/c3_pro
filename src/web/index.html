@@ -2134,6 +2134,24 @@
           return String(timeStr).substring(0, 5);
         },
 
+        formatDateYMD(dateVal) {
+          if (!dateVal) return '';
+          try {
+            if (typeof dateVal === 'string') {
+              const match = dateVal.match(/^(\d{4}-\d{2}-\d{2})/);
+              if (match) return match[1];
+            }
+            const d = new Date(dateVal);
+            if (!isNaN(d.getTime())) {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            }
+          } catch(e) {}
+          return String(dateVal).substring(0, 10);
+        },
+
         formatDateMMDD(dateStr) {
           if (!dateStr) return '';
           try {
@@ -2826,13 +2844,15 @@
             this.activeSubView = '';
             
             this.addToast(`✅ 請假成功！已自動釋出補課額度。`, 'success');
+            const leaveDate = this.formatDateYMD(result.sessionDate);
+            const leaveTime = this.formatTime(result.startTime);
             
             // 在 LINE App 內，發送訊息後 1.5 秒自動關閉 LIFF 視窗
             if (typeof liff !== 'undefined' && liff.isInClient()) {
               liff.sendMessages([
                 {
                   type: 'text',
-                  text: `【GymOS 請假申請】我已於系統完成請假登記，請假課堂日期：${result.sessionDate} ${result.startTime}。`
+                  text: `【GymOS 請假申請】我已於系統完成請假登記，請假課堂日期：${leaveDate} ${leaveTime}。`
                 }
               ]).then(() => {
                 setTimeout(() => { liff.closeWindow(); }, 1500);
@@ -2871,7 +2891,9 @@
               leaveId: this.makeupForm.leaveId,
               targetSessionId: this.makeupForm.targetSessionId
             });
-            this.addToast(`補課預約成功！目標時段: ${result.sessionDate} ${result.startTime} (${result.className})`, 'success');
+            const makeupDate = this.formatDateYMD(result.sessionDate);
+            const makeupTime = this.formatTime(result.startTime);
+            this.addToast(`補課預約成功！目標時段: ${makeupDate} ${makeupTime} (${result.className})`, 'success');
             this.makeupForm.leaveId = '';
             this.makeupForm.targetSessionId = '';
             this.makeupForm.filterDate = '7days';
@@ -2885,7 +2907,7 @@
               liff.sendMessages([
                 {
                   type: 'text',
-                  text: `【GymOS 補課預約】我已於系統預約補課成功，目標補課課堂：${result.className} (${result.sessionDate} ${result.startTime})。`
+                  text: `【GymOS 補課預約】我已於系統預約補課成功，目標補課課堂：${result.className} (${makeupDate} ${makeupTime})。`
                 }
               ]).then(() => {
                 setTimeout(() => { liff.closeWindow(); }, 1500);

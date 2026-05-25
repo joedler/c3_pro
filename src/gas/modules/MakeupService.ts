@@ -14,6 +14,34 @@ class MakeupService {
     return match ? parseInt(match[0], 10) : 0;
   }
 
+  private static safeFormatSessionDate(dateVal: any): string {
+    if (!dateVal) return '';
+    if (dateVal instanceof Date) {
+      return Utilities.formatDate(dateVal, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    return String(dateVal).substring(0, 10);
+  }
+
+  private static safeFormatTime(timeVal: any): string {
+    if (!timeVal) return '';
+    if (timeVal instanceof Date) {
+      return Utilities.formatDate(timeVal, 'Asia/Taipei', 'HH:mm');
+    }
+    const match = String(timeVal).trim().match(/(\d{1,2}):(\d{2})/);
+    if (match) {
+      return `${match[1].padStart(2, '0')}:${match[2]}`;
+    }
+    return String(timeVal).trim().substring(0, 5);
+  }
+
+  private static buildSessionDateTime(dateVal: any, timeVal: any): Date {
+    return new Date(`${this.safeFormatSessionDate(dateVal)}T${this.safeFormatTime(timeVal)}:00`);
+  }
+
   /**
    * 查詢可用的補課課堂清單 (F-M04)
    * 規則：
@@ -266,7 +294,7 @@ class MakeupService {
 
     // 4. 驗證時間：目標課堂必須是在未來
     const now = new Date();
-    const targetStart = new Date(`${targetSession.session_date}T${targetSession.start_time}:00`);
+    const targetStart = this.buildSessionDateTime(targetSession.session_date, targetSession.start_time);
     if (targetStart <= now) {
       throw new Error('不能選擇過去或已經開始的課堂作為補課目標。');
     }
@@ -355,8 +383,8 @@ class MakeupService {
     return {
       success: true,
       makeupId: makeupId,
-      sessionDate: targetSession.session_date,
-      startTime: targetSession.start_time,
+      sessionDate: this.safeFormatSessionDate(targetSession.session_date),
+      startTime: this.safeFormatTime(targetSession.start_time),
       className: targetClass.class_name
     };
   }

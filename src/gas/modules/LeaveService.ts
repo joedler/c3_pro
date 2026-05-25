@@ -4,6 +4,34 @@
  */
 
 class LeaveService {
+  private static safeFormatSessionDate(dateVal: any): string {
+    if (!dateVal) return '';
+    if (dateVal instanceof Date) {
+      return Utilities.formatDate(dateVal, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd');
+    }
+    return String(dateVal).substring(0, 10);
+  }
+
+  private static safeFormatTime(timeVal: any): string {
+    if (!timeVal) return '';
+    if (timeVal instanceof Date) {
+      return Utilities.formatDate(timeVal, 'Asia/Taipei', 'HH:mm');
+    }
+    const match = String(timeVal).trim().match(/(\d{1,2}):(\d{2})/);
+    if (match) {
+      return `${match[1].padStart(2, '0')}:${match[2]}`;
+    }
+    return String(timeVal).trim().substring(0, 5);
+  }
+
+  private static buildSessionDateTime(dateVal: any, timeVal: any): Date {
+    return new Date(`${this.safeFormatSessionDate(dateVal)}T${this.safeFormatTime(timeVal)}:00`);
+  }
+
   /**
    * 處理學員請假申請
    * 依據 PRD 3.0，請假截止至「下課前」，請假無上限且自動審核通過 (Approved)。
@@ -50,7 +78,7 @@ class LeaveService {
     // 4. 驗證時間規則：必須在「下課前」申請請假
     const now = new Date();
     // 將 session_date (YYYY-MM-DD) 與 end_time (HH:mm) 合併為正確日期時間
-    const sessionEndTime = new Date(`${session.session_date}T${session.end_time}:00`);
+    const sessionEndTime = this.buildSessionDateTime(session.session_date, session.end_time);
     
     if (now > sessionEndTime) {
       throw new Error(`抱歉，本堂課已於 ${session.session_date} ${session.end_time} 下課，無法補請假。`);
@@ -116,8 +144,8 @@ class LeaveService {
     return {
       success: true,
       leaveId: leaveId,
-      sessionDate: session.session_date,
-      startTime: session.start_time
+      sessionDate: this.safeFormatSessionDate(session.session_date),
+      startTime: this.safeFormatTime(session.start_time)
     };
   }
 }
