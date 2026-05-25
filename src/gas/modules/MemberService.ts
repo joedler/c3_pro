@@ -28,8 +28,8 @@ class MemberService {
           return false;
         }
 
-        // 保留狀態為 open 與 pending 的課堂
-        return cls.status === 'open' || cls.status === 'pending';
+        // 只顯示已正式開放報名的課堂；pending 尚未開課，不提供選擇。
+        return cls.status === 'open';
       })
       .map(cls => {
         const capacity = Number(cls.max_capacity) || 0;
@@ -586,8 +586,8 @@ class MemberService {
     const allClasses = SheetHelper.getRows<any>('Classes');
     const availableClasses = allClasses
       .filter(cls => {
-        // 只能加選開放報名 (open) 或尚未開課 (pending) 的課程
-        if (cls.status !== 'open' && cls.status !== 'pending') return false;
+        // 只允許加選已正式開放報名的課程；pending 尚未開課，不提供選擇。
+        if (cls.status !== 'open') return false;
 
         // 不能重複報名已選過的班級
         if (enrolledClassIds.includes(cls.class_id)) return false;
@@ -652,7 +652,7 @@ class MemberService {
     if (!targetClass) {
       throw new Error('所選的課程時段不存在。');
     }
-    if (targetClass.status !== 'open' && targetClass.status !== 'pending') {
+    if (targetClass.status !== 'open') {
       throw new Error('該課程時段目前未開放報名。');
     }
 

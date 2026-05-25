@@ -64,6 +64,12 @@ class ClassEngine {
       throw new Error(`找不到班級代碼: ${classId}`);
     }
 
+    const classStatus = String(cls.status || '').trim().toLowerCase();
+    if (classStatus === 'pending') {
+      Logger.log(`[ClassEngine.generate] ${classId} 尚未開課，略過課堂與日曆建立。`);
+      return { generated: 0 };
+    }
+
     const sessions: any[] = [];
     const holidaysStr = Config.get('HOLIDAYS', '');
     const holidays = holidaysStr ? holidaysStr.split(',').map(d => d.trim()) : [];
@@ -181,10 +187,7 @@ class ClassEngine {
       } while (!daysOfWeek.includes(currentDate.getDay()));
     }
 
-    // 3. 取得相關關聯名稱 (教練、教室) 供日曆渲染使用
-    const coachRow = SheetHelper.getRow<any>('Staff', 'line_uid', cls.coach_line_uid);
-    const coachName = coachRow ? coachRow.real_name : '未指派教練';
-
+    // 3. 取得教室名稱供日曆渲染使用；正式版暫不在日曆顯示教練。
     const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
@@ -196,7 +199,7 @@ class ClassEngine {
         const endDateTime = this.parseDateTime(session.session_date, session.end_time);
 
         const title = `${cls.class_name} (預計 0 人)`;
-        const description = `【課程資訊】\n班級：${cls.class_name}\n教練：${coachName}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (0人):\n(尚未有學員報名)\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
+        const description = `【課程資訊】\n班級：${cls.class_name}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (0人):\n(尚未有學員報名)\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
 
         const eventId = GoogleCalendarAPI.createEvent(calendarId, title, startDateTime, endDateTime, {
           description: description,
@@ -374,10 +377,7 @@ class ClassEngine {
       seq++;
     }
 
-    // 4. 取得相關關聯名稱 (教練、教室)
-    const coachRow = SheetHelper.getRow<any>('Staff', 'line_uid', cls.coach_line_uid);
-    const coachName = coachRow ? coachRow.real_name : '未指派教練';
-
+    // 4. 取得教室名稱；正式版暫不在日曆顯示教練。
     const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
@@ -398,7 +398,7 @@ class ClassEngine {
         const title = `${cls.class_name} (預計 ${renewMemberNames.length} 人) [${termRemark}]`;
         const studentLines = renewMemberNames.map(name => `• ${name} (已續期待繳費)`).join('\n');
         
-        const description = `【課程資訊】\n班級：${cls.class_name} [${termRemark}]\n教練：${coachName}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (${renewMemberNames.length}人):\n${studentLines || '(無)'}\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
+        const description = `【課程資訊】\n班級：${cls.class_name} [${termRemark}]\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (${renewMemberNames.length}人):\n${studentLines || '(無)'}\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
 
         const eventId = GoogleCalendarAPI.createEvent(calendarId, title, startDateTime, endDateTime, {
           description: description,
@@ -445,11 +445,7 @@ class ClassEngine {
     const cls = SheetHelper.getRow<any>('Classes', 'class_id', session.class_id);
     if (!cls) return;
 
-    // 1. 取得教練與教室名稱
-    const coachRow = SheetHelper.getRow<any>('Staff', 'line_uid', session.substitute_coach_uid || cls.coach_line_uid);
-    const coachName = coachRow ? coachRow.real_name : '未指派教練';
-    const isSubstitute = !!session.substitute_coach_uid;
-
+    // 1. 取得教室名稱；正式版暫不在日曆顯示教練或代課資訊。
     const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
@@ -513,14 +509,12 @@ class ClassEngine {
     // 6. 重新編排日曆內容
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     try {
-      const substitutePrefix = isSubstitute ? `[代課:${coachName}] ` : '';
       const statusPrefix = session.status === 'cancelled' ? '[已停課] ' : '';
       
-      const title = `${statusPrefix}${substitutePrefix}${cls.class_name} (${totalAttending}/${maxCapacity}人)`;
+      const title = `${statusPrefix}${cls.class_name} (${totalAttending}/${maxCapacity}人)`;
 
       const description = `【課程資訊】
 班級：${cls.class_name}
-教練：${coachName}${isSubstitute ? ' (代課教練)' : ''}
 教室：${roomName}
 人數上限：${maxCapacity}人
 

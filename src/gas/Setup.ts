@@ -453,7 +453,7 @@ function seedClasses(): void {
   }
 
   // 2. 清空相關資料表除了首代表頭外的內容
-  const sheetsToClear = ['Classes', 'Sessions', 'Enrollments', 'Leave_Requests', 'Makeup_Requests', 'Attendance', 'Staff', 'Members'];
+  const sheetsToClear = ['Classes', 'Sessions', 'Leave_Requests', 'Makeup_Requests', 'Attendance'];
   sheetsToClear.forEach(sheetName => {
     try {
       const s = ss.getSheetByName(SheetHelper.SHEET_NAME_MAP[sheetName] || sheetName);
@@ -464,7 +464,7 @@ function seedClasses(): void {
       Logger.log(`[清理 ${sheetName} 失敗] ${e}`);
     }
   });
-  Logger.log('[自動重置] 所有業務、教職員與學員資料表已清空。');
+  Logger.log('[自動重置] 已清空課程排程相關資料表；保留正式教職員、學員與選課資料。');
 
   // =================================================================
   // 【一鍵設定各班開課日期】正式上線或測試時在此統一調整日期即可！
@@ -888,6 +888,10 @@ function seedClasses(): void {
   // 批次寫入所有班級資料並自動展開課堂 Sessions 及 Google 日曆事件
   defaultClasses.forEach(cls => {
     SheetHelper.addRow('Classes', cls);
+    if (String(cls.status || '').trim().toLowerCase() === 'pending') {
+      Logger.log(`[自動排課略過] 班級 ${cls.class_id} 尚未開課，不展開課堂與日曆。`);
+      return;
+    }
     try {
       ClassEngine.generate(cls.class_id);
       Logger.log(`[自動排課] 班級 ${cls.class_id} 的課堂已成功展開並建立日曆事件。`);
@@ -896,111 +900,8 @@ function seedClasses(): void {
     }
   });
 
-  // 3. 匯入教職員種子資料
-  const defaultStaff = [
-    {
-      staff_id: 'ST-01',
-      line_uid: 'U028285d818d2fb6acc952c416b833e33',
-      real_name: '張教練',
-      role: 'coach',
-      status: 'active',
-      hourly_rate: 800,
-      notes: '課程種子教練'
-    },
-    {
-      staff_id: 'ST-02',
-      line_uid: 'U4abb6fb071cf072db0cc950d59780e11',
-      real_name: '訪客管理員',
-      role: 'admin',
-      status: 'active',
-      hourly_rate: 1000,
-      notes: '測試用模擬管理員'
-    }
-  ];
-  defaultStaff.forEach(s => SheetHelper.addRow('Staff', s));
-
-  // 4. 匯入學員與選課種子資料
-  const defaultMembers = [
-    {
-      member_id: 'MB-01',
-      line_uid: 'U9876543210123456789012345678901',
-      display_name: '林小明',
-      real_name: '林小明',
-      birthday: '1995-08-12',
-      gender: 'male',
-      level: 'L1',
-      join_date: '2026-05-01',
-      status: 'active',
-      notes: '測試學員'
-    },
-    {
-      member_id: 'MB-02',
-      line_uid: 'U9876543210123456789012345678902',
-      display_name: '陳美華',
-      real_name: '陳美華',
-      birthday: '1998-03-24',
-      gender: 'female',
-      level: 'L2',
-      join_date: '2026-05-01',
-      status: 'active',
-      notes: '測試學員'
-    }
-  ];
-  defaultMembers.forEach(m => SheetHelper.addRow('Members', m));
-
-  const defaultEnrollments = [
-    {
-      enrollment_id: 'EN-01',
-      member_id: 'MB-01',
-      class_id: 'A-MON-1000',
-      enroll_date: '2026-05-01',
-      status: 'active',
-      total_paid_sessions: 12,
-      notes: '已繳費'
-    },
-    {
-      enrollment_id: 'EN-02',
-      member_id: 'MB-02',
-      class_id: 'C-SAT-0800',
-      enroll_date: '2026-05-01',
-      status: 'active',
-      total_paid_sessions: 0,
-      notes: '待繳費'
-    }
-  ];
-  defaultEnrollments.forEach(e => SheetHelper.addRow('Enrollments', e));
-
-  // 5. 針對今日課堂生成測試請假與補課數據
-  try {
-    const todayStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
-    const allSessions = SheetHelper.getRows<any>('Sessions');
-    const todaySessions = allSessions.filter(s => String(s.date || s.session_date).substring(0, 10) === todayStr);
-    if (todaySessions.length > 0) {
-      const sess1 = todaySessions[0];
-      SheetHelper.addRow('Leave_Requests', {
-        leave_id: 'LV-TEST-01',
-        member_id: 'MB-01',
-        session_id: sess1.session_id,
-        request_time: new Date().toISOString(),
-        status: 'approved',
-        notes: '身體不舒服請假'
-      });
-
-      SheetHelper.addRow('Makeup_Requests', {
-        makeup_id: 'MK-TEST-01',
-        member_id: 'MB-02',
-        leave_id: 'LV-TEST-01',
-        target_session_id: sess1.session_id,
-        request_time: new Date().toISOString(),
-        status: 'approved',
-        notes: '跨班補課'
-      });
-    }
-  } catch(err) {
-    Logger.log(`[生成測試請假補課失敗] ${err}`);
-  }
-
-  Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料、教職員、學員、出勤請假測試資料，且批次展開日曆！ ===`);
+  Logger.log('[正式種子] 已略過測試教職員、測試學員、測試選課、測試請假補課資料。');
+  Logger.log(`=== 成功導入 ${defaultClasses.length} 筆 C3 Fitness 課程排程種子資料，並只針對已開課班級展開日曆！ ===`);
 }
 
 
