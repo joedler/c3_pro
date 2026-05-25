@@ -328,6 +328,15 @@ class MemberService {
 
     // 組裝班級名稱清單與日期範圍
     const classNames = myClasses.map(c => c.class_name).join('、');
+    const courseSummaryItems = myClasses.map(c => {
+      const startDate = new Date(c.period_start);
+      const weeks = Number(c.period_weeks) || 12;
+      const endDate = new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+      return {
+        className: c.class_name,
+        period: this.formatDateRange(startDate, endDate)
+      };
+    });
     
     // 支援多班級不同課程區間的精準顯示設計
     let periodInfo = '尚未開始';
@@ -356,7 +365,7 @@ class MemberService {
     const upcomingSessions = allSessions
       .filter(s => {
         // 自己班級的課 OR 已預約補課的課堂
-        const isMyClass = activeClassIds.includes(s.class_id);
+        const isMyClass = classIds.includes(s.class_id);
         const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
         if (!isMyClass && !isMakeupTarget) return false;
         if (s.status === 'cancelled') return false;
@@ -416,6 +425,7 @@ class MemberService {
       hasClasses: true,
       classNames,
       periodInfo,
+      courseSummaryItems,
       totalPaid,
       attendedCount,
       leaveCount,
@@ -765,6 +775,20 @@ class MemberService {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}/${m}/${d}`;
+  }
+
+  private static formatDateRange(startDate: Date, endDate: Date): string {
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return '';
+    }
+    const sameYear = startDate.getFullYear() === endDate.getFullYear();
+    const fmt = (date: Date): string => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return sameYear ? `${m}/${d}` : `${y}/${m}/${d}`;
+    };
+    return `${fmt(startDate)} ~ ${fmt(endDate)}`;
   }
 
   /**

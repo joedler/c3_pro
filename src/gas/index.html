@@ -1672,16 +1672,20 @@
             </div>
           </div>
 
-          <!-- 課程詳細資訊 -->
-          <div class="text-xs text-slate-400 space-y-2 border-t border-slate-800/60 pt-4" x-show="studentProfile.classNames">
-            <p class="flex justify-between">
-              <span>📅 班級名稱：</span>
-              <span class="text-slate-200 font-bold text-right" x-text="studentProfile.classNames"></span>
-            </p>
-            <p class="flex justify-between">
-              <span>🗓️ 本期區間：</span>
-              <span class="text-slate-200 text-right" x-text="studentProfile.periodInfo"></span>
-            </p>
+          <!-- 課程摘要 -->
+          <div class="text-xs border-t border-slate-800/60 pt-4" x-show="studentProfile.classNames">
+            <div class="flex items-center justify-between mb-3">
+              <p class="font-black text-slate-300">📅 課程摘要</p>
+              <span class="px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[10px] font-black" x-text="(studentProfile.courseSummaryItems?.length || 0) + ' 門'"></span>
+            </div>
+            <div class="space-y-3">
+              <template x-for="course in studentProfile.courseSummaryItems" :key="course.className">
+                <div>
+                  <p class="text-slate-100 font-bold leading-snug" x-text="course.className"></p>
+                  <p class="text-slate-500 text-[11px] mt-0.5 pl-3" x-text="course.period"></p>
+                </div>
+              </template>
+            </div>
           </div>
 
           <div x-show="!studentProfile.classNames" class="text-center py-6">
@@ -1762,7 +1766,7 @@
                   <span class="text-[10px] font-bold text-amber-400">可請假</span>
                 </label>
               </template>
-              <template x-if="upcomingSessions.length === 0">
+              <template x-if="upcomingSessions.filter(x => !x.isMakeup && !x.isPendingPayment).length === 0">
                 <p class="text-xs text-slate-500 text-center py-4">查無 4 週內可請假之課堂紀錄。</p>
               </template>
             </div>
@@ -2106,6 +2110,7 @@
           level: 'L1',
           classNames: '',
           periodInfo: '',
+          courseSummaryItems: [],
           totalPaid: 0,
           attendedCount: 0,
           leaveCount: 0,
@@ -2555,6 +2560,7 @@
                 this.studentProfile.level = info.level;
                 this.studentProfile.classNames = info.classNames || '';
                 this.studentProfile.periodInfo = info.periodInfo || '';
+                this.studentProfile.courseSummaryItems = info.courseSummaryItems || [];
                 this.studentProfile.totalPaid = info.totalPaid || 0;
                 this.studentProfile.attendedCount = info.attendedCount || 0;
                 this.studentProfile.leaveCount = info.leaveCount || 0;
