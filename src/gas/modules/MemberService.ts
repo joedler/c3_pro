@@ -75,6 +75,11 @@ class MemberService {
     },
     user: UserSession
   ): Record<string, any> {
+    const perfStart = Date.now();
+    const perfLog = (label: string): void => {
+      Logger.log(`[學員綁定效能] ${label}: ${Date.now() - perfStart}ms`);
+    };
+
     if (!user || !user.uid) {
       throw new Error('無法取得您的 LINE 身份識別，請在 LINE 官方帳號內重新開啟頁面。');
     }
@@ -124,6 +129,7 @@ class MemberService {
 
     // 1. 取得目標班級資訊，進行人數與性別防呆
     const targetClass = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+    perfLog('讀取目標班級');
     if (!targetClass) {
       throw new Error('所選的課程時段不存在，請重新整理頁面。');
     }
@@ -145,6 +151,7 @@ class MemberService {
 
     // 2. 檢查是否該 LINE 帳號已綁定過任何學員
     const existingMemberByUid = SheetHelper.getRow<any>('Members', 'line_uid', user.uid);
+    perfLog('檢查 LINE 是否已綁定');
     if (existingMemberByUid) {
       if (existingMemberByUid.status === 'active') {
         throw new Error(`422:您的 LINE 帳號已綁定學員「${existingMemberByUid.real_name}」，無須重複綁定。`);
@@ -155,6 +162,7 @@ class MemberService {
 
     // 3. 搜尋是否有「預先登記」的學員（真實姓名與生日吻合，且尚未綁定 LINE 帳號）
     const allMembers = SheetHelper.getRows<any>('Members');
+    perfLog('讀取學員資料');
     const matchedPreRegistered = allMembers.find(
       member =>
         member.real_name === realName &&
@@ -203,6 +211,7 @@ class MemberService {
       };
 
       SheetHelper.addRow('Members', newMember);
+      perfLog('新增學員資料');
       Logger.log(`[學員綁定] 建立全新學員檔案：${realName} (${finalMemberId})`);
     }
 
@@ -218,28 +227,22 @@ class MemberService {
       notes: '學員綁定自動加選'
     };
     SheetHelper.addRow('Enrollments', newEnrollment);
+    perfLog('新增選課紀錄');
     Logger.log(`[學員綁定] 成功寫入待繳費選課紀錄：${newEnrollmentId}`);
 
     // 6. 更新班級表的「目前人數」計數器 (+1)
     SheetHelper.updateRow('Classes', 'class_id', classId, {
       enrolled: enrolled + 1
     });
+    perfLog('更新班級人數');
     Logger.log(`[學員綁定] 班級人數計數更新成功：${classId} (目前人數: ${enrolled + 1})`);
 
-    // 6.5 同步此班級的所有未來課堂到 Google 日曆 (確保剛綁定的學員姓名立刻同步出現)
-    const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
-      s => s.class_id === classId && s.status === 'scheduled'
-    );
-    sessionsToSync.forEach(s => {
-      try {
-        ClassEngine.syncCalendarEvent(s.session_id);
-      } catch (err) {
-        Logger.log(`[日曆同步失敗] Session: ${s.session_id}, Error: ${err}`);
-      }
-    });
+    // 6.5 首次綁定只建立待繳費選課，不同步日曆。正式繳費確認時才會同步正式出席名單。
+    perfLog('略過待繳費日曆同步');
 
     // 7. 動態對接 LINE 學員豐富選單
     LineRichMenu.link(user.uid, 'member');
+    perfLog('同步 LINE 圖文選單');
 
     return {
       success: true,
