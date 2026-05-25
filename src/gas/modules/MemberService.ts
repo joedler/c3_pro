@@ -287,6 +287,8 @@ class MemberService {
     }
 
     const classIds = enrollments.map(e => e.class_id);
+    const activeEnrollments = enrollments.filter(e => e.status === 'active');
+    const activeClassIds = activeEnrollments.map(e => e.class_id);
 
     // 3. 取得班級與課程設定 (Classes)
     const allClasses = SheetHelper.getRows<any>('Classes');
@@ -302,11 +304,12 @@ class MemberService {
     const allSessions = SheetHelper.getRows<any>('Sessions');
 
     // 各項計數器
-    const totalPaid = enrollments.reduce((sum, e) => sum + (Number(e.total_paid_sessions) || 0), 0);
+    // 時數統計只計入已確認繳費的課程；待繳費課程可顯示在班級清單，但不納入額度。
+    const totalPaid = activeEnrollments.reduce((sum, e) => sum + (Number(e.total_paid_sessions) || 0), 0);
     
     // 已上堂數：指實際經過的周數或次數（不扣除請假）
     const completedSessions = allSessions.filter(
-      s => classIds.includes(s.class_id) && s.status === 'completed'
+      s => activeClassIds.includes(s.class_id) && s.status === 'completed'
     );
     const attendedCount = completedSessions.length;
 
@@ -355,7 +358,7 @@ class MemberService {
     const upcomingSessions = allSessions
       .filter(s => {
         // 自己班級的課 OR 已預約補課的課堂
-        const isMyClass = classIds.includes(s.class_id);
+        const isMyClass = activeClassIds.includes(s.class_id);
         const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
         if (!isMyClass && !isMakeupTarget) return false;
         if (s.status === 'cancelled') return false;
@@ -697,7 +700,7 @@ class MemberService {
     }
 
     // 6. 寫入選課紀錄表 (Enrollments)，狀態設為待繳費 pending_payment
-    const totalPaidSessions = Number(targetClass.total_sessions || (Number(targetClass.period_weeks) * Number(targetClass.sessions_per_week))) || 0;
+    const targetTotalSessions = Number(targetClass.total_sessions || (Number(targetClass.period_weeks) * Number(targetClass.sessions_per_week))) || 0;
     const newEnrollmentId = `ENR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const newEnrollment = {
       enrollment_id: newEnrollmentId,
@@ -705,12 +708,12 @@ class MemberService {
       class_id: classId,
       enroll_date: new Date(),
       status: 'pending_payment',
-      total_paid_sessions: totalPaidSessions,
+      total_paid_sessions: 0,
       notes: isOverlimit ? '[越級加選-待審]' : '學員自主加選'
     };
 
     SheetHelper.addRow('Enrollments', newEnrollment);
-    Logger.log(`[學員加選] 成功寫入選課紀錄：${newEnrollmentId} (待繳費)，總堂數：${totalPaidSessions}`);
+    Logger.log(`[學員加選] 成功寫入選課紀錄：${newEnrollmentId} (待繳費)，確認繳費前不計入總堂數；課程原始堂數：${targetTotalSessions}`);
 
     // 7. 更新班級報名人數
     SheetHelper.updateRow('Classes', 'class_id', classId, {
@@ -722,7 +725,7 @@ class MemberService {
       success: true,
       enrollmentId: newEnrollmentId,
       className: targetClass.class_name,
-      totalSessions: totalPaidSessions,
+      totalSessions: targetTotalSessions,
       isOverlimit: isOverlimit
     };
   }
