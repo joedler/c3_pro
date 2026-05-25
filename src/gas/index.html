@@ -1674,8 +1674,13 @@
           <!-- 課程摘要 -->
           <div class="text-xs border-t border-slate-800/60 pt-4" x-show="studentProfile.classNames">
             <div class="flex items-center justify-between mb-3">
-              <p class="font-black text-slate-300">📅 課程摘要</p>
-              <span class="px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[10px] font-black" x-text="(studentProfile.courseSummaryItems?.length || 0) + ' 門'"></span>
+              <div class="flex items-center gap-2">
+                <p class="font-black text-slate-300">📅 課程摘要</p>
+                <span class="px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[10px] font-black" x-text="(studentProfile.courseSummaryItems?.length || 0) + ' 門'"></span>
+              </div>
+              <button @click="switchMode('enroll')" class="px-2.5 py-1 rounded-full bg-slate-950/60 border border-slate-800 text-[10px] font-bold text-slate-300 hover:border-brand-500/40 hover:text-brand-400 transition-all">
+                ＋ 加選
+              </button>
             </div>
             <div class="space-y-3">
               <template x-for="course in studentProfile.courseSummaryItems" :key="course.className">
@@ -1690,9 +1695,11 @@
           <div x-show="!studentProfile.classNames" class="text-center py-6">
             <p class="text-xs text-slate-500">尚無報名或待核收之課程資訊。</p>
           </div>
+        </div>
 
-          <!-- 三大捷徑按鈕 (F-M02) -->
-          <div class="grid grid-cols-3 gap-2 border-t border-slate-800/60 pt-5">
+        <!-- 學務功能面板 -->
+        <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-4" x-show="studentProfile.classNames">
+          <div class="grid grid-cols-3 gap-2">
             <button @click="activeSubView = activeSubView === 'schedule' ? '' : 'schedule'" :class="activeSubView === 'schedule' ? 'bg-brand-600 text-white border-brand-500' : 'bg-slate-900/60 text-slate-300 border-slate-800/80 hover:bg-slate-850'" class="py-3 px-1 text-xs font-bold rounded-xl border transition-all text-center">
               📅 查看課表
             </button>
@@ -1704,17 +1711,8 @@
             </button>
           </div>
 
-          <!-- 自助加選新班級捷徑 (Premium Card Button) -->
-          <div class="border-t border-slate-800/60 pt-4" x-show="studentProfile.classNames">
-            <button @click="switchMode('enroll')" class="w-full py-3 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-500/20 active:scale-[0.98] flex items-center justify-center gap-2">
-              <span>➕</span>
-              <span>自助加選其他新班級課程</span>
-            </button>
-          </div>
-        </div>
-
         <!-- 展開顯示未來 4 週課堂 (查看課表) -->
-        <div x-show="activeSubView === 'schedule'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
+        <div x-show="activeSubView === 'schedule'" x-transition class="space-y-3 border-t border-slate-800/60 pt-4">
           <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🗓️ 未來 4 週課表行程</h3>
           <div class="space-y-2">
             <template x-for="s in upcomingSessions" :key="s.sessionId">
@@ -1748,7 +1746,7 @@
         </div>
 
         <!-- 展開顯示請假表單 -->
-        <div x-show="activeSubView === 'leave'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-4">
+        <div x-show="activeSubView === 'leave'" x-transition class="space-y-4 border-t border-slate-800/60 pt-4">
           <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🏖️ 線上請假申請</h3>
           <div>
             <label class="block text-xs font-bold text-slate-400 mb-2">選擇欲請假之課堂 (4週內)</label>
@@ -1784,7 +1782,7 @@
         </div>
 
         <!-- 展開顯示補課表單 -->
-        <div x-show="activeSubView === 'makeup'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-4">
+        <div x-show="activeSubView === 'makeup'" x-transition class="space-y-4 border-t border-slate-800/60 pt-4">
           <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🔄 跨班補課預約</h3>
           
           <!-- Step 1: Choose original leave request -->
@@ -1850,6 +1848,7 @@
               確認預約補課
             </button>
           </div>
+        </div>
         </div>
 
       </div>
