@@ -1613,15 +1613,17 @@
       <div class="max-w-md mx-auto space-y-6">
         <!-- Announcement Marquee for Students -->
         <template x-if="announcements.length > 0">
-          <div class="relative w-full overflow-hidden bg-gradient-to-r from-brand-600/10 to-purple-600/10 border border-slate-800/80 rounded-2xl p-3.5 backdrop-blur-md">
-            <div class="flex items-center gap-3 overflow-hidden">
+          <div class="relative w-full bg-gradient-to-r from-brand-600/10 to-purple-600/10 border border-slate-800/80 rounded-2xl p-3.5 backdrop-blur-md">
+            <div class="flex items-start gap-3">
               <span class="flex-shrink-0 px-2 py-0.5 text-[9px] font-bold bg-brand-500/20 text-brand-400 rounded-md border border-brand-500/30">📢 公告</span>
-              <div class="scrollbar-none overflow-x-auto whitespace-nowrap text-xs font-semibold text-slate-200 flex items-center gap-6 select-none flex-grow">
+              <div class="text-xs font-semibold text-slate-200 flex flex-col gap-2 select-none min-w-0 flex-grow">
                 <template x-for="ann in announcements" :key="ann.announcementId">
-                  <div class="inline-flex items-center gap-2">
-                    <span :class="ann.type === 'alert' ? 'text-rose-400 animate-ping' : 'text-brand-400'">•</span>
-                    <span x-text="ann.title" class="font-bold text-white"></span>
-                    <span x-text="ann.content" class="text-slate-400 text-[11px]"></span>
+                  <div class="flex items-start gap-2 min-w-0 leading-relaxed">
+                    <span :class="ann.type === 'alert' ? 'text-rose-400 animate-ping' : 'text-brand-400'" class="mt-0.5 flex-shrink-0">•</span>
+                    <div class="min-w-0">
+                      <span x-text="ann.title" class="font-bold text-white break-words"></span>
+                      <span x-text="ann.content" class="text-slate-400 text-[11px] break-words ml-1"></span>
+                    </div>
                   </div>
                 </template>
               </div>
@@ -1629,18 +1631,15 @@
           </div>
         </template>
 
-        <div class="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl space-y-2 text-center">
-          <span class="text-3xl">👤</span>
-          <h2 class="text-xl font-bold text-white"><span x-text="studentProfile.realName || '學員'"></span> 的課程資訊</h2>
-          <p class="text-xs text-slate-400 leading-relaxed">
-            歡迎回來！以下是您的當前課程與學務統計數據。
-          </p>
-        </div>
-
         <!-- 課程與學務卡片 -->
         <div class="bg-slate-900/20 border border-slate-800 rounded-3xl p-6 backdrop-blur-md space-y-5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <span class="text-xs font-bold text-slate-400">目前學員身分</span>
+          <div class="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+            <div class="min-w-0">
+              <span class="text-[10px] font-bold text-slate-500">目前學員身分</span>
+              <h2 class="mt-0.5 text-lg font-black text-white leading-snug break-words">
+                <span x-text="studentProfile.realName || '學員'"></span> 的課程資訊
+              </h2>
+            </div>
             <span class="px-2 py-0.5 text-[9px] font-bold bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full" x-text="studentProfile.level || ''"></span>
           </div>
 
@@ -1717,7 +1716,7 @@
         <!-- 展開顯示未來 4 週課堂 (查看課表) -->
         <div x-show="activeSubView === 'schedule'" x-transition class="bg-slate-900/20 border border-slate-800 rounded-3xl p-5 backdrop-blur-md space-y-3">
           <h3 class="text-xs font-bold text-white flex items-center gap-1.5">🗓️ 未來 4 週課表行程</h3>
-          <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <div class="space-y-2">
             <template x-for="s in upcomingSessions" :key="s.sessionId">
               <div :class="{
                      'border-brand-700 bg-brand-950/20': s.isMakeup,
