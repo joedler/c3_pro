@@ -666,17 +666,18 @@ class LineHandler {
     // (B) 若為教練指令
     if (staff && text === '今日課表') {
       const calendarId = Config.get('GOOGLE_CALENDAR_ID') || 'primary';
-      const calendarUrl = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(calendarId)}&ctz=Asia%2FTaipei`;
+      const calendarUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(calendarId)}`;
       
       const coachFlex = this.buildC3InfoCard({
         title: '教練今日課表',
-        subtitle: `${staff.real_name || '教練'} 您好，可開啟 Google 行事曆查看授課時段與學員異動。`,
+        subtitle: `${staff.real_name || '教練'} 您好，請用 Google 日曆開啟並訂閱 C3 課程日曆。`,
         accentColor: '#111827',
         rows: [
-          this.flexRow('資料來源', 'Google Calendar'),
+          this.flexRow('操作方式', '開啟 Google 日曆並加入/訂閱'),
           this.flexRow('顯示內容', '課堂時間、教室、出席與請假補課名單')
         ],
-        buttonLabel: '開啟 Google 行事曆',
+        note: '若手機已安裝 Google 日曆，系統通常會優先以 App 開啟；若未安裝則會以瀏覽器開啟。',
+        buttonLabel: '訂閱/開啟 Google 日曆',
         buttonUri: calendarUrl
       });
 
