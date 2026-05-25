@@ -1660,7 +1660,7 @@
             </div>
             <div class="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-900">
               <p class="text-2xl font-black text-brand-400" x-text="studentProfile.makeupCount ?? '-'"></p>
-              <p class="text-[10px] text-slate-500 mt-1 font-bold">🔄 補課完成</p>
+              <p class="text-[10px] text-slate-500 mt-1 font-bold">🔄 已約補課</p>
             </div>
             <div class="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-900">
               <p class="text-2xl font-black text-indigo-400" x-text="studentProfile.availableMakeupCount ?? '-'"></p>
@@ -1681,10 +1681,6 @@
             <p class="flex justify-between">
               <span>🗓️ 本期區間：</span>
               <span class="text-slate-200 text-right" x-text="studentProfile.periodInfo"></span>
-            </p>
-            <p class="flex justify-between">
-              <span>🔄 補課統計：</span>
-              <span class="text-slate-200 text-right" x-text="studentProfile.makeupInfo"></span>
             </p>
           </div>
 
@@ -2115,7 +2111,6 @@
           leaveCount: 0,
           makeupCount: 0,
           availableMakeupCount: 0,
-          makeupInfo: '',
           remainingCount: 0
         },
         showLocalSchedule: false,
@@ -2563,7 +2558,6 @@
                 this.studentProfile.totalPaid = info.totalPaid || 0;
                 this.studentProfile.attendedCount = info.attendedCount || 0;
                 this.studentProfile.leaveCount = info.leaveCount || 0;
-                this.studentProfile.makeupInfo = info.makeupInfo || '';
                 this.studentProfile.makeupCount = info.makeupCount ?? 0;
                 this.studentProfile.availableMakeupCount = info.availableMakeupCount ?? 0;
                 this.studentProfile.remainingCount = info.remainingCount || 0;

@@ -316,11 +316,9 @@ class MemberService {
     // 請假堂數：實際成功請假的次數
     const leaveCount = leaveRequests.length;
     
-    // 補課完成：預約成功且已結案(completed)的補課次數
-    const makeupCount = makeupRequests.filter(m => m.status === 'completed').length;
-
     // 已預約補課次數 (包含 completed 與 approved)
     const reservedMakeups = makeupRequests.filter(m => m.status === 'completed' || m.status === 'approved').length;
+    const makeupCount = reservedMakeups;
 
     // 可補額度：請假堂數 - 已預約補課次數
     const availableMakeupCount = Math.max(0, leaveCount - reservedMakeups);
@@ -423,7 +421,6 @@ class MemberService {
       leaveCount,
       makeupCount,
       availableMakeupCount,
-      makeupInfo: `已登記 ${reservedMakeups} 堂`,
       remainingCount,
       upcomingSessions,
       pendingLeaves
