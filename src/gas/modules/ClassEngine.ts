@@ -450,12 +450,19 @@ class ClassEngine {
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
     // 2. 獲取報名該班級的所有正式學員
+    const allClassSessions = SheetHelper.getRows<any>('Sessions').filter(
+      s => s.class_id && session.class_id &&
+           String(s.class_id).trim() === String(session.class_id).trim() &&
+           String(s.status || '').trim() !== 'cancelled'
+    );
+
     const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
       e => e.class_id && session.class_id &&
            String(e.class_id).trim() === String(session.class_id).trim() && 
-           String(e.status).trim() === 'active'
+           String(e.status).trim() === 'active' &&
+           this.isEnrollmentEligibleForSession(e, session, allClassSessions)
     );
-    const memberIds = enrollments.map(e => e.member_id);
+    const memberIds = Array.from(new Set(enrollments.map(e => String(e.member_id).trim()).filter(id => !!id)));
     const allMembers = SheetHelper.getRows<any>('Members');
     
     // 將 member_id 映射為 real_name
@@ -534,6 +541,29 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     } catch (e) {
       Logger.log(`[同步日曆事件失敗] Session: ${sessionId}, Error: ${e instanceof Error ? e.message : e}`);
     }
+  }
+
+  private static isEnrollmentEligibleForSession(enrollment: any, session: any, classSessions: any[]): boolean {
+    const paidSessions = Number(enrollment.total_paid_sessions || 0);
+    if (!paidSessions) return false;
+
+    const targetId = String(session.session_id || '').trim();
+    const enrollmentDate = this.normalizeDateOnly(enrollment.enroll_date);
+    const orderedSessions = classSessions
+      .filter(s => this.normalizeDateOnly(s.session_date || s.date).getTime() >= enrollmentDate.getTime())
+      .sort((a, b) => {
+        const aKey = `${Utilities.formatDate(this.normalizeDateOnly(a.session_date || a.date), 'Asia/Taipei', 'yyyy-MM-dd')} ${String(a.start_time || '')} ${String(a.session_seq || '')}`;
+        const bKey = `${Utilities.formatDate(this.normalizeDateOnly(b.session_date || b.date), 'Asia/Taipei', 'yyyy-MM-dd')} ${String(b.start_time || '')} ${String(b.session_seq || '')}`;
+        return aKey.localeCompare(bKey);
+      });
+
+    return orderedSessions.slice(0, paidSessions).some(s => String(s.session_id || '').trim() === targetId);
+  }
+
+  private static normalizeDateOnly(value: any): Date {
+    const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
+    date.setHours(0, 0, 0, 0);
+    return date;
   }
 
   /**

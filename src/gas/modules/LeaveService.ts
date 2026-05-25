@@ -75,6 +75,11 @@ class LeaveService {
       throw new Error('您並未選修本課程，無法請假。');
     }
 
+    const allSessions = SheetHelper.getRows<any>('Sessions');
+    if (!this.isEnrollmentSessionEligible(enrollment, session, allSessions)) {
+      throw new Error('此課堂未包含在您的本期已啟用堂數內，無法請假。');
+    }
+
     // 4. 驗證時間規則：必須在「下課前」申請請假
     const now = new Date();
     // 將 session_date (YYYY-MM-DD) 與 end_time (HH:mm) 合併為正確日期時間
@@ -147,5 +152,32 @@ class LeaveService {
       sessionDate: this.safeFormatSessionDate(session.session_date),
       startTime: this.safeFormatTime(session.start_time)
     };
+  }
+
+  private static isEnrollmentSessionEligible(enrollment: any, session: any, allSessions: any[]): boolean {
+    const paidSessions = Number(enrollment.total_paid_sessions || 0);
+    if (!paidSessions) return false;
+
+    const classId = String(enrollment.class_id || '').trim();
+    const targetSessionId = String(session.session_id || '').trim();
+    const enrollmentDate = this.normalizeDateOnly(enrollment.enroll_date);
+
+    const orderedSessions = allSessions
+      .filter(s => String(s.class_id || '').trim() === classId)
+      .filter(s => String(s.status || '').trim() !== 'cancelled')
+      .filter(s => this.normalizeDateOnly(s.session_date || s.date).getTime() >= enrollmentDate.getTime())
+      .sort((a, b) => {
+        const aKey = `${this.safeFormatSessionDate(this.normalizeDateOnly(a.session_date || a.date))} ${this.safeFormatTime(a.start_time)} ${String(a.session_seq || '')}`;
+        const bKey = `${this.safeFormatSessionDate(this.normalizeDateOnly(b.session_date || b.date))} ${this.safeFormatTime(b.start_time)} ${String(b.session_seq || '')}`;
+        return aKey.localeCompare(bKey);
+      });
+
+    return orderedSessions.slice(0, paidSessions).some(s => String(s.session_id || '').trim() === targetSessionId);
+  }
+
+  private static normalizeDateOnly(value: any): Date {
+    const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
+    date.setHours(0, 0, 0, 0);
+    return date;
   }
 }

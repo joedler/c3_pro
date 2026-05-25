@@ -288,7 +288,6 @@ class MemberService {
 
     const classIds = enrollments.map(e => e.class_id);
     const activeEnrollments = enrollments.filter(e => e.status === 'active');
-    const activeClassIds = activeEnrollments.map(e => e.class_id);
 
     // 3. 取得班級與課程設定 (Classes)
     const allClasses = SheetHelper.getRows<any>('Classes');
@@ -302,6 +301,13 @@ class MemberService {
       m => m.member_id === memberId
     );
     const allSessions = SheetHelper.getRows<any>('Sessions');
+    const eligibleActiveSessionIds = new Set<string>();
+    activeEnrollments.forEach(e => {
+      allSessions
+        .filter(s => String(s.class_id || '').trim() === String(e.class_id || '').trim())
+        .filter(s => this.isEnrollmentSessionEligible(e, s, allSessions))
+        .forEach(s => eligibleActiveSessionIds.add(String(s.session_id || '').trim()));
+    });
 
     // 各項計數器
     // 時數統計只計入已確認繳費的課程；待繳費課程可顯示在班級清單，但不納入額度。
@@ -309,7 +315,7 @@ class MemberService {
     
     // 已上堂數：指實際經過的周數或次數（不扣除請假）
     const completedSessions = allSessions.filter(
-      s => activeClassIds.includes(s.class_id) && s.status === 'completed'
+      s => eligibleActiveSessionIds.has(String(s.session_id || '').trim()) && s.status === 'completed'
     );
     const attendedCount = completedSessions.length;
 
@@ -365,7 +371,9 @@ class MemberService {
     const upcomingSessions = allSessions
       .filter(s => {
         // 自己班級的課 OR 已預約補課的課堂
-        const isMyClass = classIds.includes(s.class_id);
+        const myEnrollment = enrollments.find(e => String(e.class_id || '').trim() === String(s.class_id || '').trim());
+        const isPendingPayment = myEnrollment ? (myEnrollment.status === 'pending_payment') : false;
+        const isMyClass = isPendingPayment || eligibleActiveSessionIds.has(String(s.session_id || '').trim());
         const isMakeupTarget = makeupTargetSessionIds.includes(s.session_id);
         if (!isMyClass && !isMakeupTarget) return false;
         if (s.status === 'cancelled') return false;
@@ -789,6 +797,33 @@ class MemberService {
       return sameYear ? `${m}/${d}` : `${y}/${m}/${d}`;
     };
     return `${fmt(startDate)} ~ ${fmt(endDate)}`;
+  }
+
+  private static isEnrollmentSessionEligible(enrollment: any, session: any, allSessions: any[]): boolean {
+    const paidSessions = Number(enrollment.total_paid_sessions || 0);
+    if (!paidSessions) return false;
+
+    const classId = String(enrollment.class_id || '').trim();
+    const targetSessionId = String(session.session_id || '').trim();
+    const enrollmentDate = this.normalizeDateOnly(enrollment.enroll_date);
+
+    const orderedSessions = allSessions
+      .filter(s => String(s.class_id || '').trim() === classId)
+      .filter(s => String(s.status || '').trim() !== 'cancelled')
+      .filter(s => this.normalizeDateOnly(s.session_date || s.date).getTime() >= enrollmentDate.getTime())
+      .sort((a, b) => {
+        const aKey = `${this.formatDate(this.normalizeDateOnly(a.session_date || a.date))} ${this.safeFormatTime(a.start_time)} ${String(a.session_seq || '')}`;
+        const bKey = `${this.formatDate(this.normalizeDateOnly(b.session_date || b.date))} ${this.safeFormatTime(b.start_time)} ${String(b.session_seq || '')}`;
+        return aKey.localeCompare(bKey);
+      });
+
+    return orderedSessions.slice(0, paidSessions).some(s => String(s.session_id || '').trim() === targetSessionId);
+  }
+
+  private static normalizeDateOnly(value: any): Date {
+    const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
+    date.setHours(0, 0, 0, 0);
+    return date;
   }
 
   /**

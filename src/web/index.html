@@ -1157,6 +1157,7 @@
                           </th>
                           <th class="px-6 py-4">學員姓名</th>
                           <th class="px-6 py-4">報名班級</th>
+                          <th class="px-6 py-4">啟用堂數</th>
                           <th class="px-6 py-4">登記日期</th>
                           <th class="px-6 py-4">備註</th>
                           <th class="px-6 py-4">狀態</th>
@@ -1180,13 +1181,19 @@
                               <span class="font-semibold text-slate-300 block" x-text="p.className"></span>
                               <span class="px-1.5 py-0.5 text-[9px] bg-brand-500/10 text-brand-400 rounded border border-brand-500/10 font-bold" x-text="p.level"></span>
                             </td>
+                            <td class="px-6 py-4">
+                              <div class="flex items-center gap-2">
+                                <input type="number" min="1" :max="p.totalSessions" x-model.number="p.paymentSessions" class="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                                <span class="text-[10px] text-slate-500 whitespace-nowrap" x-text="'/ ' + p.totalSessions + ' 堂'"></span>
+                              </div>
+                            </td>
                             <td class="px-6 py-4 text-slate-400" x-text="p.enrollDate"></td>
                             <td class="px-6 py-4 text-slate-400 italic font-medium" x-text="p.notes || '自動續期待繳'"></td>
                             <td class="px-6 py-4">
                               <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">待繳學費 ⏳</span>
                             </td>
                             <td class="px-6 py-4 text-right">
-                              <button @click="confirmTuitionPayment(p.classId, p.memberId)" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-bold shadow-lg shadow-emerald-950/20 transition-all active:scale-95 flex items-center gap-1.5 ml-auto">
+                              <button @click="confirmTuitionPayment(p.classId, p.memberId, p.paymentSessions)" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] font-bold shadow-lg shadow-emerald-950/20 transition-all active:scale-95 flex items-center gap-1.5 ml-auto">
                                 <span>💰</span>
                                 <span>確認已繳費</span>
                               </button>
@@ -2664,13 +2671,18 @@
           }
         },
 
-        async confirmTuitionPayment(classId, memberId) {
-          if (!confirm('💰 確定要確認收費並正式開通該學員的課程權限嗎？\n系統將自動發送 LINE Flex 繳費收據通知該學員！')) {
+        async confirmTuitionPayment(classId, memberId, totalPaidSessions) {
+          const paidSessions = Number(totalPaidSessions || 0);
+          if (!paidSessions || paidSessions < 1) {
+            this.addToast('請先輸入有效的啟用堂數。', 'error');
+            return;
+          }
+          if (!confirm(`💰 確定要確認收費並正式開通 ${paidSessions} 堂課程權限嗎？\n系統將自動發送 LINE Flex 繳費收據通知該學員！`)) {
             return;
           }
           try {
             this.addToast('正在進行學費核點與 LINE Flex 繳費收據發送...', 'info');
-            const res = await this.apiCall('admin.confirmPayment', { classId, memberId });
+            const res = await this.apiCall('admin.confirmPayment', { classId, memberId, totalPaidSessions: paidSessions });
             this.addToast(res.message || '🟢 學費核收成功，繳費收據已推送！', 'success');
             await this.loadInitialData();
           } catch (e) {
@@ -2690,7 +2702,8 @@
             this.addToast(`正在進行 ${count} 筆學費批量核點與 Google 日曆同步，請稍候...`, 'info');
             const items = this.selectedEnrollments.map(str => {
               const [classId, memberId] = str.split(':');
-              return { classId, memberId };
+              const payment = this.pendingPayments.find(p => p.classId === classId && p.memberId === memberId);
+              return { classId, memberId, totalPaidSessions: Number(payment?.paymentSessions || payment?.totalSessions || 0) };
             });
             
             const res = await this.apiCall('admin.batchConfirmPayments', { items });

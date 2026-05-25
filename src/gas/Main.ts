@@ -197,6 +197,8 @@ function getAdminBootstrapData(): Record<string, any> {
         classId: e.class_id,
         className: cls ? cls.class_name : '未知班級',
         level: cls ? cls.level : '未知程度',
+        totalSessions: cls ? Number(cls.total_sessions || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : 0,
+        paymentSessions: cls ? Number(cls.total_sessions || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : 0,
         memberId: e.member_id,
         realName: member ? member.real_name : '未知學員',
         gender: member ? member.gender : '',
@@ -647,7 +649,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           throw new Error('找不到該班級設定');
         }
 
-        const totalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
+        const classTotalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
+        const requestedPaidSessions = Number(data.totalPaidSessions || classTotalSessions);
+        if (!requestedPaidSessions || requestedPaidSessions < 1 || requestedPaidSessions > classTotalSessions) {
+          throw new Error(`啟用堂數需介於 1 ~ ${classTotalSessions} 堂之間`);
+        }
+        const totalSessions = requestedPaidSessions;
         
         // 1. 更新選課紀錄狀態為 active 並填入已繳堂數
         const enrollSheet = SheetHelper.getSheet('Enrollments');
@@ -722,7 +729,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const uniqueClassIds = new Set<string>();
         let successCount = 0;
 
-        data.items.forEach((item: { classId: string; memberId: string }) => {
+        data.items.forEach((item: { classId: string; memberId: string; totalPaidSessions?: number }) => {
           const enrollIdx = enrollments.findIndex(
             e => String(e.class_id).trim() === String(item.classId).trim() && 
                  String(e.member_id).trim() === String(item.memberId).trim() && 
@@ -740,7 +747,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             }
 
             if (cls) {
-              const totalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
+              const classTotalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
+              const totalSessions = Number(item.totalPaidSessions || classTotalSessions);
+              if (!totalSessions || totalSessions < 1 || totalSessions > classTotalSessions) {
+                Logger.log(`[批次繳費略過] 堂數不合法：Class ${item.classId}, Member ${item.memberId}, totalPaidSessions=${item.totalPaidSessions}`);
+                return;
+              }
               
               // 2. 更新選課紀錄狀態為 active 並填入已繳堂數
               enrollSheet.getRange(rowNum, statusCol).setValue('active');
