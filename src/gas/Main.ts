@@ -106,26 +106,7 @@ function getBrandConfigForFrontend(): Record<string, any> {
 }
 
 function getActiveAnnouncementsFromRows(allAnnouncements: any[]): Record<string, any>[] {
-  const now = new Date();
-  const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
-
-  return allAnnouncements
-    .filter(ann => {
-      const pubTime = ann.publish_time ? new Date(ann.publish_time) : null;
-      const expTime = ann.expire_time ? new Date(ann.expire_time) : null;
-      if (!pubTime) return false;
-
-      const pubTimeStr = ann.publish_time instanceof Date
-        ? Utilities.formatDate(ann.publish_time, 'Asia/Taipei', 'yyyy-MM-dd')
-        : String(ann.publish_time || '').substring(0, 10);
-
-      return (now >= pubTime || nowStr >= pubTimeStr) && (!expTime || now <= expTime);
-    })
-    .sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return new Date(b.publish_time).getTime() - new Date(a.publish_time).getTime();
-    });
+  return PublicService.getActiveAnnouncementsFromRows(allAnnouncements);
 }
 
 function getAdminBootstrapData(): Record<string, any> {
@@ -423,7 +404,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const cacheKey = getMemberBootstrapCacheKey(user);
         const cached = cache.get(cacheKey);
         if (cached) {
-          return JSON.parse(cached);
+          const cachedResult = JSON.parse(cached);
+          cachedResult.announcements = PublicService.getActiveAnnouncements();
+          return cachedResult;
         }
 
         const result = {

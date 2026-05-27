@@ -57,12 +57,16 @@ class PublicService {
    */
   public static getActiveAnnouncements(): Record<string, any>[] {
     const allAnnouncements = SheetHelper.getRows<any>('Announcements');
+    return this.getActiveAnnouncementsFromRows(allAnnouncements);
+  }
+
+  public static getActiveAnnouncementsFromRows(allAnnouncements: any[]): Record<string, any>[] {
     const now = new Date();
     const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
 
     const active = allAnnouncements.filter(ann => {
-      const pubTime = ann.publish_time ? new Date(ann.publish_time) : null;
-      const expTime = ann.expire_time ? new Date(ann.expire_time) : null;
+      const pubTime = this.parseDateValue(ann.publish_time);
+      const expTime = this.parseDateValue(ann.expire_time);
 
       if (!pubTime) return false;
       
@@ -80,10 +84,46 @@ class PublicService {
     });
 
     // 優先呈現置頂公告，再依時間倒序
-    return active.sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return new Date(b.publish_time).getTime() - new Date(a.publish_time).getTime();
-    });
+    return active
+      .sort((a, b) => {
+        if (this.isTruthy(a.pinned) && !this.isTruthy(b.pinned)) return -1;
+        if (!this.isTruthy(a.pinned) && this.isTruthy(b.pinned)) return 1;
+        return (this.parseDateValue(b.publish_time)?.getTime() || 0) - (this.parseDateValue(a.publish_time)?.getTime() || 0);
+      })
+      .map(ann => this.normalizeAnnouncement(ann));
+  }
+
+  private static normalizeAnnouncement(ann: any): Record<string, any> {
+    const publishTime = this.parseDateValue(ann.publish_time);
+    const expireTime = this.parseDateValue(ann.expire_time);
+    return {
+      announcementId: ann.announcement_id || ann.announcementId || '',
+      title: ann.title || '',
+      content: ann.content || '',
+      target: ann.target || 'all',
+      type: ann.type || 'info',
+      sendLine: this.isTruthy(ann.send_line),
+      publishTime: publishTime ? publishTime.toISOString() : '',
+      expireTime: expireTime ? expireTime.toISOString() : '',
+      createdBy: ann.created_by || '',
+      pinned: this.isTruthy(ann.pinned)
+    };
+  }
+
+  private static parseDateValue(value: any): Date | null {
+    if (!value) return null;
+    if (value instanceof Date && !isNaN(value.getTime())) return value;
+    const str = String(value).trim();
+    if (!str) return null;
+    const normalized = str.replace(/\//g, '-');
+    const parsed = new Date(normalized);
+    if (!isNaN(parsed.getTime())) return parsed;
+    const dateOnly = normalized.substring(0, 10);
+    const fallback = new Date(`${dateOnly}T00:00:00`);
+    return isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  private static isTruthy(value: any): boolean {
+    return value === true || String(value).trim().toLowerCase() === 'true' || String(value).trim() === '是' || String(value).trim() === '1';
   }
 }
