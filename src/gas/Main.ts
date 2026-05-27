@@ -105,8 +105,8 @@ function getBrandConfigForFrontend(): Record<string, any> {
   };
 }
 
-function getActiveAnnouncementsFromRows(allAnnouncements: any[]): Record<string, any>[] {
-  return PublicService.getActiveAnnouncementsFromRows(allAnnouncements);
+function getActiveAnnouncementsFromRows(allAnnouncements: any[], limit = 3): Record<string, any>[] {
+  return PublicService.getActiveAnnouncementsFromRows(allAnnouncements, limit);
 }
 
 function getAdminBootstrapData(): Record<string, any> {
@@ -245,7 +245,8 @@ function getAdminBootstrapData(): Record<string, any> {
     classes: adminClasses,
     pendingPayments,
     dashboardStats: { todaySessions, todayLeaves, todayMakeups },
-    announcements: getActiveAnnouncementsFromRows(announcements),
+    announcements: getActiveAnnouncementsFromRows(announcements, 3),
+    announcementList: getActiveAnnouncementsFromRows(announcements, 0),
     meta: {
       coaches: activeStaff.map(s => ({ lineUid: s.line_uid, name: s.real_name })),
       rooms: rooms.map(r => ({ roomId: r.room_id, roomName: r.room_name }))
@@ -878,7 +879,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         return AdminService.createAnnouncement(data, user);
       },
       'admin.getAnnouncements': () => {
-        return PublicService.getActiveAnnouncements();
+        AuthService.requireRole(user, ['admin']);
+        return PublicService.getActiveAnnouncements(0);
+      },
+      'admin.deactivateAnnouncement': () => {
+        AuthService.requireRole(user, ['admin']);
+        return AdminService.deactivateAnnouncement(data.announcementId, user);
       },
       'admin.saveSystemConfig': () => {
         AuthService.requireRole(user, ['admin']);

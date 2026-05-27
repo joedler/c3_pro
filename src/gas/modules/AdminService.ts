@@ -113,7 +113,7 @@ class AdminService {
     },
     user: UserSession
   ): Record<string, any> {
-    const { title, content, target = 'all', expireDays = 30, pinned = false, type = 'info', sendLine = false } = data;
+    const { title, content, target = 'all', expireDays = 14, pinned = false, type = 'info', sendLine = false } = data;
 
     if (!title || !content) {
       throw new Error('請輸入公告標題與內容。');
@@ -161,6 +161,27 @@ class AdminService {
       announcementId: announcementId,
       title: title,
       expireTime: expireTime
+    };
+  }
+
+  public static deactivateAnnouncement(announcementId: string, user: UserSession): Record<string, any> {
+    if (!announcementId) {
+      throw new Error('請選擇要下架的公告。');
+    }
+
+    const updated = SheetHelper.updateRow('Announcements', 'announcement_id', announcementId, {
+      expire_time: new Date(Date.now() - 60 * 1000),
+      created_by: user.uid
+    });
+
+    if (!updated) {
+      throw new Error('找不到指定公告，可能已被下架或刪除。');
+    }
+
+    return {
+      success: true,
+      message: '公告已下架。',
+      announcementId: announcementId
     };
   }
 

@@ -627,27 +627,33 @@
             <!-- Summary Tab -->
             <div x-show="activeTab === 'dashboard'" class="space-y-6">
               
-              <!-- Announcement Marquee / Broadcast Bar -->
-              <div class="relative w-full overflow-hidden bg-gradient-to-r from-brand-600/10 via-purple-600/5 to-blue-600/10 border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 backdrop-blur-md">
-                <div class="flex items-center gap-3 overflow-hidden flex-grow">
-                  <span class="flex-shrink-0 px-2.5 py-1 text-[10px] font-bold bg-brand-500/20 text-brand-400 rounded-lg animate-pulse border border-brand-500/30">📢 最新公告</span>
-                  <div class="scrollbar-none overflow-x-auto whitespace-nowrap text-xs font-semibold text-slate-200 flex items-center gap-6 select-none flex-grow">
-                    <template x-for="ann in announcements" :key="ann.announcementId">
-                      <div class="inline-flex items-center gap-2">
-                        <span :class="ann.type === 'alert' ? 'text-rose-400 animate-ping' : 'text-brand-400'">•</span>
-                        <span x-text="ann.title" class="font-bold text-white"></span>
-                        <span x-text="ann.content" class="text-slate-400 text-[11px]"></span>
-                      </div>
-                    </template>
-                    <template x-if="announcements.length === 0">
-                      <span class="text-slate-500 text-[11px]">目前尚無任何發布中的系統公告。</span>
-                    </template>
+              <!-- Announcement Board -->
+              <div class="relative w-full bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 backdrop-blur-md space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 class="text-sm font-black text-white">📢 最新公告</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">首頁顯示最新 3 則，重要公告優先。</p>
                   </div>
+                  <button @click="showAnnouncementModal = true" class="flex-shrink-0 px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95">
+                    <span>📢</span>
+                    <span>發布 / 管理</span>
+                  </button>
                 </div>
-                <button @click="showAnnouncementModal = true" class="flex-shrink-0 px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95">
-                  <span>📢</span>
-                  <span>發布公告</span>
-                </button>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <template x-for="ann in announcements" :key="ann.announcementId">
+                    <div class="rounded-xl border p-3 min-w-0" :class="ann.type === 'alert' ? 'bg-rose-500/10 border-rose-500/35' : 'bg-slate-950/50 border-slate-800'">
+                      <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black" :class="ann.type === 'alert' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/35' : 'bg-brand-500/15 text-brand-300 border border-brand-500/25'" x-text="ann.type === 'alert' ? '🚨 重要' : '📢 公告'"></span>
+                        <span class="text-[10px] text-slate-500" x-text="formatDateYMD(ann.publishTime)"></span>
+                      </div>
+                      <div class="text-xs font-black text-white break-words" x-text="ann.title"></div>
+                      <p class="text-[11px] text-slate-400 leading-relaxed mt-1 line-clamp-2 break-words" x-text="ann.content"></p>
+                    </div>
+                  </template>
+                  <template x-if="announcements.length === 0">
+                    <div class="lg:col-span-3 rounded-xl bg-slate-950/50 border border-slate-800 p-4 text-xs text-slate-500">目前尚無發布中的公告。</div>
+                  </template>
+                </div>
               </div>
 
               <!-- 4-Column Operations Summary Cards -->
@@ -1282,7 +1288,7 @@
 
           <!-- Announcement Modal -->
           <div x-show="showAnnouncementModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50" x-transition>
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-2xl shadow-2xl relative space-y-4 max-h-[92vh] overflow-y-auto">
               <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📢 發布系統最新公告</h3>
                 <button @click="showAnnouncementModal = false" class="text-slate-400 hover:text-white">&times;</button>
@@ -1290,13 +1296,13 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-xs font-bold text-slate-400 mb-1.5">公告標題</label>
-                  <input type="text" x-model="announcementForm.title" placeholder="例如: 雙十連假營運時段公告" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
+                  <input type="text" x-model="announcementForm.title" placeholder="例如: 週四晚間班停課通知" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-400 mb-1.5">公告性質等級</label>
                   <select x-model="announcementForm.type" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-brand-500">
-                    <option value="info">💬 普通公告 (藍標)</option>
-                    <option value="alert">🚨 重要紧急公告 (紅標/微動畫)</option>
+                    <option value="info">📢 普通公告</option>
+                    <option value="alert">🚨 重要公告</option>
                   </select>
                 </div>
                 <div>
@@ -1315,6 +1321,30 @@
                   </p>
                 </div>
               </div>
+                <div class="border-t border-slate-800 pt-4 space-y-3">
+                  <div class="flex items-center justify-between gap-3">
+                    <h4 class="text-xs font-black text-white">公告管理列表</h4>
+                    <span class="text-[10px] text-slate-500">目前有效公告</span>
+                  </div>
+                  <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <template x-for="ann in announcementList" :key="ann.announcementId">
+                      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-3 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black" :class="ann.type === 'alert' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/35' : 'bg-brand-500/15 text-brand-300 border border-brand-500/25'" x-text="ann.type === 'alert' ? '🚨 重要' : '📢 公告'"></span>
+                            <span class="text-[10px] text-slate-500" x-text="formatDateYMD(ann.publishTime)"></span>
+                          </div>
+                          <div class="text-xs font-bold text-white break-words" x-text="ann.title"></div>
+                          <p class="text-[10px] text-slate-500 mt-1 break-words" x-text="ann.content"></p>
+                        </div>
+                        <button @click="deactivateAnnouncement(ann.announcementId)" class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-200 border border-slate-700 hover:border-rose-500/30 text-[10px] font-bold transition-all">下架</button>
+                      </div>
+                    </template>
+                    <template x-if="announcementList.length === 0">
+                      <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-3 text-[11px] text-slate-500">目前沒有有效公告。</div>
+                    </template>
+                  </div>
+                </div>
               <div class="flex gap-3 pt-3 border-t border-slate-800">
                 <button @click="submitPublishAnnouncement()" class="flex-grow bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl py-3 text-xs font-bold transition-all shadow-lg active:scale-95">確認並公開發布</button>
                 <button @click="showAnnouncementModal = false" class="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-5 py-3 text-xs font-bold transition-all">取消</button>
@@ -1618,23 +1648,19 @@
     <!-- ================= STUDENT PROFILE DASHBOARD (F-M02) ================= -->
     <template x-if="currentMode === 'profile'">
       <div class="max-w-md mx-auto space-y-6">
-        <!-- Announcement Marquee for Students -->
+        <!-- Announcement Board for Students -->
         <template x-if="announcements.length > 0">
-          <div class="relative w-full bg-gradient-to-r from-brand-600/10 to-purple-600/10 border border-slate-800/80 rounded-2xl p-3.5 backdrop-blur-md">
-            <div class="flex items-start gap-3">
-              <span class="flex-shrink-0 px-2 py-0.5 text-[9px] font-bold bg-brand-500/20 text-brand-400 rounded-md border border-brand-500/30">📢 公告</span>
-              <div class="text-xs font-semibold text-slate-200 flex flex-col gap-2 select-none min-w-0 flex-grow">
-                <template x-for="ann in announcements" :key="ann.announcementId">
-                  <div class="flex items-start gap-2 min-w-0 leading-relaxed">
-                    <span :class="ann.type === 'alert' ? 'text-rose-400 animate-ping' : 'text-brand-400'" class="mt-0.5 flex-shrink-0">•</span>
-                    <div class="min-w-0">
-                      <span x-text="ann.title" class="font-bold text-white break-words"></span>
-                      <span x-text="ann.content" class="text-slate-400 text-[11px] break-words ml-1"></span>
-                    </div>
-                  </div>
-                </template>
+          <div class="relative w-full bg-white border border-member-border rounded-2xl p-3.5 shadow-soft space-y-2">
+            <template x-for="ann in announcements" :key="ann.announcementId">
+              <div class="rounded-xl border p-3" :class="ann.type === 'alert' ? 'bg-red-50 border-red-200' : 'bg-[#FBFAF6] border-member-border'">
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-black" :class="ann.type === 'alert' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'" x-text="ann.type === 'alert' ? '🚨 重要' : '📢 公告'"></span>
+                  <span class="text-[10px] text-member-muted" x-text="formatDateYMD(ann.publishTime)"></span>
+                </div>
+                <div class="text-xs font-black text-member-ink leading-snug break-words" x-text="ann.title"></div>
+                <p class="text-[11px] text-member-muted leading-relaxed mt-1 break-words" x-text="ann.content"></p>
               </div>
-            </div>
+            </template>
           </div>
         </template>
 
@@ -2021,6 +2047,7 @@
           todayMakeups: []
         },
         announcements: [],
+        announcementList: [],
         showAnnouncementModal: false,
         announcementForm: {
           title: '',
@@ -2543,6 +2570,7 @@
               this.pendingPayments = bootstrap.pendingPayments || [];
               this.adminDashboardStats = bootstrap.dashboardStats || { todaySessions: [], todayLeaves: [], todayMakeups: [] };
               this.announcements = bootstrap.announcements || [];
+              this.announcementList = bootstrap.announcementList || this.announcements;
               this.adminRooms = (bootstrap.meta && bootstrap.meta.rooms) || [];
               this.adminCoaches = (bootstrap.meta && bootstrap.meta.coaches) || [];
               this.lineAutoPushRenew = !bootstrap.systemConfig || bootstrap.systemConfig.lineAutoPushRenew !== false;
@@ -2754,6 +2782,18 @@
             this.announcementForm.content = '';
             this.announcementForm.type = 'info';
             this.announcementForm.sendLine = false;
+            await this.loadInitialData();
+          } catch (e) {
+            console.error(e);
+          }
+        },
+
+        async deactivateAnnouncement(announcementId) {
+          if (!announcementId) return;
+          if (!confirm('確定要下架這則公告嗎？')) return;
+          try {
+            await this.apiCall('admin.deactivateAnnouncement', { announcementId });
+            this.addToast('公告已下架。', 'success');
             await this.loadInitialData();
           } catch (e) {
             console.error(e);

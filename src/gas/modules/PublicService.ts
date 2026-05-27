@@ -55,12 +55,12 @@ class PublicService {
   /**
    * 取得目前有效之公告
    */
-  public static getActiveAnnouncements(): Record<string, any>[] {
+  public static getActiveAnnouncements(limit = 3): Record<string, any>[] {
     const allAnnouncements = SheetHelper.getRows<any>('Announcements');
-    return this.getActiveAnnouncementsFromRows(allAnnouncements);
+    return this.getActiveAnnouncementsFromRows(allAnnouncements, limit);
   }
 
-  public static getActiveAnnouncementsFromRows(allAnnouncements: any[]): Record<string, any>[] {
+  public static getActiveAnnouncementsFromRows(allAnnouncements: any[], limit = 3): Record<string, any>[] {
     const now = new Date();
     const nowStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
 
@@ -84,13 +84,17 @@ class PublicService {
     });
 
     // 優先呈現置頂公告，再依時間倒序
-    return active
+    const sorted = active
       .sort((a, b) => {
         if (this.isTruthy(a.pinned) && !this.isTruthy(b.pinned)) return -1;
         if (!this.isTruthy(a.pinned) && this.isTruthy(b.pinned)) return 1;
+        if (String(a.type || 'info') === 'alert' && String(b.type || 'info') !== 'alert') return -1;
+        if (String(a.type || 'info') !== 'alert' && String(b.type || 'info') === 'alert') return 1;
         return (this.parseDateValue(b.publish_time)?.getTime() || 0) - (this.parseDateValue(a.publish_time)?.getTime() || 0);
       })
       .map(ann => this.normalizeAnnouncement(ann));
+
+    return limit > 0 ? sorted.slice(0, limit) : sorted;
   }
 
   private static normalizeAnnouncement(ann: any): Record<string, any> {
