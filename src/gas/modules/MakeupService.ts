@@ -42,6 +42,33 @@ class MakeupService {
     return new Date(`${this.safeFormatSessionDate(dateVal)}T${this.safeFormatTime(timeVal)}:00`);
   }
 
+  private static isEnrollmentSessionEligible(enrollment: any, session: any, allSessions: any[]): boolean {
+    const paidSessions = Number(enrollment.total_paid_sessions || 0);
+    if (!paidSessions) return false;
+
+    const classId = this.normalizeId(enrollment.class_id);
+    const targetSessionId = this.normalizeId(session.session_id);
+    const enrollmentDate = this.normalizeDateOnly(enrollment.enroll_date);
+
+    const orderedSessions = allSessions
+      .filter(s => this.normalizeId(s.class_id) === classId)
+      .filter(s => String(s.status || '').trim() !== 'cancelled')
+      .filter(s => this.normalizeDateOnly(s.session_date || s.date).getTime() >= enrollmentDate.getTime())
+      .sort((a, b) => {
+        const aKey = `${this.safeFormatSessionDate(this.normalizeDateOnly(a.session_date || a.date))} ${this.safeFormatTime(a.start_time)} ${String(a.session_seq || '')}`;
+        const bKey = `${this.safeFormatSessionDate(this.normalizeDateOnly(b.session_date || b.date))} ${this.safeFormatTime(b.start_time)} ${String(b.session_seq || '')}`;
+        return aKey.localeCompare(bKey);
+      });
+
+    return orderedSessions.slice(0, paidSessions).some(s => this.normalizeId(s.session_id) === targetSessionId);
+  }
+
+  private static normalizeDateOnly(value: any): Date {
+    const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
   /**
    * 查詢可用的補課課堂清單 (F-M04)
    * 規則：
@@ -89,8 +116,22 @@ class MakeupService {
       throw new Error('找不到原請假課堂資料，無法安排補課。');
     }
     const originalClassId = this.normalizeId(originalSession.class_id);
+    const allEnrollmentsRaw = SheetHelper.getRows<any>('Enrollments');
+    const originalEnrollment = allEnrollmentsRaw.find(
+      e => e.member_id === member.member_id &&
+           this.normalizeId(e.class_id) === originalClassId &&
+           e.status === 'active'
+    );
+    const originalClass = SheetHelper.getRow<any>('Classes', 'class_id', originalClassId);
+    const classTotalSessions = originalClass
+      ? Number(originalClass.total_sessions || (Number(originalClass.period_weeks) * Number(originalClass.sessions_per_week)))
+      : 0;
+    const isPartialEnrollment = !!originalEnrollment &&
+      classTotalSessions > 0 &&
+      Number(originalEnrollment.total_paid_sessions || 0) < classTotalSessions;
+
     const memberClassIds = new Set(
-      SheetHelper.getRows<any>('Enrollments')
+      allEnrollmentsRaw
         .filter(e => e.member_id === member.member_id && e.status === 'active')
         .map(e => this.normalizeId(e.class_id))
         .filter(id => id !== '')
@@ -102,28 +143,33 @@ class MakeupService {
     // 3. 解析學員等級分數
     const memberLevelNum = this.getLevelNumber(member.level);
 
-    // 4. 篩選出所有符合條件的班級 (狀態為 active 或 open、允許補課、且符合學員等級與性別限制)
+    // 4. 篩選出所有符合條件的班級
     const allClasses = SheetHelper.getRows<any>('Classes');
     const validClassIds = new Set<string>();
     const classMap = new Map<string, any>();
 
-    allClasses.forEach(c => {
-      // 班級必須為 active 或 open，且開放補課
-      if (memberClassIds.has(this.normalizeId(c.class_id))) return;
-      if (c.status !== 'active' && c.status !== 'open') return;
-      if (c.allow_makeup !== true && String(c.allow_makeup).toLowerCase() !== 'true') return;
-      if (c.level === '不固定') return; // 一律禁止補入不固定班級
+    if (isPartialEnrollment && originalClass) {
+      validClassIds.add(originalClassId);
+      classMap.set(originalClassId, originalClass);
+    } else {
+      allClasses.forEach(c => {
+        // 完整堂數學員維持原規則：只能跨班補課，不能補入自己的原班級或已報名班級。
+        if (memberClassIds.has(this.normalizeId(c.class_id))) return;
+        if (c.status !== 'active' && c.status !== 'open') return;
+        if (c.allow_makeup !== true && String(c.allow_makeup).toLowerCase() !== 'true') return;
+        if (c.level === '不固定') return; // 一律禁止補入不固定班級
 
-      // 級別限制：學員級別 >= 班級級別
-      const classLevelNum = this.getLevelNumber(c.level);
-      if (memberLevelNum < classLevelNum) return;
+        // 級別限制：學員級別 >= 班級級別
+        const classLevelNum = this.getLevelNumber(c.level);
+        if (memberLevelNum < classLevelNum) return;
 
-      // 性別限制：男生不能選女性專班
-      if (member.gender === '男' && c.gender_limit === 'female') return;
+        // 性別限制：男生不能選女性專班
+        if (member.gender === '男' && c.gender_limit === 'female') return;
 
-      validClassIds.add(c.class_id);
-      classMap.set(c.class_id, c);
-    });
+        validClassIds.add(c.class_id);
+        classMap.set(c.class_id, c);
+      });
+    }
 
     if (validClassIds.size === 0) {
       return [];
@@ -134,6 +180,12 @@ class MakeupService {
     const allSessions = SheetHelper.getRows<any>('Sessions');
     const candidateSessions = allSessions.filter(s => {
       if (!validClassIds.has(s.class_id) || s.status !== 'scheduled') {
+        return false;
+      }
+      if (this.normalizeId(s.session_id) === this.normalizeId(originalSession.session_id)) {
+        return false;
+      }
+      if (isPartialEnrollment && originalEnrollment && this.isEnrollmentSessionEligible(originalEnrollment, s, allSessions)) {
         return false;
       }
       // 判斷是否在未來：GAS 從試算表讀回的欄位可能是 Date 物件，也可能是字串，必須兩者都處理
@@ -176,7 +228,7 @@ class MakeupService {
     const result: Record<string, any>[] = [];
 
     // 6. 計算每堂課的剩餘空位
-    const allEnrollments = SheetHelper.getRows<any>('Enrollments').filter(e => e.status === 'active');
+    const allEnrollments = allEnrollmentsRaw.filter(e => e.status === 'active');
     const allLeaves = SheetHelper.getRows<any>('Leave_Requests').filter(l => l.status === 'approved');
     const allMakeups = SheetHelper.getRows<any>('Makeup_Requests').filter(
       m => m.status === 'approved' || m.status === 'completed'
@@ -192,7 +244,9 @@ class MakeupService {
       const maxCapacity = Number(cls.max_capacity) || (room ? Number(room.max_capacity) : 15);
 
       // 正式出席人數 (正式選課人數 - 該堂請假人數)
-      const regCount = allEnrollments.filter(e => e.class_id === s.class_id).length;
+      const regCount = allEnrollments.filter(e =>
+        e.class_id === s.class_id && this.isEnrollmentSessionEligible(e, s, allSessions)
+      ).length;
       const leaveCount = allLeaves.filter(l => l.session_id === s.session_id).length;
       const attendingRegular = regCount - leaveCount;
 
@@ -218,7 +272,8 @@ class MakeupService {
             ? Utilities.formatDate(s.end_time, 'Asia/Taipei', 'HH:mm')
             : String(s.end_time || '').trim().replace('上午', '').replace('下午', ''),
           level: cls.level,
-          vacancy: vacancy
+          vacancy: vacancy,
+          makeupType: isPartialEnrollment ? '本班未啟用堂次' : '跨班補課'
         });
       }
     });
@@ -271,8 +326,22 @@ class MakeupService {
       throw new Error('找不到原請假課堂資料，無法安排補課。');
     }
     const originalClassId = this.normalizeId(originalSession.class_id);
+    const allEnrollmentRows = SheetHelper.getRows<any>('Enrollments');
+    const originalEnrollment = allEnrollmentRows.find(
+      e => e.member_id === memberId &&
+           this.normalizeId(e.class_id) === originalClassId &&
+           e.status === 'active'
+    );
+    const originalClass = SheetHelper.getRow<any>('Classes', 'class_id', originalClassId);
+    const originalClassTotalSessions = originalClass
+      ? Number(originalClass.total_sessions || (Number(originalClass.period_weeks) * Number(originalClass.sessions_per_week)))
+      : 0;
+    const isPartialEnrollment = !!originalEnrollment &&
+      originalClassTotalSessions > 0 &&
+      Number(originalEnrollment.total_paid_sessions || 0) < originalClassTotalSessions;
+
     const memberClassIds = new Set(
-      SheetHelper.getRows<any>('Enrollments')
+      allEnrollmentRows
         .filter(e => e.member_id === memberId && e.status === 'active')
         .map(e => this.normalizeId(e.class_id))
         .filter(id => id !== '')
@@ -287,7 +356,18 @@ class MakeupService {
       throw new Error('目標補課課堂已停課或非正常排定狀態。');
     }
 
-    if (memberClassIds.has(this.normalizeId(targetSession.class_id))) {
+    if (isPartialEnrollment && originalEnrollment) {
+      if (this.normalizeId(targetSession.class_id) !== originalClassId) {
+        throw new Error('部分堂數學員僅可預約本班未啟用堂次，不開放跨班補課。');
+      }
+      if (this.normalizeId(targetSession.session_id) === this.normalizeId(originalSession.session_id)) {
+        throw new Error('不能選擇原請假課堂作為補課目標。');
+      }
+      const allSessions = SheetHelper.getRows<any>('Sessions');
+      if (this.isEnrollmentSessionEligible(originalEnrollment, targetSession, allSessions)) {
+        throw new Error('此課堂已包含在您的本期啟用堂數內，不能作為本班補課目標。');
+      }
+    } else if (memberClassIds.has(this.normalizeId(targetSession.class_id))) {
       Logger.log(`[補課阻擋] 學員 ${memberId} 嘗試補入自己的班級: ${targetSession.class_id}`);
       throw new Error('補課需選擇其他班級，不能回補自己的原班級或已報名班級。');
     }
@@ -326,8 +406,11 @@ class MakeupService {
     }
 
     // 6. 精準檢查目標課堂是否還有剩餘空額
+    const allSessionsForCapacity = SheetHelper.getRows<any>('Sessions');
     const allEnrollments = SheetHelper.getRows<any>('Enrollments').filter(
-      e => e.class_id === targetSession.class_id && e.status === 'active'
+      e => e.class_id === targetSession.class_id &&
+           e.status === 'active' &&
+           this.isEnrollmentSessionEligible(e, targetSession, allSessionsForCapacity)
     );
     const allLeaves = SheetHelper.getRows<any>('Leave_Requests').filter(
       l => l.session_id === targetSessionId && l.status === 'approved'
