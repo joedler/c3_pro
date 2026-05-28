@@ -251,6 +251,43 @@ function getAdminBootstrapData(): Record<string, any> {
       };
     });
 
+  const adminMemberRecords = members.flatMap(m => {
+    const memberEnrollments = enrollments.filter(e => String(e.member_id || '').trim() === String(m.member_id || '').trim());
+    if (memberEnrollments.length === 0) {
+      return [{
+        memberId: m.member_id,
+        realName: m.real_name || m.display_name || '未命名學員',
+        lineUid: m.line_uid || '',
+        level: m.level || '',
+        memberStatus: m.status || 'active',
+        enrollmentId: '',
+        classId: '',
+        className: '尚未選課',
+        enrollmentStatus: '',
+        totalPaidSessions: 0,
+        enrollDate: '',
+        notes: m.notes || ''
+      }];
+    }
+    return memberEnrollments.map(e => {
+      const cls = classMap.get(String(e.class_id || '').trim());
+      return {
+        memberId: m.member_id,
+        realName: m.real_name || m.display_name || '未命名學員',
+        lineUid: m.line_uid || '',
+        level: m.level || '',
+        memberStatus: m.status || 'active',
+        enrollmentId: e.enrollment_id || '',
+        classId: e.class_id || '',
+        className: cls ? cls.class_name : '未知班級',
+        enrollmentStatus: e.status || '',
+        totalPaidSessions: Number(e.total_paid_sessions) || 0,
+        enrollDate: e.enroll_date || '',
+        notes: e.notes || m.notes || ''
+      };
+    });
+  }).sort((a, b) => String(a.realName).localeCompare(String(b.realName), 'zh-Hant'));
+
   const todayStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
   const todaySessions = sessions
     .filter(s => formatDateYmd(s.date || s.session_date) === todayStr && s.status !== 'cancelled')
@@ -307,6 +344,7 @@ function getAdminBootstrapData(): Record<string, any> {
     sessions: adminSessions,
     classes: adminClasses,
     pendingPayments,
+    memberRecords: adminMemberRecords,
     dashboardStats: { todaySessions, todayLeaves, todayMakeups },
     announcements: getActiveAnnouncementsFromRows(announcements, 3),
     announcementList: getActiveAnnouncementsFromRows(announcements, 0),
@@ -893,6 +931,69 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             enrollDate: e.enroll_date
           };
         });
+      },
+      'admin.updateMemberStatus': () => {
+        AuthService.requireRole(user, ['admin']);
+        const allowed = ['active', 'inactive', 'suspended'];
+        const memberId = String(data?.memberId || '').trim();
+        const status = String(data?.status || '').trim();
+        if (!memberId || !allowed.includes(status)) {
+          throw new Error('缺少或不合法的學員狀態參數');
+        }
+
+        const ok = SheetHelper.updateRow('Members', 'member_id', memberId, { status });
+        if (!ok) {
+          throw new Error('找不到指定學員');
+        }
+
+        const enrollments = SheetHelper.getRows<any>('Enrollments').filter(e => String(e.member_id || '').trim() === memberId);
+        const classIds = Array.from(new Set(enrollments.map(e => String(e.class_id || '').trim()).filter(id => !!id)));
+        const sessions = SheetHelper.getRows<any>('Sessions');
+        classIds.forEach(classId => {
+          sessions
+            .filter(s => String(s.class_id || '').trim() === classId && String(s.status || '').trim() === 'scheduled')
+            .forEach(s => {
+              try {
+                ClassEngine.syncCalendarEvent(s.session_id);
+              } catch (err) {
+                Logger.log(`[學員狀態日曆同步失敗] Session: ${s.session_id}, Error: ${err}`);
+              }
+            });
+        });
+
+        return { message: '學員狀態已更新，相關未來課堂日曆已同步。' };
+      },
+      'admin.updateEnrollmentStatus': () => {
+        AuthService.requireRole(user, ['admin']);
+        const allowed = ['active', 'pending_payment', 'paused', 'ended', 'cancelled', 'not_renewing'];
+        const enrollmentId = String(data?.enrollmentId || '').trim();
+        const status = String(data?.status || '').trim();
+        if (!enrollmentId || !allowed.includes(status)) {
+          throw new Error('缺少或不合法的選課狀態參數');
+        }
+
+        const enrollment = SheetHelper.getRow<any>('Enrollments', 'enrollment_id', enrollmentId);
+        if (!enrollment) {
+          throw new Error('找不到指定選課紀錄');
+        }
+
+        const ok = SheetHelper.updateRow('Enrollments', 'enrollment_id', enrollmentId, { status });
+        if (!ok) {
+          throw new Error('選課狀態更新失敗');
+        }
+
+        const sessions = SheetHelper.getRows<any>('Sessions');
+        sessions
+          .filter(s => String(s.class_id || '').trim() === String(enrollment.class_id || '').trim() && String(s.status || '').trim() === 'scheduled')
+          .forEach(s => {
+            try {
+              ClassEngine.syncCalendarEvent(s.session_id);
+            } catch (err) {
+              Logger.log(`[選課狀態日曆同步失敗] Session: ${s.session_id}, Error: ${err}`);
+            }
+          });
+
+        return { message: '選課狀態已更新，相關未來課堂日曆已同步。' };
       },
       'admin.getClassMembers': () => {
         AuthService.requireRole(user, ['admin']);

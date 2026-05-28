@@ -462,8 +462,18 @@ class ClassEngine {
            String(e.status).trim() === 'active' &&
            this.isEnrollmentEligibleForSession(e, session, allClassSessions)
     );
-    const memberIds = Array.from(new Set(enrollments.map(e => String(e.member_id).trim()).filter(id => !!id)));
     const allMembers = SheetHelper.getRows<any>('Members');
+    const activeMemberIds = new Set(
+      allMembers
+        .filter(m => String(m.status || '').trim() === 'active')
+        .map(m => String(m.member_id || '').trim())
+        .filter(id => !!id)
+    );
+    const memberIds = Array.from(new Set(
+      enrollments
+        .map(e => String(e.member_id).trim())
+        .filter(id => !!id && activeMemberIds.has(id))
+    ));
     
     // 將 member_id 映射為 real_name
     const memberMap: Record<string, string> = {};

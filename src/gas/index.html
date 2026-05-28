@@ -608,6 +608,7 @@
                 <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">📊 首頁摘要</button>
                 <button @click="activeTab = 'active_classes'" :class="activeTab === 'active_classes' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">📋 課程列表</button>
                 <button @click="activeTab = 'classes'" :class="activeTab === 'classes' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">🏫 班級經營</button>
+                <button @click="activeTab = 'members'" :class="activeTab === 'members' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">👤 學員管理</button>
                 <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'bg-brand-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'" class="flex-shrink-0 md:px-4 px-3 py-2 text-[10px] sm:text-xs rounded-lg transition-all">💰 繳費確認</button>
                 
                 <!-- 🔄 手動重新整理按鈕移到最右側 -->
@@ -1113,6 +1114,83 @@
                 </div>
               </div>
 
+            </div>
+
+            <!-- Member Management Tab -->
+            <div x-show="activeTab === 'members'" class="space-y-6">
+              <div class="bg-slate-900/60 p-4 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h3 class="text-white font-bold text-sm">👤 學員狀態 / 選課管理</h3>
+                  <p class="text-[11px] text-slate-400 mt-1">用於臨時停課、停用帳號、不續報或結束單筆選課。狀態更新後會同步影響學員端權限與 Google 日曆預計出席名單。</p>
+                </div>
+                <button @click="loadInitialData()" class="px-4 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all">重新整理</button>
+              </div>
+
+              <div class="bg-slate-950/40 border border-slate-800 rounded-2xl overflow-hidden">
+                <template x-if="adminMemberRecords.length === 0">
+                  <div class="p-10 text-center text-xs text-slate-500">目前沒有學員資料。</div>
+                </template>
+                <template x-if="adminMemberRecords.length > 0">
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                      <thead>
+                        <tr class="border-b border-slate-800 bg-slate-900/40 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          <th class="px-6 py-4">學員</th>
+                          <th class="px-6 py-4">課程</th>
+                          <th class="px-6 py-4">學員狀態</th>
+                          <th class="px-6 py-4">選課狀態</th>
+                          <th class="px-6 py-4">堂數 / 選課日</th>
+                          <th class="px-6 py-4 text-right">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-800/60 text-xs text-slate-300">
+                        <template x-for="r in adminMemberRecords" :key="r.memberId + '-' + (r.enrollmentId || 'none')">
+                          <tr class="hover:bg-slate-900/20 transition-all">
+                            <td class="px-6 py-4">
+                              <span class="font-bold text-white block" x-text="r.realName"></span>
+                              <span class="text-[10px] text-slate-500" x-text="r.memberId + (r.level ? ' / ' + r.level : '')"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                              <span class="font-semibold text-slate-300 block" x-text="r.className"></span>
+                              <span class="text-[10px] text-slate-500" x-text="r.classId || '無班級'"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                              <select x-model="r.memberStatus" class="w-32 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                                <option value="active">啟用</option>
+                                <option value="suspended">暫停</option>
+                                <option value="inactive">停用</option>
+                              </select>
+                              <p class="text-[10px] text-slate-500 mt-1" x-text="memberStatusLabel(r.memberStatus)"></p>
+                            </td>
+                            <td class="px-6 py-4">
+                              <select x-model="r.enrollmentStatus" :disabled="!r.enrollmentId" class="w-36 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500 disabled:opacity-40">
+                                <option value="">無選課</option>
+                                <option value="pending_payment">待繳費</option>
+                                <option value="active">上課中</option>
+                                <option value="paused">課程暫停</option>
+                                <option value="not_renewing">不續報</option>
+                                <option value="ended">本期結束</option>
+                                <option value="cancelled">課程取消</option>
+                              </select>
+                              <p class="text-[10px] text-slate-500 mt-1" x-text="enrollmentStatusLabel(r.enrollmentStatus)"></p>
+                            </td>
+                            <td class="px-6 py-4">
+                              <span class="font-bold text-brand-400" x-text="(r.totalPaidSessions || 0) + ' 堂'"></span>
+                              <span class="block text-[10px] text-slate-500" x-text="r.enrollDate || '未記錄'"></span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                              <div class="flex flex-col sm:flex-row justify-end gap-2">
+                                <button @click="updateMemberStatus(r)" class="px-3 py-2 bg-brand-500 hover:bg-brand-400 text-slate-950 rounded-xl text-[11px] font-bold transition-all">儲存學員</button>
+                                <button @click="updateEnrollmentStatus(r)" :disabled="!r.enrollmentId" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:text-slate-600 text-white rounded-xl text-[11px] font-bold transition-all">儲存選課</button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+              </div>
             </div>
 
             <!-- Tuition Ledger Tab (Upgraded x3.0) -->
@@ -2130,6 +2208,7 @@
         adminClasses: [],
         adminRooms: [],
         adminCoaches: [],
+        adminMemberRecords: [],
         pendingPayments: [],
         showRenewModal: false,
         renewForm: {
@@ -2597,6 +2676,7 @@
               document.title = this.brandTitle + ' — 智慧健身房管理系統';
               this.adminSessions = bootstrap.sessions || [];
               this.adminClasses = bootstrap.classes || [];
+              this.adminMemberRecords = bootstrap.memberRecords || [];
               this.pendingPayments = (bootstrap.pendingPayments || []).map(p => ({
                 ...p,
                 paymentPlan: p.paymentPlan || ((p.planOptions && p.planOptions[0] && p.planOptions[0].code) || 'remaining'),
@@ -2740,6 +2820,37 @@
           const selected = (p.planOptions || []).find(opt => opt.code === p.paymentPlan);
           if (selected && selected.code !== 'custom') {
             p.paymentSessions = Number(selected.sessions || 0);
+          }
+        },
+
+        async updateMemberStatus(record) {
+          if (!record?.memberId || !record?.memberStatus) return;
+          try {
+            const res = await this.apiCall('admin.updateMemberStatus', {
+              memberId: record.memberId,
+              status: record.memberStatus
+            });
+            this.addToast(res.message || '學員狀態已更新。', 'success');
+            await this.loadInitialData();
+          } catch (e) {
+            console.error(e);
+          }
+        },
+
+        async updateEnrollmentStatus(record) {
+          if (!record?.enrollmentId || !record?.enrollmentStatus) {
+            this.addToast('此學員尚未有可調整的選課紀錄。', 'error');
+            return;
+          }
+          try {
+            const res = await this.apiCall('admin.updateEnrollmentStatus', {
+              enrollmentId: record.enrollmentId,
+              status: record.enrollmentStatus
+            });
+            this.addToast(res.message || '選課狀態已更新。', 'success');
+            await this.loadInitialData();
+          } catch (e) {
+            console.error(e);
           }
         },
 
