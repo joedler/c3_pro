@@ -18,6 +18,7 @@ class MemberService {
     }
 
     const allClasses = SheetHelper.getRows<any>('Classes');
+    const allSessions = SheetHelper.getRows<any>('Sessions');
     
     return allClasses
       .filter(cls => {
@@ -29,7 +30,7 @@ class MemberService {
         }
 
         // 只顯示已正式開放報名的課堂；pending 尚未開課，不提供選擇。
-        return cls.status === 'open';
+        return cls.status === 'open' && this.classHasFutureScheduledSession(cls.class_id, allSessions);
       })
       .map(cls => {
         const capacity = Number(cls.max_capacity) || 0;
@@ -291,6 +292,7 @@ class MemberService {
 
     // 3. 取得班級與課程設定 (Classes)
     const allClasses = SheetHelper.getRows<any>('Classes');
+    const allSessionsForEnrollment = SheetHelper.getRows<any>('Sessions');
     const myClasses = allClasses.filter(c => classIds.includes(c.class_id) && (c.status === 'active' || c.status === 'open'));
 
     // 4. 取得出勤與請假統計
@@ -335,9 +337,10 @@ class MemberService {
     // 組裝班級名稱清單與日期範圍
     const classNames = myClasses.map(c => c.class_name).join('、');
     const courseSummaryItems = myClasses.map(c => {
-      const startDate = new Date(c.period_start);
+      const range = this.getClassSessionDateRange(c.class_id, allSessions);
+      const startDate = range.start || new Date(c.period_start);
       const weeks = Number(c.period_weeks) || 12;
-      const endDate = new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+      const endDate = range.end || new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
       return {
         className: c.class_name,
         period: this.formatDateRange(startDate, endDate)
@@ -348,10 +351,11 @@ class MemberService {
     let periodInfo = '尚未開始';
     if (myClasses.length > 0) {
       periodInfo = myClasses.map(c => {
-        const start = this.formatDate(c.period_start);
+        const range = this.getClassSessionDateRange(c.class_id, allSessions);
+        const startDate = range.start || new Date(c.period_start);
         const weeks = Number(c.period_weeks) || 12;
-        const startDate = new Date(c.period_start);
-        const endDate = new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+        const endDate = range.end || new Date(startDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+        const start = this.formatDate(startDate);
         return `${c.class_name} (${start} ~ ${this.formatDate(endDate)})`;
       }).join(' ｜ ');
     }
@@ -601,11 +605,13 @@ class MemberService {
     );
     const enrolledClassIds = enrollments.map(e => e.class_id);
 
+    const allSessionsForEnrollment = SheetHelper.getRows<any>('Sessions');
     const allClasses = SheetHelper.getRows<any>('Classes');
     const availableClasses = allClasses
       .filter(cls => {
         // 只允許加選已正式開放報名的課程；pending 尚未開課，不提供選擇。
         if (cls.status !== 'open') return false;
+        if (!this.classHasFutureScheduledSession(cls.class_id, allSessionsForEnrollment)) return false;
 
         // 不能重複報名已選過的班級
         if (enrolledClassIds.includes(cls.class_id)) return false;
@@ -824,6 +830,38 @@ class MemberService {
     const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
     date.setHours(0, 0, 0, 0);
     return date;
+  }
+
+  private static classHasFutureScheduledSession(classId: string, allSessions: any[]): boolean {
+    const now = new Date();
+    return allSessions.some(s => {
+      if (String(s.class_id || '').trim() !== String(classId || '').trim()) return false;
+      if (String(s.status || '').trim() !== 'scheduled') return false;
+      const sessionStart = this.getSessionStartDate(s);
+      return !!sessionStart && sessionStart > now;
+    });
+  }
+
+  private static getClassSessionDateRange(classId: string, allSessions: any[]): { start: Date | null; end: Date | null } {
+    const dates = allSessions
+      .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
+      .filter(s => String(s.status || '').trim() !== 'cancelled')
+      .map(s => this.getSessionStartDate(s))
+      .filter((d): d is Date => !!d)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (dates.length === 0) {
+      return { start: null, end: null };
+    }
+    return { start: dates[0], end: dates[dates.length - 1] };
+  }
+
+  private static getSessionStartDate(session: any): Date | null {
+    const dateStr = this.safeFormatSessionDate(session.session_date || session.date);
+    const timeStr = this.safeFormatTime(session.start_time);
+    if (!dateStr || !timeStr) return null;
+    const parsed = new Date(`${dateStr}T${timeStr}:00`);
+    return isNaN(parsed.getTime()) ? null : parsed;
   }
 
   /**
