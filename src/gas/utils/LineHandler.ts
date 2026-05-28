@@ -343,6 +343,7 @@ class LineHandler {
           SheetHelper.updateRow('Staff', 'staff_id', target.staff_id, {
             line_uid: userId
           });
+          LineRichMenu.link(userId, 'coach');
           const flexBubble = this.buildC3InfoCard({
             title: '教練綁定成功',
             subtitle: `${target.real_name} 教練您好，系統已自動匹配您的教練檔案並完成 LINE UID 對接。`,
@@ -392,6 +393,7 @@ class LineHandler {
           SheetHelper.updateRow('Staff', 'staff_id', target.staff_id, {
             line_uid: userId
           });
+          LineRichMenu.link(userId, 'coach');
           const flexBubble = this.buildC3InfoCard({
             title: '教練綁定成功',
             subtitle: `${target.real_name} 教練您好，系統已完成您的 LINE 帳號對接。`,
