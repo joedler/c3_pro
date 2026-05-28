@@ -113,6 +113,40 @@ function getRemainingScheduledSessionsForClass(classId: string, sessions: any[],
     });
 }
 
+function getClassSessionRangeForAdmin(classId: string, sessions: any[]): { start: string; end: string; remainingCount: number; totalCount: number; operationStatus: string } {
+  const classSessions = sessions
+    .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
+    .filter(s => String(s.status || '').trim() !== 'cancelled')
+    .sort((a, b) => {
+      const aTime = getSessionStartDateForAdmin(a)?.getTime() || 0;
+      const bTime = getSessionStartDateForAdmin(b)?.getTime() || 0;
+      return aTime - bTime;
+    });
+
+  const now = new Date();
+  const futureSessions = classSessions.filter(s => {
+    const start = getSessionStartDateForAdmin(s);
+    return !!start && start > now && String(s.status || '').trim() === 'scheduled';
+  });
+
+  let operationStatus = '尚未排程';
+  if (classSessions.length > 0 && futureSessions.length === 0) {
+    operationStatus = '已結束';
+  } else if (futureSessions.length > 0 && futureSessions.length <= 2) {
+    operationStatus = '即將結束';
+  } else if (futureSessions.length > 0) {
+    operationStatus = '可加選';
+  }
+
+  return {
+    start: classSessions[0] ? formatDateYmd(classSessions[0].session_date || classSessions[0].date) : '',
+    end: classSessions[classSessions.length - 1] ? formatDateYmd(classSessions[classSessions.length - 1].session_date || classSessions[classSessions.length - 1].date) : '',
+    remainingCount: futureSessions.length,
+    totalCount: classSessions.length,
+    operationStatus
+  };
+}
+
 function getPaymentPlanOptionsForClass(cls: any, remainingSessions: any[]): Record<string, any>[] {
   const remainingCount = remainingSessions.length;
   const options: Record<string, any>[] = [
@@ -203,6 +237,7 @@ function getAdminBootstrapData(): Record<string, any> {
   const adminClasses = classes.map(c => {
     const coach = staffMap.get(String(c.coach_line_uid).trim());
     const room = roomMap.get(String(c.room_id).trim());
+    const sessionRange = getClassSessionRangeForAdmin(c.class_id, sessions);
     const enrolledCount = enrollments.filter(e =>
       String(e.class_id).trim() === String(c.class_id).trim() &&
       (e.status === 'active' || e.status === 'pending_payment')
@@ -223,6 +258,11 @@ function getAdminBootstrapData(): Record<string, any> {
       startTime: formatTimeHHMM(c.start_time),
       endTime: formatTimeHHMM(c.end_time),
       periodStart: formatDateYmd(c.period_start),
+      periodEnd: sessionRange.end,
+      periodRangeStart: sessionRange.start || formatDateYmd(c.period_start),
+      remainingSessions: sessionRange.remainingCount,
+      totalScheduledSessions: sessionRange.totalCount,
+      operationStatus: sessionRange.operationStatus,
       periodWeeks: Number(c.period_weeks) || 0,
       status: c.status
     };

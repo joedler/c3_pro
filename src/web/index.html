@@ -812,8 +812,8 @@
                           <th class="px-6 py-4">班級名稱</th>
                           <th class="px-6 py-4">難度/教練/教室</th>
                           <th class="px-6 py-4 text-center">目前人數 / 上限</th>
-                          <th class="px-6 py-4">本期開始日</th>
-                          <th class="px-6 py-4">狀態</th>
+                          <th class="px-6 py-4">本期區間</th>
+                          <th class="px-6 py-4">營運狀態</th>
                           <th class="px-6 py-4 text-right">操作</th>
                         </tr>
                       </thead>
@@ -837,11 +837,12 @@
                               <span class="text-slate-400" x-text="c.maxCapacity"></span>
                             </td>
                             <td class="px-6 py-4">
-                              <span class="font-semibold text-slate-300" x-text="formatDateYMD(c.periodStart)"></span>
-                              <span class="text-[10px] text-slate-500 block" x-text="'共 ' + c.periodWeeks + ' 週 | ' + c.dayOfWeek"></span>
+                              <span class="font-semibold text-slate-300" x-text="(formatDateYMD(c.periodRangeStart || c.periodStart) || '未排程') + (c.periodEnd ? ' ~ ' + formatDateYMD(c.periodEnd) : '')"></span>
+                              <span class="text-[10px] text-slate-500 block" x-text="'剩餘 ' + (c.remainingSessions || 0) + ' 堂 / 共 ' + (c.totalScheduledSessions || 0) + ' 堂 | ' + c.dayOfWeek"></span>
                             </td>
                             <td class="px-6 py-4">
-                              <span :class="(!c.status || c.status === 'active' || c.status === 'open' || c.status === 'pending' || c.status === '進行中' || c.status === '已開班') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.status === 'terminated' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-500 border-slate-700')" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="(!c.status || c.status === 'active' || c.status === 'open' || c.status === 'pending' || c.status === '進行中' || c.status === '已開班') ? '進行中' : (c.status === 'terminated' ? '已終止' : '已停課')"></span>
+                              <span :class="c.operationStatus === '可加選' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : (c.operationStatus === '即將結束' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : (c.operationStatus === '已結束' ? 'bg-slate-800 text-slate-500 border-slate-700' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'))" class="px-2.5 py-1 rounded-full text-[10px] font-bold border" x-text="c.status === 'terminated' ? '已終止' : (c.operationStatus || '未判定')"></span>
+                              <span class="block text-[10px] text-slate-500 mt-1" x-text="c.status === 'terminated' ? '已停止營運' : '班級狀態：' + (c.status || '未設定')"></span>
                             </td>
                             <td class="px-6 py-4 text-right space-x-2">
                               <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
@@ -1145,7 +1146,7 @@
                       </thead>
                       <tbody class="divide-y divide-slate-800/60 text-xs text-slate-300">
                         <template x-for="r in adminMemberRecords" :key="r.memberId + '-' + (r.enrollmentId || 'none')">
-                          <tr class="hover:bg-slate-900/20 transition-all">
+                          <tr class="hover:bg-slate-900/20 transition-all" :class="c.operationStatus === '已結束' ? 'opacity-60' : ''">
                             <td class="px-6 py-4">
                               <span class="font-bold text-white block" x-text="r.realName"></span>
                               <span class="text-[10px] text-slate-500" x-text="r.memberId + (r.level ? ' / ' + r.level : '')"></span>
