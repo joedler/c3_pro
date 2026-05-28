@@ -811,12 +811,15 @@ class MemberService {
 
     const classId = String(enrollment.class_id || '').trim();
     const targetSessionId = String(session.session_id || '').trim();
-    const enrollmentDate = this.normalizeDateOnly(enrollment.enroll_date);
+    const enrollmentStart = this.normalizeEnrollmentStart(enrollment.enroll_date);
 
     const orderedSessions = allSessions
       .filter(s => String(s.class_id || '').trim() === classId)
       .filter(s => String(s.status || '').trim() !== 'cancelled')
-      .filter(s => this.normalizeDateOnly(s.session_date || s.date).getTime() >= enrollmentDate.getTime())
+      .filter(s => {
+        const sessionStart = this.getSessionStartDate(s);
+        return !!sessionStart && sessionStart.getTime() >= enrollmentStart.getTime();
+      })
       .sort((a, b) => {
         const aKey = `${this.formatDate(this.normalizeDateOnly(a.session_date || a.date))} ${this.safeFormatTime(a.start_time)} ${String(a.session_seq || '')}`;
         const bKey = `${this.formatDate(this.normalizeDateOnly(b.session_date || b.date))} ${this.safeFormatTime(b.start_time)} ${String(b.session_seq || '')}`;
@@ -830,6 +833,18 @@ class MemberService {
     const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
     date.setHours(0, 0, 0, 0);
     return date;
+  }
+
+  private static normalizeEnrollmentStart(value: any): Date {
+    if (value instanceof Date) {
+      return new Date(value);
+    }
+    const raw = String(value || '').trim();
+    if (raw.includes('T') || /\d{1,2}:\d{2}/.test(raw)) {
+      const parsed = new Date(raw);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return this.normalizeDateOnly(raw);
   }
 
   private static classHasFutureScheduledSession(classId: string, allSessions: any[]): boolean {

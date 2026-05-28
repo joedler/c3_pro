@@ -90,6 +90,65 @@ function formatTimeHHMM(val: any): string {
   return String(val).substring(0, 5);
 }
 
+function getSessionStartDateForAdmin(session: any): Date | null {
+  const dateStr = formatDateYmd(session.session_date || session.date);
+  const timeStr = formatTimeHHMM(session.start_time);
+  if (!dateStr || !timeStr) return null;
+  const parsed = new Date(`${dateStr}T${timeStr}:00`);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getRemainingScheduledSessionsForClass(classId: string, sessions: any[], afterDate = new Date()): any[] {
+  return sessions
+    .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
+    .filter(s => String(s.status || '').trim() === 'scheduled')
+    .filter(s => {
+      const start = getSessionStartDateForAdmin(s);
+      return !!start && start > afterDate;
+    })
+    .sort((a, b) => {
+      const aTime = getSessionStartDateForAdmin(a)?.getTime() || 0;
+      const bTime = getSessionStartDateForAdmin(b)?.getTime() || 0;
+      return aTime - bTime;
+    });
+}
+
+function getPaymentPlanOptionsForClass(cls: any, remainingSessions: any[]): Record<string, any>[] {
+  const remainingCount = remainingSessions.length;
+  const options: Record<string, any>[] = [
+    { code: 'remaining', label: `剩餘全部 ${remainingCount} 堂`, sessions: remainingCount }
+  ];
+
+  const periodType = String(cls.period_type || '').trim().toLowerCase();
+  const isMonthly = periodType === 'monthly' || String(cls.class_type || '').trim() === 'B';
+  if (isMonthly) {
+    const now = new Date();
+    [1, 2, 3].forEach(months => {
+      const end = new Date(now.getFullYear(), now.getMonth() + months, 0, 23, 59, 59);
+      const count = remainingSessions.filter(s => {
+        const start = getSessionStartDateForAdmin(s);
+        return !!start && start <= end;
+      }).length;
+      if (count > 0) {
+        options.push({
+          code: months === 1 ? 'monthly' : (months === 2 ? 'bi_monthly' : 'quarterly'),
+          label: months === 1 ? `單月 ${count} 堂` : (months === 2 ? `雙月 ${count} 堂` : `季繳 ${count} 堂`),
+          sessions: count
+        });
+      }
+    });
+  } else {
+    [8, 12].forEach(count => {
+      if (remainingCount >= count) {
+        options.push({ code: `sessions_${count}`, label: `${count} 堂`, sessions: count });
+      }
+    });
+  }
+
+  options.push({ code: 'custom', label: '自訂堂數', sessions: remainingCount });
+  return options;
+}
+
 function getBrandConfigForFrontend(): Record<string, any> {
   let logoUrl = Config.get('BRAND_LOGO_URL', '');
   if (logoUrl) {
@@ -174,12 +233,16 @@ function getAdminBootstrapData(): Record<string, any> {
     .map(e => {
       const member = memberMap.get(String(e.member_id).trim());
       const cls = classMap.get(String(e.class_id).trim());
+      const remainingSessions = cls ? getRemainingScheduledSessionsForClass(cls.class_id, sessions) : [];
+      const totalSessions = remainingSessions.length;
       return {
         classId: e.class_id,
         className: cls ? cls.class_name : '未知班級',
         level: cls ? cls.level : '未知程度',
-        totalSessions: cls ? Number(cls.total_sessions || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : 0,
-        paymentSessions: cls ? Number(cls.total_sessions || (Number(cls.period_weeks) * Number(cls.sessions_per_week))) : 0,
+        totalSessions,
+        paymentSessions: totalSessions,
+        paymentPlan: 'remaining',
+        planOptions: cls ? getPaymentPlanOptionsForClass(cls, remainingSessions) : [],
         memberId: e.member_id,
         realName: member ? member.real_name : '未知學員',
         gender: member ? member.gender : '',
@@ -633,10 +696,12 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           throw new Error('找不到該班級設定');
         }
 
-        const classTotalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
-        const requestedPaidSessions = Number(data.totalPaidSessions || classTotalSessions);
-        if (!requestedPaidSessions || requestedPaidSessions < 1 || requestedPaidSessions > classTotalSessions) {
-          throw new Error(`啟用堂數需介於 1 ~ ${classTotalSessions} 堂之間`);
+        const allSessionsForClass = SheetHelper.getRows<any>('Sessions');
+        const remainingSessions = getRemainingScheduledSessionsForClass(data.classId, allSessionsForClass);
+        const maxSessions = remainingSessions.length;
+        const requestedPaidSessions = Number(data.totalPaidSessions || maxSessions);
+        if (!requestedPaidSessions || requestedPaidSessions < 1 || requestedPaidSessions > maxSessions) {
+          throw new Error(`啟用堂數需介於 1 ~ ${maxSessions} 堂之間`);
         }
         const totalSessions = requestedPaidSessions;
         
@@ -648,6 +713,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const headers = enrollSheet.getRange(1, 1, 1, enrollSheet.getLastColumn()).getValues()[0];
         const statusCol = headers.indexOf(colMap.status) + 1;
         const paidSessionsCol = headers.indexOf(colMap.total_paid_sessions) + 1;
+        const enrollDateCol = headers.indexOf(colMap.enroll_date) + 1;
         
         if (statusCol > 0) {
           enrollSheet.getRange(rowNum, statusCol).setValue('active');
@@ -655,12 +721,15 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         if (paidSessionsCol > 0) {
           enrollSheet.getRange(rowNum, paidSessionsCol).setValue(totalSessions);
         }
+        if (enrollDateCol > 0) {
+          enrollSheet.getRange(rowNum, enrollDateCol).setValue(new Date());
+        }
 
         // 強制寫入以確保日曆同步能讀到最新的 active 狀態
         SpreadsheetApp.flush();
 
         // 1.5 同步該班級的所有未來課堂到 Google 日曆 (確保剛確認繳費的學員姓名立刻同步出現)
-        const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
+        const sessionsToSync = allSessionsForClass.filter(
           s => s.class_id === data.classId && s.status === 'scheduled'
         );
         sessionsToSync.forEach(s => {
@@ -703,6 +772,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const headers = enrollSheet.getRange(1, 1, 1, enrollSheet.getLastColumn()).getValues()[0];
         const statusCol = headers.indexOf(colMap.status) + 1;
         const paidSessionsCol = headers.indexOf(colMap.total_paid_sessions) + 1;
+        const enrollDateCol = headers.indexOf(colMap.enroll_date) + 1;
 
         if (statusCol === 0 || paidSessionsCol === 0) {
           throw new Error('選課紀錄表結構不正確，找不到 status 或 total_paid_sessions 欄位');
@@ -710,6 +780,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
         const classCache: Record<string, any> = {};
         const memberCache: Record<string, any> = {};
+        const allSessions = SheetHelper.getRows<any>('Sessions');
         const uniqueClassIds = new Set<string>();
         let successCount = 0;
 
@@ -731,9 +802,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             }
 
             if (cls) {
-              const classTotalSessions = Number(cls.total_sessions || (cls.period_weeks * cls.sessions_per_week));
-              const totalSessions = Number(item.totalPaidSessions || classTotalSessions);
-              if (!totalSessions || totalSessions < 1 || totalSessions > classTotalSessions) {
+              const maxSessions = getRemainingScheduledSessionsForClass(item.classId, allSessions).length;
+              const totalSessions = Number(item.totalPaidSessions || maxSessions);
+              if (!totalSessions || totalSessions < 1 || totalSessions > maxSessions) {
                 Logger.log(`[批次繳費略過] 堂數不合法：Class ${item.classId}, Member ${item.memberId}, totalPaidSessions=${item.totalPaidSessions}`);
                 return;
               }
@@ -741,6 +812,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
               // 2. 更新選課紀錄狀態為 active 並填入已繳堂數
               enrollSheet.getRange(rowNum, statusCol).setValue('active');
               enrollSheet.getRange(rowNum, paidSessionsCol).setValue(totalSessions);
+              if (enrollDateCol > 0) {
+                enrollSheet.getRange(rowNum, enrollDateCol).setValue(new Date());
+              }
 
               uniqueClassIds.add(item.classId);
               successCount++;
@@ -776,7 +850,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
         // 5. 針對有變動的班級，去重同步 Google 日曆 (效能關鍵！)
         uniqueClassIds.forEach(classId => {
-          const sessionsToSync = SheetHelper.getRows<any>('Sessions').filter(
+          const sessionsToSync = allSessions.filter(
             s => String(s.class_id).trim() === String(classId).trim() && s.status === 'scheduled'
           );
           sessionsToSync.forEach(s => {
@@ -795,15 +869,22 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const enrollments = SheetHelper.getRows<any>('Enrollments').filter(e => e.status === 'pending_payment');
         const members = SheetHelper.getRows<any>('Members');
         const classes = SheetHelper.getRows<any>('Classes');
+        const sessions = SheetHelper.getRows<any>('Sessions');
         
         return enrollments.map(e => {
           const member = members.find(m => m.member_id === e.member_id);
           const cls = classes.find(c => c.class_id === e.class_id);
+          const remainingSessions = cls ? getRemainingScheduledSessionsForClass(cls.class_id, sessions) : [];
+          const totalSessions = remainingSessions.length;
           
           return {
             classId: e.class_id,
             className: cls ? cls.class_name : '未知班級',
             level: cls ? cls.level : '未知程度',
+            totalSessions,
+            paymentSessions: totalSessions,
+            paymentPlan: 'remaining',
+            planOptions: cls ? getPaymentPlanOptionsForClass(cls, remainingSessions) : [],
             memberId: e.member_id,
             realName: member ? member.real_name : '未知學員',
             gender: member ? member.gender : '',

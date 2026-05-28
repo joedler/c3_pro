@@ -1188,9 +1188,18 @@
                               <span class="px-1.5 py-0.5 text-[9px] bg-brand-500/10 text-brand-400 rounded border border-brand-500/10 font-bold" x-text="p.level"></span>
                             </td>
                             <td class="px-6 py-4">
-                              <div class="flex items-center gap-2">
-                                <input type="number" min="1" :max="p.totalSessions" x-model.number="p.paymentSessions" class="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
-                                <span class="text-[10px] text-slate-500 whitespace-nowrap" x-text="'/ ' + p.totalSessions + ' 堂'"></span>
+                              <div class="space-y-2 min-w-[150px]">
+                                <select x-model="p.paymentPlan"
+                                        @change="applyPaymentPlan(p)"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                                  <template x-for="opt in p.planOptions || []" :key="opt.code">
+                                    <option :value="opt.code" x-text="opt.label"></option>
+                                  </template>
+                                </select>
+                                <div class="flex items-center gap-2">
+                                  <input type="number" min="1" :max="p.totalSessions" x-model.number="p.paymentSessions" class="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+                                  <span class="text-[10px] text-slate-500 whitespace-nowrap" x-text="'/ ' + p.totalSessions + ' 堂'"></span>
+                                </div>
                               </div>
                             </td>
                             <td class="px-6 py-4 text-slate-400" x-text="p.enrollDate"></td>
@@ -2588,7 +2597,11 @@
               document.title = this.brandTitle + ' — 智慧健身房管理系統';
               this.adminSessions = bootstrap.sessions || [];
               this.adminClasses = bootstrap.classes || [];
-              this.pendingPayments = bootstrap.pendingPayments || [];
+              this.pendingPayments = (bootstrap.pendingPayments || []).map(p => ({
+                ...p,
+                paymentPlan: p.paymentPlan || ((p.planOptions && p.planOptions[0] && p.planOptions[0].code) || 'remaining'),
+                paymentSessions: Number(p.paymentSessions || p.totalSessions || 0)
+              }));
               this.adminDashboardStats = bootstrap.dashboardStats || { todaySessions: [], todayLeaves: [], todayMakeups: [] };
               this.announcements = bootstrap.announcements || [];
               this.announcementList = bootstrap.announcementList || this.announcements;
@@ -2723,8 +2736,21 @@
           }
         },
 
+        applyPaymentPlan(p) {
+          const selected = (p.planOptions || []).find(opt => opt.code === p.paymentPlan);
+          if (selected && selected.code !== 'custom') {
+            p.paymentSessions = Number(selected.sessions || 0);
+          }
+        },
+
         async confirmTuitionPayment(classId, memberId, totalPaidSessions) {
           const paidSessions = Number(totalPaidSessions || 0);
+          const target = this.pendingPayments.find(p => p.classId === classId && p.memberId === memberId);
+          const maxSessions = Number(target?.totalSessions || 0);
+          if (maxSessions && paidSessions > maxSessions) {
+            this.addToast(`啟用堂數不可超過剩餘 ${maxSessions} 堂`, 'error');
+            return;
+          }
           if (!paidSessions || paidSessions < 1) {
             this.addToast('請先輸入有效的啟用堂數。', 'error');
             return;
@@ -2757,6 +2783,15 @@
               const payment = this.pendingPayments.find(p => p.classId === classId && p.memberId === memberId);
               return { classId, memberId, totalPaidSessions: Number(payment?.paymentSessions || payment?.totalSessions || 0) };
             });
+            const invalidItem = items.find(item => {
+              const payment = this.pendingPayments.find(p => p.classId === item.classId && p.memberId === item.memberId);
+              const maxSessions = Number(payment?.totalSessions || 0);
+              return !item.totalPaidSessions || item.totalPaidSessions < 1 || (maxSessions && item.totalPaidSessions > maxSessions);
+            });
+            if (invalidItem) {
+              this.addToast('批次確認中有堂數不合法的項目，請先檢查啟用堂數', 'error');
+              return;
+            }
             
             const res = await this.apiCall('admin.batchConfirmPayments', { items });
             this.addToast(res.message || `🟢 成功批量核收 ${count} 筆學費，憑證均已推送！`, 'success');

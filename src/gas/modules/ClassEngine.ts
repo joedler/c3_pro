@@ -548,9 +548,9 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     if (!paidSessions) return false;
 
     const targetId = String(session.session_id || '').trim();
-    const enrollmentDate = this.normalizeDateOnly(enrollment.enroll_date);
+    const enrollmentStart = this.normalizeEnrollmentStart(enrollment.enroll_date);
     const orderedSessions = classSessions
-      .filter(s => this.normalizeDateOnly(s.session_date || s.date).getTime() >= enrollmentDate.getTime())
+      .filter(s => this.getSessionStartDate(s).getTime() >= enrollmentStart.getTime())
       .sort((a, b) => {
         const aKey = `${Utilities.formatDate(this.normalizeDateOnly(a.session_date || a.date), 'Asia/Taipei', 'yyyy-MM-dd')} ${String(a.start_time || '')} ${String(a.session_seq || '')}`;
         const bKey = `${Utilities.formatDate(this.normalizeDateOnly(b.session_date || b.date), 'Asia/Taipei', 'yyyy-MM-dd')} ${String(b.start_time || '')} ${String(b.session_seq || '')}`;
@@ -564,6 +564,25 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     const date = value instanceof Date ? new Date(value) : new Date(String(value || '').split('T')[0]);
     date.setHours(0, 0, 0, 0);
     return date;
+  }
+
+  private static normalizeEnrollmentStart(value: any): Date {
+    if (value instanceof Date) {
+      return new Date(value);
+    }
+    const raw = String(value || '').trim();
+    if (raw.includes('T') || /\d{1,2}:\d{2}/.test(raw)) {
+      const parsed = new Date(raw);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return this.normalizeDateOnly(raw);
+  }
+
+  private static getSessionStartDate(session: any): Date {
+    const date = Utilities.formatDate(this.normalizeDateOnly(session.session_date || session.date), 'Asia/Taipei', 'yyyy-MM-dd');
+    const match = String(session.start_time || '').match(/(\d{1,2}):(\d{2})/);
+    const time = match ? `${match[1].padStart(2, '0')}:${match[2]}` : '00:00';
+    return new Date(`${date}T${time}:00`);
   }
 
   /**
