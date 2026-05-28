@@ -837,7 +837,7 @@
                               <span class="text-slate-400" x-text="c.maxCapacity"></span>
                             </td>
                             <td class="px-6 py-4">
-                              <span class="font-semibold text-slate-300" x-text="c.periodStart"></span>
+                              <span class="font-semibold text-slate-300" x-text="formatDateYMD(c.periodStart)"></span>
                               <span class="text-[10px] text-slate-500 block" x-text="'共 ' + c.periodWeeks + ' 週 | ' + c.dayOfWeek"></span>
                             </td>
                             <td class="px-6 py-4">
@@ -890,7 +890,7 @@
                       <select x-model="selectedSessionId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
                         <option value="">-- 請選擇課堂時段 --</option>
                         <template x-for="s in adminSessions" :key="s.sessionId">
-                          <option :value="s.sessionId" x-text="s.date + ' ' + formatTime(s.startTime) + ' | ' + s.className"></option>
+                          <option :value="s.sessionId" x-text="formatDateYMD(s.date) + ' ' + formatTime(s.startTime) + ' | ' + s.className"></option>
                         </template>
                       </select>
                     </div>
@@ -1176,7 +1176,7 @@
                             </td>
                             <td class="px-6 py-4">
                               <span class="font-bold text-brand-400" x-text="(r.totalPaidSessions || 0) + ' 堂'"></span>
-                              <span class="block text-[10px] text-slate-500" x-text="r.enrollDate || '未記錄'"></span>
+                              <span class="block text-[10px] text-slate-500" x-text="formatDateYMD(r.enrollDate) || '未記錄'"></span>
                             </td>
                             <td class="px-6 py-4 text-right">
                               <div class="flex flex-col sm:flex-row justify-end gap-2">
@@ -1280,7 +1280,7 @@
                                 </div>
                               </div>
                             </td>
-                            <td class="px-6 py-4 text-slate-400" x-text="p.enrollDate"></td>
+                            <td class="px-6 py-4 text-slate-400" x-text="formatDateYMD(p.enrollDate) || '未記錄'"></td>
                             <td class="px-6 py-4 text-slate-400 italic font-medium" x-text="p.notes || '自動續期待繳'"></td>
                             <td class="px-6 py-4">
                               <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">待繳學費 ⏳</span>
@@ -1846,7 +1846,7 @@
                     <span x-text="s.className"></span>
                     <span x-show="s.isPendingPayment" class="px-1.5 py-0.5 text-[8px] bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold rounded">待審核開通</span>
                   </p>
-                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></p>
+                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="formatDateYMD(s.date) + ' ' + formatTime(s.startTime) + ' ~ ' + formatTime(s.endTime)"></p>
                 </div>
                 <template x-if="s.isPendingPayment">
                   <span class="text-[9px] px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full font-bold">待繳費</span>
@@ -1877,7 +1877,7 @@
                     <input type="radio" :value="s.sessionId" x-model="leaveForm.sessionId" class="text-amber-600 focus:ring-amber-500">
                     <div class="text-left">
                       <p class="text-xs font-bold text-white" x-text="s.className"></p>
-                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="s.date + ' ' + formatTime(s.startTime)"></p>
+                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="formatDateYMD(s.date) + ' ' + formatTime(s.startTime)"></p>
                     </div>
                   </div>
                   <span class="text-[10px] font-bold text-amber-400">可請假</span>
@@ -1915,7 +1915,7 @@
                     <input type="radio" :value="l.leaveId" x-model="makeupForm.leaveId" @change="queryAvailableMakeups(l.leaveId)" class="text-brand-600 focus:ring-brand-500">
                     <div class="text-left">
                       <p class="text-xs font-bold text-white" x-text="l.className"></p>
-                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="'請假時間: ' + l.date"></p>
+                      <p class="text-[10px] text-slate-500 mt-0.5" x-text="'請假時間: ' + formatDateYMD(l.date)"></p>
                     </div>
                   </div>
                   <span class="text-[10px] font-bold text-emerald-400">保留額度</span>
@@ -1943,7 +1943,7 @@
                     <input type="radio" :value="slot.sessionId" x-model="makeupForm.targetSessionId" class="text-brand-600 focus:ring-brand-500">
                     <div class="text-left">
                       <p class="text-xs font-bold text-white" x-text="slot.className"></p>
-                      <p class="text-[10px] text-slate-400 mt-0.5" x-text="slot.date + ' ' + formatTime(slot.startTime) + ' ~ ' + formatTime(slot.endTime)"></p>
+                      <p class="text-[10px] text-slate-400 mt-0.5" x-text="formatDateYMD(slot.date) + ' ' + formatTime(slot.startTime) + ' ~ ' + formatTime(slot.endTime)"></p>
                     </div>
                   </div>
                   <div class="text-right flex-shrink-0">
@@ -2281,18 +2281,24 @@
           if (!dateVal) return '';
           try {
             if (typeof dateVal === 'string') {
-              const match = dateVal.match(/^(\d{4}-\d{2}-\d{2})/);
-              if (match) return match[1];
+              const match = dateVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (match) return `${match[1]}/${match[2]}/${match[3]}`;
             }
             const d = new Date(dateVal);
             if (!isNaN(d.getTime())) {
               const y = d.getFullYear();
               const m = String(d.getMonth() + 1).padStart(2, '0');
               const day = String(d.getDate()).padStart(2, '0');
-              return `${y}-${m}-${day}`;
+              return `${y}/${m}/${day}`;
             }
           } catch(e) {}
-          return String(dateVal).substring(0, 10);
+          return String(dateVal).substring(0, 10).replaceAll('-', '/');
+        },
+
+        formatDateTime(dateVal) {
+          const date = this.formatDateYMD(dateVal);
+          const time = this.formatTime(dateVal);
+          return [date, time].filter(Boolean).join(' ');
         },
 
         formatDateMMDD(dateStr) {
