@@ -2220,6 +2220,27 @@
           return dateStr;
         },
 
+        enrollmentStatusLabel(status) {
+          const labels = {
+            pending_payment: '待繳費',
+            active: '上課中',
+            paused: '課程暫停',
+            ended: '本期結束',
+            cancelled: '課程取消',
+            not_renewing: '不續報'
+          };
+          return labels[status] || status || '未設定';
+        },
+
+        memberStatusLabel(status) {
+          const labels = {
+            active: '啟用',
+            inactive: '停用帳號',
+            suspended: '帳號暫停'
+          };
+          return labels[status] || status || '未設定';
+        },
+
         getPeriodEndMMDD(startStr, weeks, classType) {
           if (!startStr) return '';
           try {

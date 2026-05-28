@@ -807,6 +807,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
             memberId: e.member_id,
             realName: member ? member.real_name : '未知學員',
             gender: member ? member.gender : '',
+            status: e.status,
             notes: e.notes,
             enrollDate: e.enroll_date
           };
