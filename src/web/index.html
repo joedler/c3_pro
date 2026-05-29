@@ -848,6 +848,9 @@
                               <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
                                 🔄 手動續期
                               </button>
+                              <button @click="repairClassSessions(c)" class="px-2.5 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
+                                🛠️ 修復課堂
+                              </button>
                               <button @click="if (confirm('確定要終止此班級開班嗎？終止後將不會再自動續期。')) { terminateClassSingle(c.classId) }" class="px-2.5 py-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
                                 🚫 終止開班
                               </button>
@@ -2773,6 +2776,21 @@
             this.addToast('🚫 系統正在終止此班級開班與後續自動續期...', 'info');
             const res = await this.apiCall('admin.terminateClass', { classId });
             this.addToast(res.message || '🚫 班級已成功終止開班！', 'success');
+            await this.loadInitialData();
+          } catch (e) {
+            console.error(e);
+          }
+        },
+
+        async repairClassSessions(cls) {
+          if (!cls?.classId) return;
+          if (!confirm(`確定要修復「${cls.className}」的課堂資料嗎？\n系統會補齊堂數序號、實際出席人數、日曆事件 ID，並重新同步日曆。`)) {
+            return;
+          }
+          try {
+            this.addToast('正在修復課堂資料並同步日曆...', 'info');
+            const res = await this.apiCall('admin.repairClassSessions', { classId: cls.classId });
+            this.addToast(res.message || '課堂資料修復完成。', 'success');
             await this.loadInitialData();
           } catch (e) {
             console.error(e);
