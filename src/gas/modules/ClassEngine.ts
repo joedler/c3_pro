@@ -221,7 +221,7 @@ class ClassEngine {
   /**
    * 為特定班級進行「續期開班」與「學員自動轉移 (Rollover)」
    */
-  public static renew(classId: string, newStartDate: string, renewMemberIds: string[], termRemark: string): { generated: number } {
+  public static renew(classId: string, newStartDate: string, renewMemberIds: string[], termRemark: string): { generated: number; renewedMembers: number; skippedMembers: number } {
     const cls = SheetHelper.getRow<any>('Classes', 'class_id', classId);
     if (!cls) {
       throw new Error(`找不到班級代碼: ${classId}`);
@@ -415,7 +415,22 @@ class ClassEngine {
     SheetHelper.bulkInsert('Sessions', sessions);
 
     // 7. 學員自動轉移 (Rollover) -> 寫入 Enrollments，狀態為 pending_payment
-    const newEnrollments: any[] = renewMemberIds.map(uid => {
+    const activeMemberIds = new Set(
+      allMembers
+        .filter(m => String(m.status || '').trim() === 'active')
+        .map(m => String(m.member_id || '').trim())
+    );
+    const existingEnrollments = SheetHelper.getRows<any>('Enrollments');
+    const eligibleRenewMemberIds = renewMemberIds.filter(uid => {
+      if (!activeMemberIds.has(String(uid || '').trim())) return false;
+      return existingEnrollments.some(e =>
+        String(e.member_id || '').trim() === String(uid || '').trim() &&
+        String(e.class_id || '').trim() === String(classId || '').trim() &&
+        String(e.status || '').trim() === 'active'
+      );
+    });
+
+    const newEnrollments: any[] = eligibleRenewMemberIds.map(uid => {
       return {
         enrollment_id: `ENR-${classId}-${uid.substring(0, 6)}-${Utilities.formatDate(new Date(), 'Asia/Taipei', 'MMdd')}`,
         member_id: uid,
@@ -431,7 +446,7 @@ class ClassEngine {
       SheetHelper.bulkInsert('Enrollments', newEnrollments);
     }
 
-    return { generated: sessions.length };
+    return { generated: sessions.length, renewedMembers: newEnrollments.length, skippedMembers: renewMemberIds.length - eligibleRenewMemberIds.length };
   }
 
   /**

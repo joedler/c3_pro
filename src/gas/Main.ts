@@ -1050,8 +1050,15 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         if (!data || !data.classId) {
           throw new Error('缺少 classId 參數');
         }
+        const activeMemberIds = new Set(
+          SheetHelper.getRows<any>('Members')
+            .filter(m => String(m.status || '').trim() === 'active')
+            .map(m => String(m.member_id || '').trim())
+        );
         const enrollments = SheetHelper.getRows<any>('Enrollments').filter(
-          e => e.class_id === data.classId && e.status === 'active'
+          e => e.class_id === data.classId &&
+               e.status === 'active' &&
+               activeMemberIds.has(String(e.member_id || '').trim())
         );
         const members = SheetHelper.getRows<any>('Members');
         return enrollments.map(e => {
@@ -1059,7 +1066,9 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
           return {
             memberId: e.member_id,
             realName: m ? m.real_name : '未知學員',
-            gender: m ? m.gender : ''
+            gender: m ? m.gender : '',
+            enrollmentStatus: e.status,
+            memberStatus: m ? m.status : ''
           };
         });
       },
