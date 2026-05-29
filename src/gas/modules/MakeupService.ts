@@ -187,11 +187,12 @@ class MakeupService {
       return [];
     }
 
-    // 5. 撈出所有符合班級且在未來的 scheduled 課堂
+    // 5. 撈出所有符合班級且在未來的可預約課堂
     const now = new Date();
     const allSessions = SheetHelper.getRows<any>('Sessions');
     const candidateSessions = allSessions.filter(s => {
-      if (!validClassIds.has(s.class_id) || s.status !== 'scheduled') {
+      const status = String(s.status || '').trim();
+      if (!validClassIds.has(s.class_id) || (status !== 'scheduled' && status !== 'open')) {
         return false;
       }
       if (this.normalizeId(s.session_id) === this.normalizeId(originalSession.session_id)) {
@@ -364,7 +365,8 @@ class MakeupService {
 
     // 3. 取得目標補課課堂與班級資料
     const targetSession = SheetHelper.getRow<any>('Sessions', 'session_id', targetSessionId);
-    if (!targetSession || targetSession.status !== 'scheduled') {
+    const targetStatus = String(targetSession?.status || '').trim();
+    if (!targetSession || (targetStatus !== 'scheduled' && targetStatus !== 'open')) {
       throw new Error('目標補課課堂已停課或非正常排定狀態。');
     }
 

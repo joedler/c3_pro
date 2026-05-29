@@ -851,7 +851,8 @@ class MemberService {
     const now = new Date();
     return allSessions.some(s => {
       if (String(s.class_id || '').trim() !== String(classId || '').trim()) return false;
-      if (String(s.status || '').trim() !== 'scheduled') return false;
+      const status = String(s.status || '').trim();
+      if (status !== 'scheduled' && status !== 'open') return false;
       const sessionStart = this.getSessionStartDate(s);
       return !!sessionStart && sessionStart > now;
     });

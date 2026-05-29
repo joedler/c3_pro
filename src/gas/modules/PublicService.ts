@@ -9,7 +9,7 @@ class PublicService {
    */
   public static getPublicSchedule(): Record<string, any>[] {
     const allClasses = SheetHelper.getRows<any>('Classes').filter(c => c.status === 'active');
-    const allSessions = SheetHelper.getRows<any>('Sessions').filter(s => s.status === 'scheduled' || s.status === 'completed');
+    const allSessions = SheetHelper.getRows<any>('Sessions').filter(s => s.status === 'scheduled' || s.status === 'open' || s.status === 'completed');
     const allRooms = SheetHelper.getRows<any>('Rooms');
 
     const classMap = new Map(allClasses.map(c => [c.class_id, c]));

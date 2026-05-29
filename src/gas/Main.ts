@@ -98,10 +98,15 @@ function getSessionStartDateForAdmin(session: any): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function isSchedulableSessionStatus(status: any): boolean {
+  const normalized = String(status || '').trim();
+  return normalized === 'scheduled' || normalized === 'open';
+}
+
 function getRemainingScheduledSessionsForClass(classId: string, sessions: any[], afterDate = new Date()): any[] {
   return sessions
     .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
-    .filter(s => String(s.status || '').trim() === 'scheduled')
+    .filter(s => isSchedulableSessionStatus(s.status))
     .filter(s => {
       const start = getSessionStartDateForAdmin(s);
       return !!start && start > afterDate;
@@ -126,7 +131,7 @@ function getClassSessionRangeForAdmin(classId: string, sessions: any[]): { start
   const now = new Date();
   const futureSessions = classSessions.filter(s => {
     const start = getSessionStartDateForAdmin(s);
-    return !!start && start > now && String(s.status || '').trim() === 'scheduled';
+    return !!start && start > now && isSchedulableSessionStatus(s.status);
   });
 
   let operationStatus = '尚未排程';
@@ -306,11 +311,14 @@ function getAdminBootstrapData(): Record<string, any> {
         enrollmentStatus: '',
         totalPaidSessions: 0,
         enrollDate: '',
+        classPeriodEnd: '',
+        classRemainingSessions: 0,
         notes: m.notes || ''
       }];
     }
     return memberEnrollments.map(e => {
       const cls = classMap.get(String(e.class_id || '').trim());
+      const sessionRange = cls ? getClassSessionRangeForAdmin(cls.class_id, sessions) : null;
       return {
         memberId: m.member_id,
         realName: m.real_name || m.display_name || '未命名學員',
@@ -323,6 +331,8 @@ function getAdminBootstrapData(): Record<string, any> {
         enrollmentStatus: e.status || '',
         totalPaidSessions: Number(e.total_paid_sessions) || 0,
         enrollDate: e.enroll_date || '',
+        classPeriodEnd: sessionRange ? sessionRange.end : '',
+        classRemainingSessions: sessionRange ? sessionRange.remainingCount : 0,
         notes: e.notes || m.notes || ''
       };
     });
@@ -808,7 +818,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
         // 1.5 同步該班級的所有未來課堂到 Google 日曆 (確保剛確認繳費的學員姓名立刻同步出現)
         const sessionsToSync = allSessionsForClass.filter(
-          s => s.class_id === data.classId && s.status === 'scheduled'
+          s => s.class_id === data.classId && isSchedulableSessionStatus(s.status)
         );
         sessionsToSync.forEach(s => {
           try {
@@ -929,7 +939,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         // 5. 針對有變動的班級，去重同步 Google 日曆 (效能關鍵！)
         uniqueClassIds.forEach(classId => {
           const sessionsToSync = allSessions.filter(
-            s => String(s.class_id).trim() === String(classId).trim() && s.status === 'scheduled'
+            s => String(s.class_id).trim() === String(classId).trim() && isSchedulableSessionStatus(s.status)
           );
           sessionsToSync.forEach(s => {
             try {
@@ -991,7 +1001,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         const sessions = SheetHelper.getRows<any>('Sessions');
         classIds.forEach(classId => {
           sessions
-            .filter(s => String(s.class_id || '').trim() === classId && String(s.status || '').trim() === 'scheduled')
+            .filter(s => String(s.class_id || '').trim() === classId && isSchedulableSessionStatus(s.status))
             .forEach(s => {
               try {
                 ClassEngine.syncCalendarEvent(s.session_id);
@@ -1024,7 +1034,7 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
 
         const sessions = SheetHelper.getRows<any>('Sessions');
         sessions
-          .filter(s => String(s.class_id || '').trim() === String(enrollment.class_id || '').trim() && String(s.status || '').trim() === 'scheduled')
+          .filter(s => String(s.class_id || '').trim() === String(enrollment.class_id || '').trim() && isSchedulableSessionStatus(s.status))
           .forEach(s => {
             try {
               ClassEngine.syncCalendarEvent(s.session_id);

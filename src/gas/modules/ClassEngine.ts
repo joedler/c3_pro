@@ -719,7 +719,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
               session_date: dateStr,
               start_time: cls.start_time,
               end_time: cls.end_time,
-              status: 'open',
+              status: 'scheduled',
               calendar_event_id: calendarEventId,
               notes: `[停課順延生成] 代替已停課時段: ${session.session_date || session.date}`
             });
@@ -749,7 +749,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     
     // 找出所有已過去但狀態仍為 scheduled 的課堂
     const pastSessions = allSessions.filter(s => {
-      if (s.status !== 'scheduled') {
+      if (s.status !== 'scheduled' && s.status !== 'open') {
         return false;
       }
       try {
