@@ -54,6 +54,56 @@ class ClassEngine {
     return d;
   }
 
+  private static formatDateYmd(dateVal: any): string {
+    return Utilities.formatDate(this.normalizeDateOnly(dateVal), 'Asia/Taipei', 'yyyy-MM-dd');
+  }
+
+  private static nextClassDateAfter(dateVal: any, dayOfWeek: number): Date {
+    const next = this.normalizeDateOnly(dateVal);
+    do {
+      next.setDate(next.getDate() + 1);
+    } while (next.getDay() !== dayOfWeek);
+    return next;
+  }
+
+  private static buildCalendarDescription(params: {
+    className: string;
+    roomName: string;
+    startTime: any;
+    endTime: any;
+    maxCapacity: number | string;
+    attendingNames?: string[];
+    leaveNames?: string[];
+    makeupNames?: string[];
+    extensionNote?: string;
+  }): string {
+    const attendingNames = params.attendingNames || [];
+    const leaveNames = params.leaveNames || [];
+    const makeupNames = params.makeupNames || [];
+    return `【課程資訊】
+班級：${params.className}
+教室：${params.roomName}
+起訖時間：${this.formatTimeForDisplay(params.startTime)} ~ ${this.formatTimeForDisplay(params.endTime)}
+人數上限：${params.maxCapacity}人
+${params.extensionNote ? `\n📌 延期備註：${params.extensionNote}\n` : ''}
+✅ 預計出席學員 (${attendingNames.length}人):
+${attendingNames.map(name => `• ${name}`).join('\n') || '(無學員出席)'}
+
+🚫 請假學員 (${leaveNames.length}人):
+${leaveNames.map(name => `• ${name}`).join('\n') || '(無)'}
+
+🔄 補課學員 (${makeupNames.length}人):
+${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
+  }
+
+  private static formatTimeForDisplay(timeVal: any): string {
+    if (timeVal instanceof Date) {
+      return Utilities.formatDate(timeVal, 'Asia/Taipei', 'HH:mm');
+    }
+    const match = String(timeVal || '').match(/(\d{1,2}):(\d{2})/);
+    return match ? `${match[1].padStart(2, '0')}:${match[2]}` : String(timeVal || '').substring(0, 5);
+  }
+
   /**
    * 依據 Classes 班級設定，批次產生 Sessions 課堂紀錄，並同步至 Google Calendar
    * @param classId 班級ID
@@ -199,7 +249,14 @@ class ClassEngine {
         const endDateTime = this.parseDateTime(session.session_date, session.end_time);
 
         const title = `${cls.class_name} (預計 0 人)`;
-        const description = `【課程資訊】\n班級：${cls.class_name}\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (0人):\n(尚未有學員報名)\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
+        const description = this.buildCalendarDescription({
+          className: cls.class_name,
+          roomName,
+          startTime: session.start_time,
+          endTime: session.end_time,
+          maxCapacity: cls.max_capacity ?? '無',
+          attendingNames: []
+        });
 
         const eventId = GoogleCalendarAPI.createEvent(calendarId, title, startDateTime, endDateTime, {
           description: description,
@@ -545,19 +602,18 @@ class ClassEngine {
       
       const title = `${statusPrefix}${cls.class_name} (${totalAttending}/${maxCapacity}人)`;
 
-      const description = `【課程資訊】
-班級：${cls.class_name}
-教室：${roomName}
-人數上限：${maxCapacity}人
-
-✅ 預計出席學員 (${totalAttending}人):
-${[...regularAttendingNames, ...makeupNames].map(name => `• ${name}`).join('\n') || '(無學員出席)'}
-
-🚫 請假學員 (${leaveNames.length}人):
-${leaveNames.map(name => `• ${name}`).join('\n') || '(無)'}
-
-🔄 補課學員 (${makeupNames.length}人):
-${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
+      const isExtensionSession = String(session.notes || '').includes('停課順延');
+      const description = this.buildCalendarDescription({
+        className: cls.class_name,
+        roomName,
+        startTime: session.start_time,
+        endTime: session.end_time,
+        maxCapacity,
+        attendingNames: [...regularAttendingNames, ...makeupNames],
+        leaveNames,
+        makeupNames,
+        extensionNote: isExtensionSession ? String(session.notes || '') : ''
+      });
 
       GoogleCalendarAPI.updateEvent(calendarId, session.calendar_event_id, {
         title: title,
@@ -578,6 +634,9 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     }
 
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
+    const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
+    const roomName = roomRow ? roomRow.room_name : '未設定教室';
+    const targetDayOfWeek = Number(cls.day_of_week);
     const sessions = SheetHelper.getRows<any>('Sessions')
       .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
       .sort((a, b) => {
@@ -589,6 +648,9 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     const sheet = SheetHelper.getSheet('Sessions');
     const colMap = SheetHelper.COLUMN_MAP['Sessions'];
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const sessionIdCol = headers.indexOf(colMap.session_id) + 1;
+    const dateCol = headers.indexOf(colMap.date) + 1;
+    const sessionDateCol = headers.indexOf(colMap.session_date) + 1;
     const seqCol = headers.indexOf(colMap.session_seq) + 1;
     const statusCol = headers.indexOf(colMap.status) + 1;
     const actualCountCol = headers.indexOf(colMap.actual_count) + 1;
@@ -596,12 +658,37 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
     let repaired = 0;
     let createdEvents = 0;
+    const syncSessionIds: string[] = [];
+    const existingIds = new Set(sessions.map(s => String(s.session_id || '').trim()).filter(id => !!id));
+    let lastDate = sessions[0] ? this.normalizeDateOnly(sessions[0].session_date || sessions[0].date) : this.normalizeDateOnly(cls.period_start);
     sessions.forEach((s, index) => {
       const rowNum = Number(s._rowNum);
       if (!rowNum) return;
 
+      const repairedSeq = Number(s.session_seq) || (index + 1);
+      let repairedId = String(s.session_id || '').trim();
+      let repairedDate = this.normalizeDateOnly(s.session_date || s.date);
+      const isExtensionSession = String(s.notes || '').includes('停課順延');
+
+      if (isExtensionSession && !isNaN(targetDayOfWeek) && repairedDate.getDay() !== targetDayOfWeek) {
+        repairedDate = this.nextClassDateAfter(lastDate, targetDayOfWeek);
+        const dateStr = this.formatDateYmd(repairedDate);
+        if (dateCol > 0) sheet.getRange(rowNum, dateCol).setValue(dateStr);
+        if (sessionDateCol > 0) sheet.getRange(rowNum, sessionDateCol).setValue(dateStr);
+        repaired++;
+      }
+
+      const expectedId = `SES-${classId}-${String(repairedSeq).padStart(2, '0')}`;
+      if (sessionIdCol > 0 && repairedId && !repairedId.startsWith(`SES-${classId}-`) && (!existingIds.has(expectedId) || repairedId === expectedId)) {
+        sheet.getRange(rowNum, sessionIdCol).setValue(expectedId);
+        existingIds.delete(repairedId);
+        existingIds.add(expectedId);
+        repairedId = expectedId;
+        repaired++;
+      }
+
       if (!Number(s.session_seq) && seqCol > 0) {
-        sheet.getRange(rowNum, seqCol).setValue(index + 1);
+        sheet.getRange(rowNum, seqCol).setValue(repairedSeq);
         repaired++;
       }
       if (String(s.status || '').trim() === 'open' && statusCol > 0) {
@@ -612,13 +699,33 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         sheet.getRange(rowNum, actualCountCol).setValue(0);
         repaired++;
       }
+      const dateWasChanged = this.formatDateYmd(repairedDate) !== this.formatDateYmd(s.session_date || s.date);
+      if (dateWasChanged && s.calendar_event_id) {
+        try {
+          GoogleCalendarAPI.deleteEvent(calendarId, s.calendar_event_id);
+          if (calendarEventCol > 0) sheet.getRange(rowNum, calendarEventCol).setValue('');
+          s.calendar_event_id = '';
+        } catch (err) {
+          Logger.log(`[修復課堂刪除舊日曆事件失敗] Session: ${s.session_id}, Error: ${err}`);
+        }
+      }
+
       if (!s.calendar_event_id && calendarEventCol > 0) {
         try {
-          const start = this.parseDateTime(s.session_date || s.date, s.start_time);
-          const end = this.parseDateTime(s.session_date || s.date, s.end_time);
+          const start = this.parseDateTime(this.formatDateYmd(repairedDate), s.start_time);
+          const end = this.parseDateTime(this.formatDateYmd(repairedDate), s.end_time);
+          const extensionNote = isExtensionSession ? String(s.notes || '停課順延生成課堂') : '';
           const eventId = GoogleCalendarAPI.createEvent(calendarId, `${cls.class_name} (0/${cls.max_capacity || 0}人)`, start, end, {
-            description: `【課程資訊】\n班級：${cls.class_name}\n修復建立課堂日曆事件`,
-            location: ''
+            description: this.buildCalendarDescription({
+              className: cls.class_name,
+              roomName,
+              startTime: s.start_time,
+              endTime: s.end_time,
+              maxCapacity: cls.max_capacity ?? '無',
+              attendingNames: [],
+              extensionNote
+            }),
+            location: roomName
           });
           sheet.getRange(rowNum, calendarEventCol).setValue(eventId);
           createdEvents++;
@@ -627,14 +734,16 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
           Logger.log(`[修復課堂日曆事件失敗] Session: ${s.session_id}, Error: ${err}`);
         }
       }
+      syncSessionIds.push(repairedId || String(s.session_id || '').trim());
+      lastDate = repairedDate;
     });
 
     SpreadsheetApp.flush();
-    sessions.forEach(s => {
+    syncSessionIds.forEach(sessionId => {
       try {
-        this.syncCalendarEvent(s.session_id);
+        this.syncCalendarEvent(sessionId);
       } catch (err) {
-        Logger.log(`[修復後同步日曆失敗] Session: ${s.session_id}, Error: ${err}`);
+        Logger.log(`[修復後同步日曆失敗] Session: ${sessionId}, Error: ${err}`);
       }
     });
 
@@ -720,6 +829,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         const classId = session.class_id;
         const cls = SheetHelper.getRow<any>('Classes', 'class_id', classId);
         if (!cls) return;
+        const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
+        const roomName = roomRow ? roomRow.room_name : '未設定教室';
 
         // A. 針對一期一個月的班 (B 類) 或管理員勾選返還點數者：發放請假補償以返還補課點數
         if (grantMakeupPoints || cls.class_type === 'B') {
@@ -760,11 +871,11 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
           // 1. 取得該班級所有現有課堂，找出最後一堂課的日期
           const sessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
           const maxSeq = sessions.reduce((max, s) => Math.max(max, Number(s.session_seq) || 0), 0);
-          let latestDate = new Date(cls.period_start);
+          let latestDate = this.normalizeDateOnly(cls.period_start);
           sessions.forEach(s => {
             const rawDate = s.session_date || s.date;
             if (rawDate) {
-              const d = new Date(rawDate);
+              const d = this.normalizeDateOnly(rawDate);
               if (!isNaN(d.getTime()) && d.getTime() > latestDate.getTime()) {
                 latestDate = d;
               }
@@ -776,8 +887,10 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
             const nextDate = new Date(latestDate);
             nextDate.setDate(nextDate.getDate() + (7 * i)); // 順延 i 週
 
-            const newSessionId = `SES-${Math.floor(nextDate.getTime() / 1000)}`;
-            const dateStr = nextDate.toISOString().split('T')[0];
+            const nextSeq = maxSeq + i;
+            const newSessionId = `SES-${classId}-${String(nextSeq).padStart(2, '0')}`;
+            const dateStr = this.formatDateYmd(nextDate);
+            const extensionNote = `[停課順延生成] 原課堂：${this.formatDateYmd(session.session_date || session.date)}，原因：${reason}`;
 
             // 建立日曆活動
             let calendarEventId = '';
@@ -790,7 +903,15 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
                 new Date(startTimeStr),
                 new Date(endTimeStr),
                 {
-                  description: `【課程資訊】\n班級：${cls.class_name}\n停課順延生成課堂`
+                  description: this.buildCalendarDescription({
+                    className: cls.class_name,
+                    roomName,
+                    startTime: cls.start_time,
+                    endTime: cls.end_time,
+                    maxCapacity: cls.max_capacity ?? '無',
+                    attendingNames: [],
+                    extensionNote
+                  })
                 }
               );
             } catch (err) {
@@ -806,13 +927,13 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
               room_id: cls.room_id,
               date: dateStr,
               session_date: dateStr,
-              session_seq: maxSeq + i,
+              session_seq: nextSeq,
               start_time: cls.start_time,
               end_time: cls.end_time,
               status: 'scheduled',
               actual_count: 0,
               calendar_event_id: calendarEventId,
-              notes: `[停課順延生成] 代替已停課時段: ${session.session_date || session.date}`
+              notes: extensionNote
             });
             Logger.log(`[停課順延] 已成功為班級 ${classId} 生成新的課堂：${dateStr} (${newSessionId})`);
           }
