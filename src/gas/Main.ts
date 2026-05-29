@@ -243,6 +243,10 @@ function getAdminBootstrapData(): Record<string, any> {
     const coach = staffMap.get(String(c.coach_line_uid).trim());
     const room = roomMap.get(String(c.room_id).trim());
     const sessionRange = getClassSessionRangeForAdmin(c.class_id, sessions);
+    const pendingPaymentCount = enrollments.filter(e =>
+      String(e.class_id).trim() === String(c.class_id).trim() &&
+      e.status === 'pending_payment'
+    ).length;
     const enrolledCount = enrollments.filter(e =>
       String(e.class_id).trim() === String(c.class_id).trim() &&
       (e.status === 'active' || e.status === 'pending_payment')
@@ -268,6 +272,8 @@ function getAdminBootstrapData(): Record<string, any> {
       remainingSessions: sessionRange.remainingCount,
       totalScheduledSessions: sessionRange.totalCount,
       operationStatus: sessionRange.operationStatus,
+      pendingPaymentCount,
+      hasPendingRenewal: pendingPaymentCount > 0,
       periodWeeks: Number(c.period_weeks) || 0,
       status: c.status
     };

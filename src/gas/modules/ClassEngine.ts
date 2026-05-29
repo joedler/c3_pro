@@ -358,6 +358,32 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
     // 1. 取得現有 Sessions，找出最後一堂的序列號 seq (比如 12)
     const allSessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
+    if (allSessions.some(s => String(s.term_id || '').trim() === termId)) {
+      throw new Error(`此班級已建立「${termLabel}」課堂，請勿重複續期。`);
+    }
+
+    const allMembers = SheetHelper.getRows<any>('Members');
+    const activeMemberIds = new Set(
+      allMembers
+        .filter(m => String(m.status || '').trim() === 'active')
+        .map(m => String(m.member_id || '').trim())
+    );
+    const existingEnrollments = SheetHelper.getRows<any>('Enrollments');
+    const currentActiveEnrollments = existingEnrollments.filter(e =>
+      String(e.class_id || '').trim() === String(classId || '').trim() &&
+      String(e.status || '').trim() === 'active'
+    );
+    const eligibleRenewMemberIds = renewMemberIds.filter(uid => {
+      if (!activeMemberIds.has(String(uid || '').trim())) return false;
+      return currentActiveEnrollments.some(e =>
+        String(e.member_id || '').trim() === String(uid || '').trim() &&
+        String(e.class_id || '').trim() === String(classId || '').trim()
+      );
+    });
+    if (eligibleRenewMemberIds.length === 0) {
+      throw new Error('沒有可續期的啟用中學員；可能已續期完成，或學員尚未啟用/已結束。');
+    }
+
     let startSeq = 1;
     if (allSessions.length > 0) {
       const seqs = allSessions.map(s => Number(s.session_seq) || 0);
@@ -515,8 +541,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     // 5. 批次建立 Google 日曆事件並回寫 ID
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     
-    const allMembers = SheetHelper.getRows<any>('Members');
-    const renewMemberNames = renewMemberIds.map(uid => {
+    const renewMemberNames = eligibleRenewMemberIds.map(uid => {
       const m = allMembers.find(member => member.member_id === uid);
       return m ? m.real_name : uid;
     });
@@ -556,24 +581,6 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     SheetHelper.bulkInsert('Sessions', sessions);
 
     // 7. 學員自動轉移 (Rollover) -> 寫入 Enrollments，狀態為 pending_payment
-    const activeMemberIds = new Set(
-      allMembers
-        .filter(m => String(m.status || '').trim() === 'active')
-        .map(m => String(m.member_id || '').trim())
-    );
-    const existingEnrollments = SheetHelper.getRows<any>('Enrollments');
-    const currentActiveEnrollments = existingEnrollments.filter(e =>
-      String(e.class_id || '').trim() === String(classId || '').trim() &&
-      String(e.status || '').trim() === 'active'
-    );
-    const eligibleRenewMemberIds = renewMemberIds.filter(uid => {
-      if (!activeMemberIds.has(String(uid || '').trim())) return false;
-      return currentActiveEnrollments.some(e =>
-        String(e.member_id || '').trim() === String(uid || '').trim() &&
-        String(e.class_id || '').trim() === String(classId || '').trim()
-      );
-    });
-
     const newEnrollments: any[] = eligibleRenewMemberIds.map(uid => {
       const previousEnrollment = currentActiveEnrollments.find(e =>
         String(e.member_id || '').trim() === String(uid || '').trim()

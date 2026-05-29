@@ -845,8 +845,8 @@
                               <span class="block text-[10px] text-slate-500 mt-1" x-text="c.status === 'terminated' ? '已停止營運' : '班級狀態：' + (c.status || '未設定')"></span>
                             </td>
                             <td class="px-6 py-4 text-right space-x-2">
-                              <button @click="openRenewModal(c)" class="px-2.5 py-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
-                                🔄 手動續期
+                              <button @click="openRenewModal(c)" :class="c.hasPendingRenewal ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/20'" class="px-2.5 py-1.5 border rounded-lg text-[10px] font-bold transition-all active:scale-95">
+                                <span x-text="c.hasPendingRenewal ? '✅ 已續期待收費' : '🔄 手動續期'"></span>
                               </button>
                               <button @click="repairClassSessions(c)" class="px-2.5 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 rounded-lg text-[10px] font-bold transition-all active:scale-95">
                                 🛠️ 修復課堂
