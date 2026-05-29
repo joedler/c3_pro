@@ -66,12 +66,34 @@ class ClassEngine {
     return next;
   }
 
+  private static parseDaysOfWeek(dayVal: any): number[] {
+    const clean = String(dayVal || '').trim();
+    const map: Record<string, number> = {
+      '日': 0, '週日': 0, '星期日': 0, 'Sunday': 0, 'SUN': 0,
+      '一': 1, '週一': 1, '星期一': 1, 'Monday': 1, 'MON': 1,
+      '二': 2, '週二': 2, '星期二': 2, 'Tuesday': 2, 'TUE': 2,
+      '三': 3, '週三': 3, '星期三': 3, 'Wednesday': 3, 'WED': 3,
+      '四': 4, '週四': 4, '星期四': 4, 'Thursday': 4, 'THU': 4,
+      '五': 5, '週五': 5, '星期五': 5, 'Friday': 5, 'FRI': 5,
+      '六': 6, '週六': 6, '星期六': 6, 'Saturday': 6, 'SAT': 6
+    };
+    const parts = clean.includes('+') ? clean.split('+') : [clean];
+    return parts.map(part => {
+      const key = part.trim();
+      if (map[key] !== undefined) return map[key];
+      const num = Number(key);
+      return isNaN(num) ? -1 : num;
+    }).filter(day => day >= 0 && day <= 6);
+  }
+
   private static buildCalendarDescription(params: {
     className: string;
     roomName: string;
     startTime: any;
     endTime: any;
     maxCapacity: number | string;
+    periodStart?: string;
+    periodEnd?: string;
     attendingNames?: string[];
     leaveNames?: string[];
     makeupNames?: string[];
@@ -83,7 +105,8 @@ class ClassEngine {
     return `【課程資訊】
 班級：${params.className}
 教室：${params.roomName}
-起訖時間：${this.formatTimeForDisplay(params.startTime)} ~ ${this.formatTimeForDisplay(params.endTime)}
+起訖日期：${params.periodStart || '未定'} ~ ${params.periodEnd || '未定'}
+上課時間：${this.formatTimeForDisplay(params.startTime)} ~ ${this.formatTimeForDisplay(params.endTime)}
 人數上限：${params.maxCapacity}人
 ${params.extensionNote ? `\n📌 延期備註：${params.extensionNote}\n` : ''}
 ✅ 預計出席學員 (${attendingNames.length}人):
@@ -102,6 +125,41 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     }
     const match = String(timeVal || '').match(/(\d{1,2}):(\d{2})/);
     return match ? `${match[1].padStart(2, '0')}:${match[2]}` : String(timeVal || '').substring(0, 5);
+  }
+
+  private static sanitizeExtensionNote(note: any, fallbackDate: any): string {
+    const raw = String(note || '').trim();
+    if (!raw) return '[停課順延生成]';
+
+    const dateMatch = raw.match(/\d{4}[-/]\d{1,2}[-/]\d{1,2}|[A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{4}(?:\s+\d{2}:\d{2}:\d{2})?/);
+    let dateText = '';
+    if (dateMatch) {
+      const candidate = dateMatch[0].replace(/\//g, '-');
+      const parsed = new Date(candidate);
+      dateText = isNaN(parsed.getTime()) ? candidate : this.formatDateYmd(parsed);
+    } else if (fallbackDate) {
+      dateText = this.formatDateYmd(fallbackDate);
+    }
+
+    const normalized = dateMatch ? raw.replace(dateMatch[0], dateText) : raw;
+    if (normalized.includes('代替已停課時段')) {
+      return `[停課順延生成] 原課堂：${dateText || '未記錄'}`;
+    }
+    if (normalized.includes('原課堂：') || normalized.includes('原因：')) {
+      return normalized;
+    }
+    return dateText ? `[停課順延生成] 原課堂：${dateText}` : normalized;
+  }
+
+  private static getSessionDateRange(sessions: any[]): { start: string; end: string } {
+    const sorted = sessions
+      .filter(s => String(s.status || '').trim() !== 'cancelled')
+      .filter(s => s.session_date || s.date)
+      .sort((a, b) => this.normalizeDateOnly(a.session_date || a.date).getTime() - this.normalizeDateOnly(b.session_date || b.date).getTime());
+    return {
+      start: sorted[0] ? this.formatDateYmd(sorted[0].session_date || sorted[0].date) : '',
+      end: sorted[sorted.length - 1] ? this.formatDateYmd(sorted[sorted.length - 1].session_date || sorted[sorted.length - 1].date) : ''
+    };
   }
 
   /**
@@ -243,6 +301,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
     // 4. 批次建立日曆事件並回寫 ID
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
+    const generatedRange = this.getSessionDateRange(sessions);
     sessions.forEach(session => {
       try {
         const startDateTime = this.parseDateTime(session.session_date, session.start_time);
@@ -255,6 +314,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
           startTime: session.start_time,
           endTime: session.end_time,
           maxCapacity: cls.max_capacity ?? '無',
+          periodStart: generatedRange.start,
+          periodEnd: generatedRange.end,
           attendingNames: []
         });
 
@@ -446,6 +507,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
       const m = allMembers.find(member => member.member_id === uid);
       return m ? m.real_name : uid;
     });
+    const renewalRange = this.getSessionDateRange(sessions);
 
     sessions.forEach(session => {
       try {
@@ -453,9 +515,18 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         const endDateTime = this.parseDateTime(session.session_date, session.end_time);
 
         const title = `${cls.class_name} (預計 ${renewMemberNames.length} 人) [${termRemark}]`;
-        const studentLines = renewMemberNames.map(name => `• ${name} (已續期待繳費)`).join('\n');
-        
-        const description = `【課程資訊】\n班級：${cls.class_name} [${termRemark}]\n教室：${roomName}\n人數上限：${cls.max_capacity ?? '無'}人\n\n✅ 預計出席學員 (${renewMemberNames.length}人):\n${studentLines || '(無)'}\n\n🚫 請假學員:\n(無)\n\n🔄 補課學員:\n(無)`;
+        const description = this.buildCalendarDescription({
+          className: `${cls.class_name} [${termRemark}]`,
+          roomName,
+          startTime: session.start_time,
+          endTime: session.end_time,
+          maxCapacity: cls.max_capacity ?? '無',
+          periodStart: renewalRange.start,
+          periodEnd: renewalRange.end,
+          attendingNames: renewMemberNames.map(name => `${name} (已續期待繳費)`),
+          leaveNames: [],
+          makeupNames: []
+        });
 
         const eventId = GoogleCalendarAPI.createEvent(calendarId, title, startDateTime, endDateTime, {
           description: description,
@@ -594,6 +665,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
 
     const totalAttending = regularAttendingNames.length + makeupNames.length;
     const maxCapacity = cls.max_capacity || (roomRow ? roomRow.max_capacity : 15);
+    const classRange = this.getSessionDateRange(allClassSessions);
 
     // 6. 重新編排日曆內容
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
@@ -609,6 +681,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         startTime: session.start_time,
         endTime: session.end_time,
         maxCapacity,
+        periodStart: classRange.start,
+        periodEnd: classRange.end,
         attendingNames: [...regularAttendingNames, ...makeupNames],
         leaveNames,
         makeupNames,
@@ -636,7 +710,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     const calendarId = Config.get('GOOGLE_CALENDAR_ID');
     const roomRow = SheetHelper.getRow<any>('Rooms', 'room_id', cls.room_id);
     const roomName = roomRow ? roomRow.room_name : '未設定教室';
-    const targetDayOfWeek = Number(cls.day_of_week);
+    const targetDayOfWeek = this.parseDaysOfWeek(cls.day_of_week)[0] ?? 1;
     const sessions = SheetHelper.getRows<any>('Sessions')
       .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
       .sort((a, b) => {
@@ -655,6 +729,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     const statusCol = headers.indexOf(colMap.status) + 1;
     const actualCountCol = headers.indexOf(colMap.actual_count) + 1;
     const calendarEventCol = headers.indexOf(colMap.calendar_event_id) + 1;
+    const notesCol = headers.indexOf(colMap.notes) + 1;
 
     let repaired = 0;
     let createdEvents = 0;
@@ -668,13 +743,18 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
       const repairedSeq = Number(s.session_seq) || (index + 1);
       let repairedId = String(s.session_id || '').trim();
       let repairedDate = this.normalizeDateOnly(s.session_date || s.date);
-      const isExtensionSession = String(s.notes || '').includes('停課順延');
+      const isExtensionSession = String(s.notes || '').includes('停課順延') || String(s.notes || '').includes('代替已停課時段');
+      const repairedNote = isExtensionSession ? this.sanitizeExtensionNote(s.notes, s.session_date || s.date) : String(s.notes || '');
 
-      if (isExtensionSession && !isNaN(targetDayOfWeek) && repairedDate.getDay() !== targetDayOfWeek) {
+      if (isExtensionSession && repairedDate.getDay() !== targetDayOfWeek) {
         repairedDate = this.nextClassDateAfter(lastDate, targetDayOfWeek);
         const dateStr = this.formatDateYmd(repairedDate);
         if (dateCol > 0) sheet.getRange(rowNum, dateCol).setValue(dateStr);
         if (sessionDateCol > 0) sheet.getRange(rowNum, sessionDateCol).setValue(dateStr);
+        repaired++;
+      }
+      if (isExtensionSession && notesCol > 0 && repairedNote !== String(s.notes || '')) {
+        sheet.getRange(rowNum, notesCol).setValue(repairedNote);
         repaired++;
       }
 
@@ -714,7 +794,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         try {
           const start = this.parseDateTime(this.formatDateYmd(repairedDate), s.start_time);
           const end = this.parseDateTime(this.formatDateYmd(repairedDate), s.end_time);
-          const extensionNote = isExtensionSession ? String(s.notes || '停課順延生成課堂') : '';
+          const eventRange = this.getSessionDateRange([...sessions, { ...s, session_date: this.formatDateYmd(repairedDate), status: 'scheduled' }]);
+          const extensionNote = isExtensionSession ? repairedNote : '';
           const eventId = GoogleCalendarAPI.createEvent(calendarId, `${cls.class_name} (0/${cls.max_capacity || 0}人)`, start, end, {
             description: this.buildCalendarDescription({
               className: cls.class_name,
@@ -722,6 +803,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
               startTime: s.start_time,
               endTime: s.end_time,
               maxCapacity: cls.max_capacity ?? '無',
+              periodStart: eventRange.start,
+              periodEnd: eventRange.end,
               attendingNames: [],
               extensionNote
             }),
@@ -897,6 +980,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
             try {
               const startTimeStr = `${dateStr}T${cls.start_time}:00`;
               const endTimeStr = `${dateStr}T${cls.end_time}:00`;
+              const extensionRange = this.getSessionDateRange([...sessions, { session_date: dateStr, status: 'scheduled' }]);
               calendarEventId = GoogleCalendarAPI.createEvent(
                 calendarId,
                 `${cls.class_name} (0/8人)`,
@@ -909,6 +993,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
                     startTime: cls.start_time,
                     endTime: cls.end_time,
                     maxCapacity: cls.max_capacity ?? '無',
+                    periodStart: extensionRange.start,
+                    periodEnd: extensionRange.end,
                     attendingNames: [],
                     extensionNote
                   })
