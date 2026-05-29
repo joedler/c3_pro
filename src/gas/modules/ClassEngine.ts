@@ -1125,6 +1125,12 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
    * 自動為即將結訓的班級辦理新一期續期 (在最後一堂課結束前 7 天自動觸發)
    */
   public static autoRenewClasses(): void {
+    const autoRenewEnabled = Config.get('AUTO_RENEW_CLASSES', 'false') === 'true';
+    if (!autoRenewEnabled) {
+      Logger.log('[自動續期已停用] 正式版採用管理端提醒與手動續期。');
+      return;
+    }
+
     const classes = SheetHelper.getRows<any>('Classes');
     const allSessions = SheetHelper.getRows<any>('Sessions');
     const enrollments = SheetHelper.getRows<any>('Enrollments');

@@ -52,7 +52,7 @@ function runBackgroundMaintenanceIfDue(): void {
     // Throttle heavy sheet/calendar maintenance so a single page load does not repeat it for every API call.
     cache.put(cacheKey, String(Date.now()), 600);
     ClassEngine.autoCompletePastSessions();
-    ClassEngine.autoRenewClasses();
+    // Production policy: do not auto-renew classes. Admins are reminded in the dashboard and renew manually.
   } finally {
     lock.releaseLock();
   }
@@ -222,6 +222,7 @@ function getAdminBootstrapData(): Record<string, any> {
   const staffMap = new Map(staff.map(s => [String(s.line_uid).trim(), s]));
   const roomMap = new Map(rooms.map(r => [String(r.room_id).trim(), r]));
   const memberMap = new Map(members.map(m => [String(m.member_id).trim(), m]));
+  const todayStart = new Date(`${formatDateYmd(new Date())}T00:00:00`);
 
   const adminSessions = sessions
     .filter(s => s.status !== 'cancelled')
@@ -251,6 +252,18 @@ function getAdminBootstrapData(): Record<string, any> {
       String(e.class_id).trim() === String(c.class_id).trim() &&
       (e.status === 'active' || e.status === 'pending_payment')
     ).length;
+    const endDate = sessionRange.end ? new Date(`${sessionRange.end}T00:00:00`) : null;
+    const daysToEnd = endDate && !isNaN(endDate.getTime())
+      ? Math.ceil((endDate.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000))
+      : null;
+    let renewalStatus = 'normal';
+    if (pendingPaymentCount > 0) {
+      renewalStatus = 'pending_payment';
+    } else if (daysToEnd !== null && daysToEnd < 0) {
+      renewalStatus = 'ended_unrenewed';
+    } else if (daysToEnd !== null && daysToEnd <= 10) {
+      renewalStatus = 'ending_soon';
+    }
 
     return {
       classId: c.class_id,
@@ -274,9 +287,22 @@ function getAdminBootstrapData(): Record<string, any> {
       operationStatus: sessionRange.operationStatus,
       pendingPaymentCount,
       hasPendingRenewal: pendingPaymentCount > 0,
+      daysToEnd,
+      renewalStatus,
       periodWeeks: Number(c.period_weeks) || 0,
       status: c.status
     };
+  }).sort((a, b) => {
+    const priority: Record<string, number> = {
+      ended_unrenewed: 0,
+      ending_soon: 1,
+      pending_payment: 2,
+      normal: 3
+    };
+    const aPriority = priority[a.renewalStatus] ?? 9;
+    const bPriority = priority[b.renewalStatus] ?? 9;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return String(a.periodEnd || '').localeCompare(String(b.periodEnd || ''));
   });
 
   const pendingPayments = enrollments
@@ -392,6 +418,16 @@ function getAdminBootstrapData(): Record<string, any> {
         className: cls ? cls.class_name : '未知課程'
       };
     });
+  const endingSoonClasses = adminClasses
+    .filter(c => c.renewalStatus === 'ending_soon' || c.renewalStatus === 'ended_unrenewed')
+    .map(c => ({
+      classId: c.classId,
+      className: c.className,
+      periodEnd: c.periodEnd,
+      daysToEnd: c.daysToEnd,
+      remainingSessions: c.remainingSessions,
+      renewalStatus: c.renewalStatus
+    }));
 
   const activeStaff = staff.filter(s => s.status === 'active' && (s.role === 'coach' || s.role === 'admin'));
 
@@ -401,7 +437,7 @@ function getAdminBootstrapData(): Record<string, any> {
     classes: adminClasses,
     pendingPayments,
     memberRecords: adminMemberRecords,
-    dashboardStats: { todaySessions, todayLeaves, todayMakeups },
+    dashboardStats: { todaySessions, todayLeaves, todayMakeups, endingSoonClasses },
     announcements: getActiveAnnouncementsFromRows(announcements, 3),
     announcementList: getActiveAnnouncementsFromRows(announcements, 0),
     meta: {
