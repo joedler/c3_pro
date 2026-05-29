@@ -743,6 +743,14 @@ function doPost(e: GoogleAppsScript.Events.DoPost): any {
         SheetHelper.updateRow('Classes', 'class_id', classId, { status: 'terminated' });
         return { success: true };
       },
+      'admin.repairClassSessions': () => {
+        AuthService.requireRole(user, ['admin']);
+        if (!data || !data.classId) {
+          throw new Error('缺少 classId 參數');
+        }
+        const result = ClassEngine.repairClassSessions(String(data.classId).trim());
+        return { message: `已修復課堂資料：更新 ${result.repaired} 個欄位，建立 ${result.createdEvents} 個日曆事件。`, data: result };
+      },
       'admin.generateSessions': () => {
         AuthService.requireRole(user, ['admin']);
         if (!data || !data.classId) {

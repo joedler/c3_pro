@@ -568,6 +568,79 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     }
   }
 
+  /**
+   * 修復舊版停課順延課堂缺漏欄位：序號、實際出席人數、狀態、日曆事件 ID。
+   */
+  public static repairClassSessions(classId: string): { repaired: number; createdEvents: number } {
+    const cls = SheetHelper.getRow<any>('Classes', 'class_id', classId);
+    if (!cls) {
+      throw new Error(`找不到班級代碼: ${classId}`);
+    }
+
+    const calendarId = Config.get('GOOGLE_CALENDAR_ID');
+    const sessions = SheetHelper.getRows<any>('Sessions')
+      .filter(s => String(s.class_id || '').trim() === String(classId || '').trim())
+      .sort((a, b) => {
+        const aTime = this.parseDateTime(a.session_date || a.date, a.start_time).getTime();
+        const bTime = this.parseDateTime(b.session_date || b.date, b.start_time).getTime();
+        return aTime - bTime;
+      });
+
+    const sheet = SheetHelper.getSheet('Sessions');
+    const colMap = SheetHelper.COLUMN_MAP['Sessions'];
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const seqCol = headers.indexOf(colMap.session_seq) + 1;
+    const statusCol = headers.indexOf(colMap.status) + 1;
+    const actualCountCol = headers.indexOf(colMap.actual_count) + 1;
+    const calendarEventCol = headers.indexOf(colMap.calendar_event_id) + 1;
+
+    let repaired = 0;
+    let createdEvents = 0;
+    sessions.forEach((s, index) => {
+      const rowNum = Number(s._rowNum);
+      if (!rowNum) return;
+
+      if (!Number(s.session_seq) && seqCol > 0) {
+        sheet.getRange(rowNum, seqCol).setValue(index + 1);
+        repaired++;
+      }
+      if (String(s.status || '').trim() === 'open' && statusCol > 0) {
+        sheet.getRange(rowNum, statusCol).setValue('scheduled');
+        repaired++;
+      }
+      if ((s.actual_count === '' || s.actual_count === null || s.actual_count === undefined) && actualCountCol > 0) {
+        sheet.getRange(rowNum, actualCountCol).setValue(0);
+        repaired++;
+      }
+      if (!s.calendar_event_id && calendarEventCol > 0) {
+        try {
+          const start = this.parseDateTime(s.session_date || s.date, s.start_time);
+          const end = this.parseDateTime(s.session_date || s.date, s.end_time);
+          const eventId = GoogleCalendarAPI.createEvent(calendarId, `${cls.class_name} (0/${cls.max_capacity || 0}人)`, start, end, {
+            description: `【課程資訊】\n班級：${cls.class_name}\n修復建立課堂日曆事件`,
+            location: ''
+          });
+          sheet.getRange(rowNum, calendarEventCol).setValue(eventId);
+          createdEvents++;
+          repaired++;
+        } catch (err) {
+          Logger.log(`[修復課堂日曆事件失敗] Session: ${s.session_id}, Error: ${err}`);
+        }
+      }
+    });
+
+    SpreadsheetApp.flush();
+    sessions.forEach(s => {
+      try {
+        this.syncCalendarEvent(s.session_id);
+      } catch (err) {
+        Logger.log(`[修復後同步日曆失敗] Session: ${s.session_id}, Error: ${err}`);
+      }
+    });
+
+    return { repaired, createdEvents };
+  }
+
   private static isEnrollmentEligibleForSession(enrollment: any, session: any, classSessions: any[]): boolean {
     const paidSessions = Number(enrollment.total_paid_sessions || 0);
     if (!paidSessions) return false;
@@ -686,6 +759,7 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         if (extendWeeks > 0 && cls.class_type !== 'B') {
           // 1. 取得該班級所有現有課堂，找出最後一堂課的日期
           const sessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
+          const maxSeq = sessions.reduce((max, s) => Math.max(max, Number(s.session_seq) || 0), 0);
           let latestDate = new Date(cls.period_start);
           sessions.forEach(s => {
             const rawDate = s.session_date || s.date;
@@ -732,9 +806,11 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
               room_id: cls.room_id,
               date: dateStr,
               session_date: dateStr,
+              session_seq: maxSeq + i,
               start_time: cls.start_time,
               end_time: cls.end_time,
               status: 'scheduled',
+              actual_count: 0,
               calendar_event_id: calendarEventId,
               notes: `[停課順延生成] 代替已停課時段: ${session.session_date || session.date}`
             });
