@@ -86,6 +86,13 @@ class ClassEngine {
     }).filter(day => day >= 0 && day <= 6);
   }
 
+  private static makeTermId(classId: string, startDate: string, termRemark: string): string {
+    const cleanRemark = String(termRemark || 'term')
+      .replace(/[^\w\u4e00-\u9fa5]+/g, '')
+      .substring(0, 16);
+    return `TERM-${classId}-${String(startDate || '').substring(0, 10)}-${cleanRemark || 'new'}`;
+  }
+
   private static buildCalendarDescription(params: {
     className: string;
     roomName: string;
@@ -344,6 +351,10 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     if (!cls) {
       throw new Error(`找不到班級代碼: ${classId}`);
     }
+    SheetHelper.ensureColumns('Sessions', ['term_id', 'term_label']);
+    SheetHelper.ensureColumns('Enrollments', ['term_id', 'term_label', 'previous_enrollment_id']);
+    const termId = this.makeTermId(classId, newStartDate, termRemark);
+    const termLabel = String(termRemark || '').trim() || `${String(newStartDate || '').substring(0, 7)}期`;
 
     // 1. 取得現有 Sessions，找出最後一堂的序列號 seq (比如 12)
     const allSessions = SheetHelper.getRows<any>('Sessions').filter(s => s.class_id === classId);
@@ -477,6 +488,8 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
       sessions.push({
         session_id: `SES-${classId}-${String(seq).padStart(2, '0')}`,
         class_id: classId,
+        term_id: termId,
+        term_label: termLabel,
         session_date: dateStr,
         session_seq: seq,
         start_time: cls.start_time,
@@ -549,20 +562,29 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
         .map(m => String(m.member_id || '').trim())
     );
     const existingEnrollments = SheetHelper.getRows<any>('Enrollments');
+    const currentActiveEnrollments = existingEnrollments.filter(e =>
+      String(e.class_id || '').trim() === String(classId || '').trim() &&
+      String(e.status || '').trim() === 'active'
+    );
     const eligibleRenewMemberIds = renewMemberIds.filter(uid => {
       if (!activeMemberIds.has(String(uid || '').trim())) return false;
-      return existingEnrollments.some(e =>
+      return currentActiveEnrollments.some(e =>
         String(e.member_id || '').trim() === String(uid || '').trim() &&
-        String(e.class_id || '').trim() === String(classId || '').trim() &&
-        String(e.status || '').trim() === 'active'
+        String(e.class_id || '').trim() === String(classId || '').trim()
       );
     });
 
     const newEnrollments: any[] = eligibleRenewMemberIds.map(uid => {
+      const previousEnrollment = currentActiveEnrollments.find(e =>
+        String(e.member_id || '').trim() === String(uid || '').trim()
+      );
       return {
         enrollment_id: `ENR-${classId}-${uid.substring(0, 6)}-${Utilities.formatDate(new Date(), 'Asia/Taipei', 'MMdd')}`,
         member_id: uid,
         class_id: classId,
+        term_id: termId,
+        term_label: termLabel,
+        previous_enrollment_id: previousEnrollment ? previousEnrollment.enrollment_id : '',
         enroll_date: Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd'),
         status: 'pending_payment',
         total_paid_sessions: 0,
@@ -573,6 +595,19 @@ ${makeupNames.map(name => `• ${name}`).join('\n') || '(無)'}`;
     if (newEnrollments.length > 0) {
       SheetHelper.bulkInsert('Enrollments', newEnrollments);
     }
+
+    const renewedMemberSet = new Set(eligibleRenewMemberIds.map(id => String(id || '').trim()));
+    currentActiveEnrollments.forEach(e => {
+      const isRenewed = renewedMemberSet.has(String(e.member_id || '').trim());
+      const oldNotes = String(e.notes || '').trim();
+      const suffix = isRenewed
+        ? `[本期結束，已續至 ${termLabel}]`
+        : `[本期結束，未勾選續報 ${termLabel}]`;
+      SheetHelper.updateRow('Enrollments', 'enrollment_id', e.enrollment_id, {
+        status: 'ended',
+        notes: `${oldNotes} ${suffix}`.trim()
+      });
+    });
 
     return { generated: sessions.length, renewedMembers: newEnrollments.length, skippedMembers: renewMemberIds.length - eligibleRenewMemberIds.length };
   }

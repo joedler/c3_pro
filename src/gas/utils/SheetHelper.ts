@@ -63,6 +63,8 @@ class SheetHelper {
     Sessions: {
       session_id: '課堂ID',
       class_id: '班級ID',
+      term_id: '班期ID',
+      term_label: '班期名稱',
       session_date: '上課日期',
       session_seq: '堂數序號',
       start_time: '開始時間',
@@ -78,6 +80,9 @@ class SheetHelper {
       enrollment_id: '選課ID',
       member_id: '學員ID',
       class_id: '班級ID',
+      term_id: '班期ID',
+      term_label: '班期名稱',
+      previous_enrollment_id: '前期選課ID',
       enroll_date: '選課日期',
       status: '狀態',
       total_paid_sessions: '已繳費總堂數',
@@ -277,6 +282,27 @@ class SheetHelper {
     });
 
     sheet.appendRow(newRowValue);
+    SpreadsheetApp.flush();
+  }
+
+  public static ensureColumns(sheetName: string, keys: string[]): void {
+    const sheet = this.getSheet(sheetName);
+    const columnMap = this.COLUMN_MAP[sheetName] || {};
+    const lastCol = sheet.getLastColumn();
+    const headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] as string[] : [];
+    const missingHeaders = keys
+      .map(key => columnMap[key])
+      .filter(header => header && !headers.includes(header));
+
+    if (missingHeaders.length === 0) return;
+
+    const startCol = lastCol + 1;
+    sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+    sheet.getRange(1, startCol, 1, missingHeaders.length)
+      .setBackground('#1e293b')
+      .setFontColor('#ffffff')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center');
     SpreadsheetApp.flush();
   }
 
